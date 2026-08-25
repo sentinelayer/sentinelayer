@@ -1,9 +1,10 @@
-from sqlalchemy import Column, String, Integer, Float, DateTime, Enum, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from .base import Base, TenantAwareMixin
 import enum
+import uuid
 
-class OrderStatus(enum.Enum):
+class OrderStatus:
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -12,12 +13,12 @@ class OrderStatus(enum.Enum):
 class Order(Base, TenantAwareMixin):
     __tablename__ = "orders"
     
-    id = Column(String(36), primary_key=True)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String(36), nullable=False, index=True)
     product_id = Column(String(36), nullable=False)
     quantity = Column(Integer, nullable=False)
     total_amount = Column(Float, nullable=False)
-    status = Column(Enum(OrderStatus), default=OrderStatus.PENDING)
+    status = Column(String(20), default=OrderStatus.PENDING)
     created_by = Column(String(36), nullable=False)
     
     def to_dict(self):
@@ -27,28 +28,31 @@ class Order(Base, TenantAwareMixin):
             "product_id": self.product_id,
             "quantity": self.quantity,
             "total_amount": self.total_amount,
-            "status": self.status.value if self.status else None,
+            "status": self.status,
             "tenant_id": self.tenant_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
 class OrderRepository:
-    """Repository dengan RLS built-in"""
+    """Repository dengan tenant isolation (app-level + RLS)"""
     
     def __init__(self, db_manager, tenant_id: str):
         self.db_manager = db_manager
         self.tenant_id = tenant_id
     
+    def _apply_tenant_filter(self, query):
+        """App-level tenant filter (fallback for SQLite)"""
+        return query.filter(Order.tenant_id == self.tenant_id)
+    
     def create_order(self, order_data: dict) -> Order:
-        """Create order dengan tenant_id otomatis"""
         order = Order(
-            id=order_data.get("id"),
+            id=order_data.get("id", str(uuid.uuid4())),
             user_id=order_data["user_id"],
             product_id=order_data["product_id"],
             quantity=order_data["quantity"],
             total_amount=order_data["total_amount"],
-            tenant_id=self.tenant_id,  # Auto-set from tenant context
+            tenant_id=self.tenant_id,
             created_by=order_data.get("created_by", "system")
         )
         
@@ -59,21 +63,26 @@ class OrderRepository:
             return order
     
     def get_order(self, order_id: str) -> Order | None:
-        """Get order - RLS ensures tenant isolation"""
         with self.db_manager.get_session(self.tenant_id) as session:
-            return session.query(Order).filter(Order.id == order_id).first()
+            query = session.query(Order).filter(Order.id == order_id)
+            # App-level filter for SQLite
+            if self.db_manager.is_sqlite:
+                query = self._apply_tenant_filter(query)
+            return query.first()
     
     def get_user_orders(self, user_id: str) -> list[Order]:
-        """Get user's orders - RLS ensures tenant isolation"""
         with self.db_manager.get_session(self.tenant_id) as session:
-            return session.query(Order).filter(
-                Order.user_id == user_id
-            ).all()
+            query = session.query(Order).filter(Order.user_id == user_id)
+            if self.db_manager.is_sqlite:
+                query = self._apply_tenant_filter(query)
+            return query.all()
     
     def update_order(self, order_id: str, updates: dict) -> Order | None:
-        """Update order - RLS prevents cross-tenant updates"""
         with self.db_manager.get_session(self.tenant_id) as session:
-            order = session.query(Order).filter(Order.id == order_id).first()
+            query = session.query(Order).filter(Order.id == order_id)
+            if self.db_manager.is_sqlite:
+                query = self._apply_tenant_filter(query)
+            order = query.first()
             if not order:
                 return None
             
@@ -86,9 +95,11 @@ class OrderRepository:
             return order
     
     def delete_order(self, order_id: str) -> bool:
-        """Delete order - RLS prevents cross-tenant deletion"""
         with self.db_manager.get_session(self.tenant_id) as session:
-            order = session.query(Order).filter(Order.id == order_id).first()
+            query = session.query(Order).filter(Order.id == order_id)
+            if self.db_manager.is_sqlite:
+                query = self._apply_tenant_filter(query)
+            order = query.first()
             if not order:
                 return False
             

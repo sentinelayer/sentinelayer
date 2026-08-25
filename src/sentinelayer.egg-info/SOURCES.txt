@@ -9,5 +9,7 @@ src/sentinelayer.egg-info/top_level.txt
 src/sentinelayer/backend/__init__.py
 src/sentinelayer/backend/internal/auth/authorization.py
 src/sentinelayer/backend/internal/auth/jwt_handler.py
+src/sentinelayer/database/models/base.py
+src/sentinelayer/database/models/order.py
 src/sentinelayer/gateway/__init__.py
 src/sentinelayer/gateway/ratelimit/sliding_window.py
