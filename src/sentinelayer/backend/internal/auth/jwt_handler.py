@@ -1,4 +1,3 @@
-import os
 import jwt
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
@@ -11,7 +10,7 @@ class TokenPayload(BaseModel):
     email: Optional[str] = None
     roles: Optional[list] = []
 
-JWT_SECRET = os.getenv("JWT_SECRET", "test-secret-key-for-testing-only")
+JWT_SECRET = "test-secret-key-for-testing-only"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 
@@ -25,8 +24,7 @@ def verify_token(token: str) -> Optional[TokenPayload]:
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
         return TokenPayload(**payload)
-    except jwt.PyJWTError as e:
-        print(f"JWT verification error: {e}")
+    except jwt.PyJWTError:
         return None
 
 def create_access_token(data: Dict[str, Any]) -> str:

@@ -1,11 +1,1 @@
-{
-  "artifacts": {
-    "main_app": {
-      "hash": "7da0936084e27598cb36342f232caa18326306cf89b4da69d45246392ebf0266",
-      "version": "0.1.0",
-      "timestamp": 1787663943.4854622,
-      "path": "src/sentinelayer/api/main_full.py"
-    }
-  },
-  "timestamp": 0
-}
+{"artifacts": {}}

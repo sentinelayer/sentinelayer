@@ -2,15 +2,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY pyproject.toml requirements.txt ./
-RUN pip install --no-cache-dir -e .
+COPY requirements.txt .
+RUN pip install --no-cache-dir fastapi uvicorn pydantic sqlalchemy redis psycopg2-binary python-jose passlib cryptography pyjwt
 
-COPY scripts/ ./scripts/
-COPY src/ ./src/
-RUN mkdir -p private/evidence/requirements
+COPY src ./src
+
+RUN mkdir -p private/evidence/requirements private/keys
+RUN echo '{"secrets": {}}' > private/secrets.json
+RUN echo '{"artifacts": {}}' > private/manifest.json
+
+ENV PYTHONPATH=/app/src
 
 EXPOSE 8000
 
-RUN python scripts/run_migrations.py || true
-
-CMD ["uvicorn", "src.sentinelayer.api.main_full:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "sentinelayer.api.main_full:app", "--host", "0.0.0.0", "--port", "8000"]
