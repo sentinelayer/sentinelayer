@@ -29,6 +29,3 @@
 ## Yearly Discount
 - 20% off annual billing
 - 2 months free
-
-## Contact
-For custom pricing: support@sentinelayer.com

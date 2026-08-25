@@ -312,3 +312,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 from sentinelayer.security.provenance import get_provenance
 provenance = get_provenance()
 logger.info(f"Runtime provenance status: {provenance.get_status()}")
+from sentinelayer.api.middleware.security_headers import SecurityHeadersMiddleware
+app.add_middleware(SecurityHeadersMiddleware)
+from sentinelayer.security.attestation import get_attestation
+attestation = get_attestation()
+logger.info(f"Runtime attestation: {attestation.get_status()}")
