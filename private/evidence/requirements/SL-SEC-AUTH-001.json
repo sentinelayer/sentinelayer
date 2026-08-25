@@ -1,0 +1,16 @@
+{
+  "requirement_id": "SL-SEC-AUTH-001",
+  "control_id": "IAM-01",
+  "owner": "Founder",
+  "criticality": "P0",
+  "gate": "MVP",
+  "status": "DESIGNED",
+  "description": "JWT validation must fail-closed for invalid signature/expiry",
+  "acceptance_criteria": "Request with expired JWT returns 401, request with valid JWT passes",
+  "test_method": "pytest integration tests with mocked expired tokens",
+  "failure_behavior": "FAIL-CLOSED (return 503 if JWT validator unavailable)",
+  "rollback_strategy": "Rollback to previous gateway image",
+  "implementation_version": "v0.1.0",
+  "evidence_artifacts": [],
+  "reviewer": "PENDING_EXTERNAL_RETAINER"
+}
