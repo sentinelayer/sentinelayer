@@ -1,14 +1,16 @@
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from .base import Base, TenantAwareMixin
 import enum
 import uuid
+from datetime import datetime
 
-class OrderStatus:
+class OrderStatus(str, enum.Enum):
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+    REFUNDED = "refunded"
 
 class Order(Base, TenantAwareMixin):
     __tablename__ = "orders"
@@ -35,14 +37,11 @@ class Order(Base, TenantAwareMixin):
         }
 
 class OrderRepository:
-    """Repository dengan tenant isolation (app-level + RLS)"""
-    
     def __init__(self, db_manager, tenant_id: str):
         self.db_manager = db_manager
         self.tenant_id = tenant_id
     
     def _apply_tenant_filter(self, query):
-        """App-level tenant filter (fallback for SQLite)"""
         return query.filter(Order.tenant_id == self.tenant_id)
     
     def create_order(self, order_data: dict) -> Order:
@@ -53,7 +52,8 @@ class OrderRepository:
             quantity=order_data["quantity"],
             total_amount=order_data["total_amount"],
             tenant_id=self.tenant_id,
-            created_by=order_data.get("created_by", "system")
+            created_by=order_data.get("created_by", "system"),
+            status=order_data.get("status", OrderStatus.PENDING)
         )
         
         with self.db_manager.get_session(self.tenant_id) as session:
@@ -65,7 +65,6 @@ class OrderRepository:
     def get_order(self, order_id: str) -> Order | None:
         with self.db_manager.get_session(self.tenant_id) as session:
             query = session.query(Order).filter(Order.id == order_id)
-            # App-level filter for SQLite
             if self.db_manager.is_sqlite:
                 query = self._apply_tenant_filter(query)
             return query.first()
@@ -73,6 +72,13 @@ class OrderRepository:
     def get_user_orders(self, user_id: str) -> list[Order]:
         with self.db_manager.get_session(self.tenant_id) as session:
             query = session.query(Order).filter(Order.user_id == user_id)
+            if self.db_manager.is_sqlite:
+                query = self._apply_tenant_filter(query)
+            return query.all()
+    
+    def get_all_orders(self) -> list[Order]:
+        with self.db_manager.get_session(self.tenant_id) as session:
+            query = session.query(Order)
             if self.db_manager.is_sqlite:
                 query = self._apply_tenant_filter(query)
             return query.all()

@@ -5,13 +5,19 @@ import time
 import logging
 import uuid
 from pydantic import BaseModel, EmailStr
-from typing import List
+from typing import List, Optional
 
 from sentinelayer.api.routes import auth
+from sentinelayer.database.models.base import DatabaseManager
+from sentinelayer.database.models.order import OrderRepository, OrderStatus
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Init database
+db_manager = DatabaseManager()
+db_manager.create_tables()
 
 # Create FastAPI app
 app = FastAPI(
@@ -48,10 +54,6 @@ class OrderResponse(BaseModel):
     created_at: str
     updated_at: str
 
-# ============ STORAGE ============
-
-orders_db = {}
-
 # ============ ROOT ============
 
 @app.get("/")
@@ -61,12 +63,25 @@ async def root():
         "version": "0.1.0",
         "status": "operational",
         "docs": "/docs",
-        "auth": "/api/v1/auth"
+        "auth": "/api/v1/auth",
+        "database": "postgresql"
     }
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "timestamp": time.time()}
+    # Check database
+    try:
+        with db_manager.get_session() as session:
+            session.execute("SELECT 1")
+        db_status = "healthy"
+    except Exception as e:
+        db_status = f"unhealthy: {e}"
+    
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "database": db_status
+    }
 
 @app.get("/metrics")
 async def metrics():
@@ -79,79 +94,71 @@ async def create_order(order: OrderCreate, request: Request):
     tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
     user_id = request.headers.get("X-User-ID", "user-default")
     
-    order_id = str(uuid.uuid4())
-    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    repo = OrderRepository(db_manager, tenant_id)
     
     order_data = {
-        "id": order_id,
         "user_id": user_id,
         "product_id": order.product_id,
         "quantity": order.quantity,
         "total_amount": order.total_amount,
-        "status": "pending",
-        "tenant_id": tenant_id,
-        "created_at": now,
-        "updated_at": now
+        "created_by": user_id,
+        "status": OrderStatus.PENDING
     }
     
-    orders_db[order_id] = order_data
-    return OrderResponse(**order_data)
+    created = repo.create_order(order_data)
+    return OrderResponse(**created.to_dict())
 
 @app.get("/api/v1/orders/", response_model=List[OrderResponse])
 async def list_orders(request: Request):
     tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
     
-    result = [
-        OrderResponse(**order) 
-        for order in orders_db.values() 
-        if order["tenant_id"] == tenant_id
-    ]
-    return result
+    repo = OrderRepository(db_manager, tenant_id)
+    orders = repo.get_all_orders()
+    
+    return [OrderResponse(**order.to_dict()) for order in orders]
 
 @app.get("/api/v1/orders/{order_id}", response_model=OrderResponse)
 async def get_order(order_id: str, request: Request):
     tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
     
-    order = orders_db.get(order_id)
+    repo = OrderRepository(db_manager, tenant_id)
+    order = repo.get_order(order_id)
+    
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    if order["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-    
-    return OrderResponse(**order)
+    return OrderResponse(**order.to_dict())
 
 @app.put("/api/v1/orders/{order_id}", response_model=OrderResponse)
 async def update_order(order_id: str, order: OrderCreate, request: Request):
     tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
     
-    existing = orders_db.get(order_id)
-    if not existing:
+    repo = OrderRepository(db_manager, tenant_id)
+    
+    update_data = {
+        "product_id": order.product_id,
+        "quantity": order.quantity,
+        "total_amount": order.total_amount
+    }
+    
+    updated = repo.update_order(order_id, update_data)
+    
+    if not updated:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    if existing["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-    
-    existing["product_id"] = order.product_id
-    existing["quantity"] = order.quantity
-    existing["total_amount"] = order.total_amount
-    existing["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    
-    return OrderResponse(**existing)
+    return OrderResponse(**updated.to_dict())
 
 @app.delete("/api/v1/orders/{order_id}")
 async def delete_order(order_id: str, request: Request):
     tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
     
-    order = orders_db.get(order_id)
-    if not order:
+    repo = OrderRepository(db_manager, tenant_id)
+    deleted = repo.delete_order(order_id)
+    
+    if not deleted:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    if order["tenant_id"] != tenant_id:
-        raise HTTPException(status_code=403, detail="Access denied")
-    
-    del orders_db[order_id]
-    return {"message": "Order deleted"}
+    return {"message": "Order deleted successfully"}
 
 # ============ INCLUDE ROUTERS ============
 
