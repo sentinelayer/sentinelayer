@@ -1,35 +1,19 @@
-# SentinelLayer - Status Aktual (2026-08-25)
-
-## Bug Fixes Done
-- WAF middleware KeyError
-- authorization.py import time
-- rate_limit middleware dipasang
-- gate engine evidence ID
-- counterfactual threshold
-- risk confidence independent
-- KMS env required
-- migration duplikat dihapus
-- admin backdoor dihapus
+# SentinelLayer - Status Aktual (2026-08-26)
 
 ## Yang Jalan
 - JWT auth (env secret)
-- BOLA/IDOR (tanpa admin bypass)
-- Rate limiting (Redis + in-memory)
+- BOLA/IDOR (logic benar, role-based belum diimplementasi)
+- Rate limiting (Redis + in-memory, fallback buggy)
 - WAF regex fallback (6 rules)
-- Risk engine (per-request)
-- Decision safety (kill switch)
+- Decision safety (kill switch, tanpa RBAC)
 - Key rotation (Redis)
-- KMS (AES-256 GCM)
-- Audit logging
+- 38/38 tests passing (belum diverifikasi ulang)
 
-## Belum
-- Coraza+CRS (masih regex)
-- RLS aktif production
-- Control Plane endpoints
-- Dashboard UI lengkap
-- AML/Fraud/PII
-- Grafana/Loki
+## Yang Perlu Diperbaiki
+- Risk engine: global singleton → harus per-request
+- Siap deploy: belum, auth masih hardcoded plaintext di beberapa tempat
+- WAF: nama file masih "coraza_wrapper" padahal isinya regex fallback
 
 ## Status
-- 38/38 tests passing
-- Siap deploy
+- Masih dalam tahap perbaikan aktif
+- Belum siap deploy production

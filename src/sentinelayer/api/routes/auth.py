@@ -1,12 +1,13 @@
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
-import uuid
+from passlib.context import CryptContext
 import logging
 
 from sentinelayer.backend.internal.auth.jwt_handler import create_access_token
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class LoginRequest(BaseModel):
     email: str
@@ -23,7 +24,7 @@ users_db = {
     "test@example.com": {
         "user_id": "user-123",
         "tenant_id": "tenant-acme",
-        "password": "password123",
+        "password_hash": "$2b$12$KxG5YqKxG5YqKxG5YqKxG5YqKxG5YqKxG5YqKxG5YqKxG5YqKxG5YqKxG5",
         "roles": ["user"]
     }
 }
@@ -31,11 +32,14 @@ users_db = {
 @router.post("/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
     user = users_db.get(request.email)
-    if not user or user["password"] != request.password:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
-        )
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    try:
+        if not pwd_context.verify(request.password, user["password_hash"]):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Authentication error")
     
     token_data = {
         "sub": user["user_id"],

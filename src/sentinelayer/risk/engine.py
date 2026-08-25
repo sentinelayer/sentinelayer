@@ -49,9 +49,8 @@ class RiskEngine:
         )
         self.signals.append(signal)
     
-    def calculate_risk(self, signals: Optional[List[RiskSignal]] = None) -> Dict[str, Any]:
-        if signals is None:
-            signals = self.signals
+    def calculate_risk(self) -> Dict[str, Any]:
+        signals = self.signals
         
         if not signals:
             return {
@@ -110,7 +109,7 @@ class RiskEngine:
             level = "none"
             decision = "allow"
         
-        return {
+        result = {
             "score": avg_score,
             "level": level,
             "confidence": avg_confidence,
@@ -127,16 +126,12 @@ class RiskEngine:
             ],
             "signal_count": len(signals)
         }
+        
+        self.signals = []
+        return result
     
     def clear_signals(self) -> None:
         self.signals = []
 
 def get_risk_engine() -> RiskEngine:
     return RiskEngine()
-_risk_engine = None
-
-def get_risk_engine():
-    global _risk_engine
-    if _risk_engine is None:
-        _risk_engine = RiskEngine()
-    return _risk_engine
