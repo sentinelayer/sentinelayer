@@ -1,71 +1,70 @@
-import React, { useState, useEffect } from 'react'
-import axios from 'axios'
-
-const API = process.env.REACT_APP_API_URL || 'http://localhost:8000'
+import React, { useState } from 'react'
+import { Dashboard } from './components/Dashboard'
+import { login } from './api/client'
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [orders, setOrders] = useState([])
-  const [security, setSecurity] = useState({ waf: 'active', rate_limit: 'active' })
+  const [email, setEmail] = useState('test@example.com')
+  const [password, setPassword] = useState('password123')
+  const [loading, setLoading] = useState(false)
 
-  const login = async () => {
+  const handleLogin = async () => {
+    setLoading(true)
     try {
-      const res = await axios.post(`${API}/api/v1/auth/login`, { email, password })
-      setToken(res.data.access_token)
-      localStorage.setItem('token', res.data.access_token)
-    } catch {
+      const data = await login(email, password)
+      setToken(data.access_token)
+      localStorage.setItem('token', data.access_token)
+    } catch (error) {
       alert('Login failed')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const logout = () => {
+  const handleLogout = () => {
     setToken('')
     localStorage.removeItem('token')
   }
 
-  useEffect(() => {
-    if (!token) return
-    const fetch = async () => {
-      try {
-        const o = await axios.get(`${API}/api/v1/orders/`, { headers: { Authorization: `Bearer ${token}` } })
-        setOrders(o.data)
-        const s = await axios.get(`${API}/api/v1/dashboard/security`, { headers: { Authorization: `Bearer ${token}` } })
-        setSecurity(s.data)
-      } catch {}
-    }
-    fetch()
-  }, [token])
-
   if (!token) {
     return (
-      <div style={{ maxWidth: 400, margin: '50px auto', padding: 20, border: '1px solid #ccc' }}>
+      <div style={{ maxWidth: 400, margin: '50px auto', padding: 20, border: '1px solid #ccc', borderRadius: 8 }}>
         <h2>SentinelLayer</h2>
-        <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', marginBottom: 10, padding: 8 }} />
-        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', marginBottom: 10, padding: 8 }} />
-        <button onClick={login} style={{ width: '100%', padding: 10 }}>Login</button>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={{ width: '100%', marginBottom: 10, padding: 8 }}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={{ width: '100%', marginBottom: 10, padding: 8 }}
+        />
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          style={{ width: '100%', padding: 10, background: '#007bff', color: 'white', border: 'none', borderRadius: 4 }}
+        >
+          {loading ? 'Loading...' : 'Login'}
+        </button>
+        <p style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: '#999' }}>
+          Default: test@example.com / password123
+        </p>
       </div>
     )
   }
 
   return (
     <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h2>SentinelLayer Dashboard</h2>
-        <button onClick={logout}>Logout</button>
+        <button onClick={handleLogout} style={{ padding: '8px 16px', cursor: 'pointer' }}>Logout</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 20, margin: '20px 0' }}>
-        <div style={{ border: '1px solid #ccc', padding: 20 }}><h3>WAF</h3><p>{security.waf === 'active' ? '✅ Active' : '❌ Inactive'}</p></div>
-        <div style={{ border: '1px solid #ccc', padding: 20 }}><h3>Rate Limit</h3><p>{security.rate_limit === 'active' ? '✅ Active' : '❌ Inactive'}</p></div>
-        <div style={{ border: '1px solid #ccc', padding: 20 }}><h3>Orders</h3><p>{orders.length}</p></div>
-      </div>
-      <div style={{ border: '1px solid #ccc', padding: 20 }}>
-        <h3>Recent Orders</h3>
-        <ul>
-          {orders.slice(0, 10).map((o: any) => <li key={o.id}>{o.product_id} - {o.quantity}x - ${o.total_amount}</li>)}
-        </ul>
-      </div>
+      <Dashboard token={token} />
     </div>
   )
 }
