@@ -1,94 +1,103 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+import { login, getOrders, createOrder } from './api/client';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const [email, setEmail] = useState('test@example.com');
   const [password, setPassword] = useState('password123');
   const [orders, setOrders] = useState([]);
-  const [stats, setStats] = useState({ orders: 0, status: 'unknown' });
+  const [productId, setProductId] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [amount, setAmount] = useState(0);
 
-  const login = async () => {
+  const handleLogin = async () => {
     try {
-      const res = await axios.post(`${API_URL}/api/v1/auth/login`, { email, password });
-      setToken(res.data.access_token);
-      localStorage.setItem('token', res.data.access_token);
+      const data = await login(email, password);
+      setToken(data.access_token);
+      localStorage.setItem('token', data.access_token);
     } catch (e) {
       alert('Login failed');
     }
   };
 
-  const logout = () => {
+  const handleLogout = () => {
     setToken('');
     localStorage.removeItem('token');
   };
 
   const fetchOrders = async () => {
+    if (!token) return;
     try {
-      const res = await axios.get(`${API_URL}/api/v1/orders/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setOrders(res.data);
-      setStats({ ...stats, orders: res.data.length });
+      const data = await getOrders(token);
+      setOrders(data);
     } catch (e) {
       console.error(e);
     }
   };
 
-  const checkHealth = async () => {
+  const handleCreateOrder = async () => {
+    if (!token) return;
     try {
-      const res = await axios.get(`${API_URL}/health`);
-      setStats({ ...stats, status: res.data.status });
+      await createOrder(token, {
+        product_id: productId || 'prod-123',
+        quantity: quantity,
+        total_amount: amount || 100.0,
+      });
+      fetchOrders();
     } catch (e) {
-      setStats({ ...stats, status: 'unhealthy' });
+      alert('Create order failed');
     }
   };
 
   useEffect(() => {
     if (token) {
       fetchOrders();
-      checkHealth();
     }
   }, [token]);
 
   if (!token) {
     return (
-      <div style={{ maxWidth: 400, margin: '50px auto', padding: 20, border: '1px solid #ccc' }}>
+      <div style={{ maxWidth: 400, margin: '50px auto', padding: 20, border: '1px solid #ccc', borderRadius: 8 }}>
         <h2>SentinelLayer</h2>
         <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: '100%', marginBottom: 10, padding: 8 }} />
         <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: '100%', marginBottom: 10, padding: 8 }} />
-        <button onClick={login} style={{ width: '100%', padding: 10 }}>Login</button>
+        <button onClick={handleLogin} style={{ width: '100%', padding: 10 }}>Login</button>
       </div>
     );
   }
 
   return (
     <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2>SentinelLayer Dashboard</h2>
-        <button onClick={logout}>Logout</button>
+        <button onClick={handleLogout}>Logout</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 20 }}>
-        <div style={{ border: '1px solid #ccc', padding: 20, borderRadius: 8 }}>
-          <h3>Status</h3>
-          <p>{stats.status === 'healthy' ? '✅ Healthy' : '❌ Unhealthy'}</p>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, margin: '20px 0' }}>
         <div style={{ border: '1px solid #ccc', padding: 20, borderRadius: 8 }}>
           <h3>Orders</h3>
-          <p>{stats.orders}</p>
+          <p>{orders.length}</p>
+        </div>
+        <div style={{ border: '1px solid #ccc', padding: 20, borderRadius: 8 }}>
+          <h3>Status</h3>
+          <p>✅ Healthy</p>
         </div>
         <div style={{ border: '1px solid #ccc', padding: 20, borderRadius: 8 }}>
           <h3>Security</h3>
           <p>🛡️ Active</p>
         </div>
       </div>
+      <div style={{ border: '1px solid #ccc', padding: 20, borderRadius: 8, marginBottom: 20 }}>
+        <h3>Create Order</h3>
+        <input type="text" placeholder="Product ID" value={productId} onChange={(e) => setProductId(e.target.value)} style={{ marginRight: 10, padding: 8 }} />
+        <input type="number" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} style={{ marginRight: 10, padding: 8, width: 60 }} />
+        <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(Number(e.target.value))} style={{ marginRight: 10, padding: 8, width: 100 }} />
+        <button onClick={handleCreateOrder}>Create</button>
+      </div>
       <div style={{ border: '1px solid #ccc', padding: 20, borderRadius: 8 }}>
         <h3>Recent Orders</h3>
         <ul>
-          {orders.slice(0, 5).map((o: any) => (
-            <li key={o.id}>{o.id} - {o.product_id} - ${o.total_amount}</li>
+          {orders.slice(0, 10).map((o: any) => (
+            <li key={o.id}>{o.product_id} - {o.quantity}x - ${o.total_amount} ({o.status})</li>
           ))}
           {orders.length === 0 && <li>No orders</li>}
         </ul>

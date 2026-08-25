@@ -1,12 +1,9 @@
 from fastapi import Request, HTTPException, status
 from typing import Optional
-from sentinelayer.backend.internal.auth.jwt_handler import verify_token, TokenPayload
-import logging
-
-logger = logging.getLogger(__name__)
+from sentinelayer.backend.internal.auth.jwt_handler import verify_token
 
 class AuthMiddleware:
-    async def __call__(self, request: Request) -> Optional[TokenPayload]:
+    async def __call__(self, request: Request) -> Optional[dict]:
         auth_header = request.headers.get("Authorization")
         if not auth_header:
             raise HTTPException(
@@ -34,10 +31,8 @@ class AuthMiddleware:
                 detail="Invalid or expired token"
             )
         
-        # Store user context - pake model_dump() (V2) instead of dict() (deprecated)
-        request.state.user = payload.model_dump()
+        request.state.user = payload.dict()
         request.state.tenant_id = payload.tenant_id
         request.state.user_id = payload.sub
         
-        logger.info(f"Authenticated: user={payload.sub}, tenant={payload.tenant_id}")
-        return payload
+        return request.state.user

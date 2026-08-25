@@ -1,10 +1,7 @@
-from fastapi import APIRouter, HTTPException, status, Request
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
-from datetime import timedelta
 import uuid
 import logging
-import jwt
-import time
 
 from sentinelayer.backend.internal.auth.jwt_handler import create_access_token
 
@@ -22,12 +19,11 @@ class LoginResponse(BaseModel):
     user_id: str
     tenant_id: str
 
-# Simple user DB (tanpa bcrypt dulu)
 users_db = {
     "test@example.com": {
         "user_id": "user-123",
         "tenant_id": "tenant-acme",
-        "password": "password123",  # Plaintext sementara
+        "password": "password123",
         "roles": ["user"]
     }
 }

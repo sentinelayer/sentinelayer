@@ -110,8 +110,8 @@ class BaselineManager:
         self.learning_mode = True
         self.learning_samples = 100
         self.redis_client = None
-        self._init_redis()
         self.profiles: Dict[str, BaselineProfile] = {}
+        self._init_redis()
         self.load_all_profiles()
     
     def _init_redis(self):
@@ -119,10 +119,10 @@ class BaselineManager:
             redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
             self.redis_client = redis.from_url(redis_url, decode_responses=True)
             self.redis_client.ping()
-            print("✅ Baseline: Redis connected")
-        except Exception as e:
+            print("Baseline: Redis connected")
+        except:
             self.redis_client = None
-            print("⚠️ Baseline: Redis not available, using in-memory only")
+            print("Baseline: Redis not available, using in-memory only")
     
     def _get_redis_key(self, profile_key: str) -> str:
         return f"baseline:profile:{profile_key}"
@@ -143,7 +143,7 @@ class BaselineManager:
             if data:
                 try:
                     return BaselineProfile.from_dict(json.loads(data))
-                except Exception as e:
+                except:
                     pass
         return None
     
@@ -158,9 +158,9 @@ class BaselineManager:
                     profile = BaselineProfile.from_dict(json.loads(data))
                     pk = self.get_profile_key(profile.endpoint, profile.method, profile.user_id, profile.tenant_id)
                     self.profiles[pk] = profile
-                except Exception as e:
+                except:
                     pass
-        print(f"✅ Loaded {len(self.profiles)} baseline profiles from Redis")
+        print(f"Loaded {len(self.profiles)} baseline profiles from Redis")
     
     def record_request(self, request_data: Dict[str, Any]) -> BaselineProfile:
         pk = self.get_profile_key(
@@ -171,7 +171,6 @@ class BaselineManager:
         )
         
         if pk not in self.profiles:
-            # Coba load dari Redis dulu
             loaded = self._load_from_redis(pk)
             if loaded:
                 self.profiles[pk] = loaded
@@ -237,23 +236,3 @@ def get_baseline_manager() -> BaselineManager:
     if _baseline_manager is None:
         _baseline_manager = BaselineManager()
     return _baseline_manager
-from sentinelayer.behavior.sequence import get_sequence_detector
-
-class BaselineManager:
-    def __init__(self):
-        self.learning_mode = True
-        self.learning_samples = 100
-        self.redis_client = None
-        self.sequence_detector = get_sequence_detector()
-        self._init_redis()
-        self.profiles: Dict[str, BaselineProfile] = {}
-        self.load_all_profiles()
-    
-    def record_sequence_event(self, user_id: str, tenant_id: str, event_type: str, details: Dict = None):
-        return self.sequence_detector.add_event(user_id, tenant_id, event_type, details)
-    
-    def get_user_sequence(self, user_id: str, tenant_id: str):
-        return self.sequence_detector.get_user_sequence(user_id, tenant_id)
-    
-    def get_sequence_matches(self):
-        return self.sequence_detector.get_recent_matches()
