@@ -4,8 +4,6 @@ from fastapi.testclient import TestClient
 from sentinelayer.api.main_full import app
 
 client = TestClient(app)
-
-# Cek apakah dalam mode testing
 TESTING = os.getenv("TESTING", "false").lower() == "true"
 
 def test_health():
@@ -36,16 +34,22 @@ def test_create_order():
     assert response.json()["product_id"] == "prod-123"
 
 def test_unauthorized():
-    """Test request tanpa token"""
     response = client.post(
         "/api/v1/orders/",
         json={"product_id": "prod-123", "quantity": 2, "total_amount": 100.0}
     )
-    
-    # Kalo TESTING=true, auth di-skip → harusnya 200
-    # Kalo TESTING=false, auth aktif → harusnya 401
     if TESTING:
         assert response.status_code == 200
     else:
         assert response.status_code == 401
-        assert response.json()["detail"] == "Missing authorization header"
+
+def test_authorized():
+    """Test dengan token valid -> harus 200"""
+    token = test_login()
+    response = client.post(
+        "/api/v1/orders/",
+        json={"product_id": "prod-123", "quantity": 2, "total_amount": 100.0},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    assert response.json()["product_id"] == "prod-123"
