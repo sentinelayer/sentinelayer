@@ -295,3 +295,13 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"error": str(exc), "path": request.url.path}
     )
+
+# ============ METRICS MIDDLEWARE ============
+from sentinelayer.observability.metrics import metrics_middleware, get_metrics
+
+app.middleware("http")(metrics_middleware)
+
+@app.get("/metrics")
+async def metrics_endpoint():
+    from fastapi.responses import Response
+    return Response(content=get_metrics(), media_type="text/plain")

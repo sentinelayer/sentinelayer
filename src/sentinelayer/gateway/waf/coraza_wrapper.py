@@ -19,7 +19,7 @@ except ImportError:
         logger.info("✅ PyCoraza available")
     except ImportError:
         CORAZA_AVAILABLE = False
-        logger.warning("⚠️ Coraza not available, using fallback")
+        logger.warning("⚠️ WAF fallback mode (regex-based)")
 
 class WAFEngine:
     def __init__(self):

@@ -7,10 +7,17 @@ requests_total = Counter('sentinelayer_requests_total', 'Total requests', ['meth
 request_duration = Histogram('sentinelayer_request_duration_seconds', 'Request duration', ['method', 'endpoint'])
 active_requests = Gauge('sentinelayer_active_requests', 'Active requests')
 waf_blocks = Counter('sentinelayer_waf_blocks_total', 'WAF blocked requests', ['rule_id'])
+rate_limit_hits = Counter('sentinelayer_rate_limit_hits_total', 'Rate limit hits', ['endpoint'])
 
 def record_request(method: str, endpoint: str, status: int, duration: float):
     requests_total.labels(method=method, endpoint=endpoint, status=str(status)).inc()
     request_duration.labels(method=method, endpoint=endpoint).observe(duration)
+
+def record_waf_block(rule_id: str):
+    waf_blocks.labels(rule_id=rule_id).inc()
+
+def record_rate_limit_hit(endpoint: str):
+    rate_limit_hits.labels(endpoint=endpoint).inc()
 
 def get_metrics():
     return generate_latest(REGISTRY)

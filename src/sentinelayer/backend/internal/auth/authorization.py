@@ -1,7 +1,7 @@
-from typing import Optional, Dict, Any
+import logging
+from typing import Optional, List, Tuple
 from dataclasses import dataclass
 import re
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ class AuthorizationMiddleware:
             r"^/api/v1/users/([^/]+)$": ("user", 1),
             r"^/api/v1/payments/([^/]+)$": ("payment", 1),
         }
+        self.admin_override_alerts = []
     
     def extract_resource_from_path(self, path: str):
         for pattern, (resource_type, id_group) in self.resource_patterns.items():
@@ -27,33 +28,38 @@ class AuthorizationMiddleware:
                 return (resource_type, match.group(id_group))
         return None
     
+    def _alert_admin_override(self, user_id: str, resource_id: str, reason: str):
+        """Log admin override untuk audit"""
+        alert = {
+            "type": "admin_override",
+            "user_id": user_id,
+            "resource_id": resource_id,
+            "reason": reason,
+            "timestamp": time.time()
+        }
+        self.admin_override_alerts.append(alert)
+        logger.warning(f"🔴 ADMIN OVERRIDE: user={user_id}, resource={resource_id}, reason={reason}")
+        
+        # Keep only last 100
+        if len(self.admin_override_alerts) > 100:
+            self.admin_override_alerts.pop(0)
+    
     def check_access(self, resource_tenant_id: str, resource_owner_id: str, 
-                     user_tenant_id: str, user_id: str, user_roles: list = None) -> tuple[bool, str]:
-        """
-        Cek akses dengan data resource REAL dari database.
-        BUKAN dari JWT.
-        """
-        # Admin override
+                     user_tenant_id: str, user_id: str, user_roles: list = None) -> Tuple[bool, str]:
+        # Admin override with alert
         if user_roles and "admin" in user_roles:
-            logger.info(f"Admin override: {user_id}")
+            self._alert_admin_override(user_id, resource_owner_id, "Admin override triggered")
             return True, "Admin override"
         
-        # Tenant isolation
         if resource_tenant_id != user_tenant_id:
-            logger.warning(f"Tenant mismatch: resource={resource_tenant_id}, user={user_tenant_id}")
             return False, "Tenant mismatch"
         
-        # Owner isolation
         if resource_owner_id and resource_owner_id != user_id:
-            logger.warning(f"Owner mismatch: resource={resource_owner_id}, user={user_id}")
             return False, "Resource belongs to another user"
         
         return True, "Access granted"
     
-    def validate_request(self, resource: Resource, user_tenant_id: str, user_id: str, user_roles: list = None) -> tuple[bool, str]:
-        """
-        Validate request dengan resource dari database.
-        """
+    def validate_request(self, resource: Resource, user_tenant_id: str, user_id: str, user_roles: list = None) -> Tuple[bool, str]:
         return self.check_access(
             resource_tenant_id=resource.tenant_id,
             resource_owner_id=resource.owner_id,
@@ -61,35 +67,9 @@ class AuthorizationMiddleware:
             user_id=user_id,
             user_roles=user_roles
         )
-
-class BOLAProtection:
-    def __init__(self, auth_middleware: AuthorizationMiddleware):
-        self.auth_middleware = auth_middleware
     
-    def protect(self, resource_type: str, resource_id_param: str = "resource_id"):
-        def decorator(func):
-            from functools import wraps
-            
-            @wraps(func)
-            async def wrapper(*args, **kwargs):
-                # Ambil resource_id dari parameter
-                resource_id = kwargs.get(resource_id_param)
-                user_tenant_id = kwargs.get("current_user", {}).get("tenant_id")
-                user_id = kwargs.get("current_user", {}).get("sub")
-                user_roles = kwargs.get("current_user", {}).get("roles", [])
-                
-                if not resource_id:
-                    raise ValueError(f"Resource ID param '{resource_id_param}' not found")
-                
-                if not user_tenant_id:
-                    raise ValueError("User tenant_id not found")
-                
-                # Fetch resource dari database (harus dipanggil di endpoint)
-                # Endpoint harus fetch dulu, terus panggil check_access
-                
-                return await func(*args, **kwargs)
-            return wrapper
-        return decorator
+    def get_admin_override_alerts(self) -> list:
+        return self.admin_override_alerts
 
 def get_authorization_middleware() -> AuthorizationMiddleware:
     return AuthorizationMiddleware()
