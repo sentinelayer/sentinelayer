@@ -1,0 +1,21 @@
+{
+  "requirement_id": "SL-SEC-OBS-001",
+  "control_id": "OBS-01",
+  "owner": "Founder",
+  "criticality": "P1",
+  "gate": "MVP",
+  "status": "TESTED",
+  "description": "Observability with Prometheus metrics + structured logging",
+  "acceptance_criteria": "Metrics endpoint available, logs in JSON format",
+  "test_method": "curl test to /metrics endpoint",
+  "test_result": "PASSED (all metrics exposed)",
+  "implementation_version": "v0.1.0",
+  "evidence_artifacts": [
+    {
+      "type": "test_report",
+      "file": "tests/manual/metrics_test.sh",
+      "timestamp": "2026-08-25T18:30:00Z"
+    }
+  ],
+  "reviewer": "PENDING_EXTERNAL_RETAINER"
+}
