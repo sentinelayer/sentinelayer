@@ -310,3 +310,17 @@ from sentinelayer.evidence.lifecycle import start_retention_enforcer
 start_retention_enforcer()
 from sentinelayer.evidence.lifecycle import start_retention_enforcer
 start_retention_enforcer()
+from sentinelayer.api.middleware.ssrf import SSRFMiddleware
+
+ssrf_middleware = SSRFMiddleware()
+
+@app.middleware("http")
+async def ssrf_middleware_wrapper(request: Request, call_next):
+    await ssrf_middleware(request)
+    return await call_next(request)
+@app.middleware("http")
+async def ssrf_middleware_wrapper(request: Request, call_next):
+    result = await ssrf_middleware(request)
+    if result:
+        return result
+    return await call_next(request)

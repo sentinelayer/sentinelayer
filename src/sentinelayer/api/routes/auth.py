@@ -23,7 +23,7 @@ users_db = {
         "user_id": "user-123",
         "tenant_id": "tenant-acme",
         "password": "password123",
-        "roles": ["user"]
+        "roles": ["user", "admin"]
     }
 }
 
