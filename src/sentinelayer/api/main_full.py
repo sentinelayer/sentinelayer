@@ -161,3 +161,38 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"error": str(exc), "path": request.url.path}
     )
+
+# ============ METRICS MIDDLEWARE ============
+from sentinelayer.observability.metrics import (
+    record_request, increment_active_requests, decrement_active_requests
+)
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    increment_active_requests()
+    start_time = time.time()
+    
+    try:
+        response = await call_next(request)
+    except Exception as e:
+        duration = time.time() - start_time
+        record_request(
+            method=request.method,
+            endpoint=request.url.path,
+            tenant=getattr(request.state, 'tenant_id', 'unknown'),
+            status_code=500,
+            duration=duration
+        )
+        decrement_active_requests()
+        raise e
+    
+    duration = time.time() - start_time
+    record_request(
+        method=request.method,
+        endpoint=request.url.path,
+        tenant=getattr(request.state, 'tenant_id', 'unknown'),
+        status_code=response.status_code,
+        duration=duration
+    )
+    decrement_active_requests()
+    return response
