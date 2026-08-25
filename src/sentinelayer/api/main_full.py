@@ -64,14 +64,12 @@ async def security_middleware(request: Request, call_next):
     if TESTING:
         if request.url.path not in public_paths:
             await waf_middleware(request)
-            await rate_limit_middleware(request)
         response = await call_next(request)
         return response
     
     if request.url.path not in public_paths:
         await waf_middleware(request)
         await auth_middleware(request)
-        await rate_limit_middleware(request)
         await tenant_middleware(request)
     
     response = await call_next(request)

@@ -11,4 +11,5 @@ htmlcov/
 railway.json
 render.yaml
 node_modulesprivate/
-node_modules
+node_modules.env*
+*.env
