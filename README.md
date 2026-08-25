@@ -6,7 +6,7 @@ Building **API Security Platform** — WAF + Behavioral Analysis + Risk Decision
 
 ---
 
-## 🚀 What I'm Building
+## What I'm Building
 
 SentinelLayer is an all-in-one API security solution designed to protect modern applications from:
 - Cyber attacks (SQLi, XSS, SSRF, etc.)
@@ -17,15 +17,15 @@ Built for solo founders, startups, and enterprises who need simple, affordable, 
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-- **Backend**: Python, FastAPI, PostgreSQL, Redis
-- **Frontend**: React, TypeScript
-- **Infra**: Docker, Railway, Render
+- Backend: Python, FastAPI, PostgreSQL, Redis
+- Frontend: React, TypeScript
+- Infra: Docker, Railway, Render
 
 ---
 
-## 📌 Focus Areas
+## Focus Areas
 
 - JWT Authentication & Authorization
 - WAF with OWASP-style rules
@@ -35,14 +35,14 @@ Built for solo founders, startups, and enterprises who need simple, affordable, 
 
 ---
 
-## 📫 Contact
+## Contact
 
 - GitHub: [@sentinelayer](https://github.com/sentinelayer)
 - Email: muhamadivan969@gmail.com
 
 ---
 
-## 🧩 Philosophy
+## Philosophy
 
 > "Designed does not mean implemented.  
 > Implemented does not mean tested.  
@@ -52,7 +52,7 @@ Built for solo founders, startups, and enterprises who need simple, affordable, 
 
 ---
 
-## 📊 GitHub Stats
+## GitHub Stats
 
 ![SentinelLayer's GitHub stats](https://github-readme-stats.vercel.app/api?username=sentinelayer&show_icons=true&theme=dark)
 
