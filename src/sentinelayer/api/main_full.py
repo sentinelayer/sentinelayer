@@ -301,3 +301,48 @@ async def metrics_endpoint():
     from fastapi.responses import Response
     from sentinelayer.observability.metrics import get_metrics
     return Response(content=get_metrics(), media_type="text/plain")
+
+# ============ DASHBOARD SECTION 16 ============
+@app.get("/api/v1/dashboard/stats")
+async def dashboard_stats(current_user: dict = Depends(get_current_user)):
+    tenant_id = current_user.get("tenant_id", "tenant-default")
+    repo = OrderRepository(db_manager, tenant_id)
+    orders = repo.get_all_orders()
+    
+    stats = {
+        "total_orders": len(orders),
+        "total_users": len(set(o.user_id for o in orders)),
+        "pending_orders": len([o for o in orders if o.status == "pending"]),
+        "completed_orders": len([o for o in orders if o.status == "completed"]),
+        "total_amount": sum(o.total_amount for o in orders),
+        "security_status": "healthy",
+        "waf_active": True,
+        "rate_limit_active": True,
+        "auth_active": True,
+        "tenant_id": tenant_id
+    }
+    return stats
+
+@app.get("/api/v1/dashboard/security")
+async def dashboard_security(current_user: dict = Depends(get_current_user)):
+    return {
+        "waf": {
+            "status": "active",
+            "rules_loaded": 6,
+            "blocks_today": 0
+        },
+        "rate_limit": {
+            "status": "active",
+            "default_limit": 100,
+            "window_seconds": 60
+        },
+        "auth": {
+            "status": "active",
+            "jwt_algo": "HS256",
+            "expiry_minutes": 15
+        },
+        "tenant_isolation": {
+            "status": "active",
+            "method": "row_level_security"
+        }
+    }

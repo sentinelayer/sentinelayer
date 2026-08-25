@@ -7,8 +7,11 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localho
 def ensure_rls():
     engine = create_engine(DATABASE_URL)
     with engine.connect() as conn:
+        # Enable RLS
         conn.execute(text("ALTER TABLE orders ENABLE ROW LEVEL SECURITY;"))
         conn.execute(text("ALTER TABLE orders FORCE ROW LEVEL SECURITY;"))
+        
+        # Create policy
         conn.execute(text("""
             DO $$ BEGIN
                 IF NOT EXISTS (
@@ -20,6 +23,8 @@ def ensure_rls():
                 END IF;
             END $$;
         """))
+        
+        # Create function
         conn.execute(text("""
             CREATE OR REPLACE FUNCTION app.set_tenant(tenant_id text)
             RETURNS void AS $$
@@ -28,6 +33,7 @@ def ensure_rls():
             END;
             $$ LANGUAGE plpgsql;
         """))
+        
         conn.commit()
         print("RLS policies applied successfully")
         return True
