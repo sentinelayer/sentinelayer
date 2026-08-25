@@ -15,11 +15,14 @@ class TokenPayload(BaseModel):
 class JWTConfig:
     @staticmethod
     def get_secret_key() -> str:
+        # Kalo testing, pake fake secret (ga divalidasi)
+        if os.getenv("TESTING", "false").lower() == "true":
+            return "fake-secret-for-testing-only"
+        
         secret = os.getenv("JWT_SECRET_KEY", "")
-        # GAGAL START kalo default atau ga diset
         if not secret or secret == "CHANGE_ME_IN_PRODUCTION_USE_KMS":
             raise RuntimeError(
-                "❌ JWT_SECRET_KEY must be set to a secure value in production! "
+                "JWT_SECRET_KEY must be set to a secure value in production! "
                 "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
             )
         return secret
