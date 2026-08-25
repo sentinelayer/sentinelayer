@@ -1,34 +1,34 @@
-# SentinelLayer - Status Aktual
+# SentinelLayer - Status Aktual (2026-08-25)
 
-## Yang Sudah Jalan
-- FastAPI skeleton + routing
-- JWT authentication (env-based secret)
-- BOLA/IDOR check
+## Bug Fixes Done
+- WAF middleware KeyError
+- authorization.py import time
+- rate_limit middleware dipasang
+- gate engine evidence ID
+- counterfactual threshold
+- risk confidence independent
+- KMS env required
+- migration duplikat dihapus
+- admin backdoor dihapus
+
+## Yang Jalan
+- JWT auth (env secret)
+- BOLA/IDOR (tanpa admin bypass)
 - Rate limiting (Redis + in-memory)
-- Tenant isolation (query-level + RLS migration)
 - WAF regex fallback (6 rules)
-- Behavior baseline (Redis persistence)
-- Risk engine (per-request scoring)
+- Risk engine (per-request)
 - Decision safety (kill switch)
-- Control plane models
-- Threat intel
-- AI layer
-- Evidence matrix
-- Gate engine
-- Key rotation (Redis persistence)
-- Runtime provenance
-- KMS + secrets integration
+- Key rotation (Redis)
+- KMS (AES-256 GCM)
 - Audit logging
-- Backup manager
-- CI workflow
 
 ## Belum
-- Coraza + OWASP CRS (masih regex fallback)
-- RLS Postgres aktif di production
+- Coraza+CRS (masih regex)
+- RLS aktif production
 - Control Plane endpoints
 - Dashboard UI lengkap
-- AML/Fraud/PII detection
-- Grafana/Loki observability
+- AML/Fraud/PII
+- Grafana/Loki
 
 ## Status
 - 38/38 tests passing

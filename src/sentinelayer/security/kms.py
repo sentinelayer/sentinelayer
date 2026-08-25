@@ -1,7 +1,6 @@
 import os
 import base64
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.backends import default_backend
 
 class KMS:
     def __init__(self):
@@ -9,10 +8,8 @@ class KMS:
         self.key_id = os.getenv("KMS_KEY_ID", "local-key")
         key_b64 = os.getenv("ENCRYPTION_KEY", "")
         if not key_b64:
-            key_bytes = os.urandom(32)
-            self.encryption_key = key_bytes
-        else:
-            self.encryption_key = base64.b64decode(key_b64)
+            raise RuntimeError("ENCRYPTION_KEY environment variable is required")
+        self.encryption_key = base64.b64decode(key_b64)
     
     def encrypt(self, plaintext: str) -> str:
         if self.provider == "local":

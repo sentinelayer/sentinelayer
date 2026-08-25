@@ -79,7 +79,7 @@ class GateEngine:
             return GateCheck(name="Automated Test", passed=False, reason="No test files found")
         
         try:
-            result = subprocess.run(
+            result = __import__("subprocess").run(
                 ["pytest", "-q", "--tb=no", "tests/"],
                 capture_output=True,
                 text=True,
@@ -103,7 +103,7 @@ class GateEngine:
             return GateCheck(name="Security Test", passed=False, reason="No security tests found")
         
         try:
-            result = subprocess.run(
+            result = __import__("subprocess").run(
                 ["pytest", "-q", "--tb=no"] + found,
                 capture_output=True,
                 text=True,

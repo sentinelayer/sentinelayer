@@ -70,6 +70,7 @@ async def security_middleware(request: Request, call_next):
     if request.url.path not in public_paths:
         await waf_middleware(request)
         await auth_middleware(request)
+        await rate_limit_middleware(request)
         await tenant_middleware(request)
     
     response = await call_next(request)
@@ -266,7 +267,7 @@ async def ai_analyze(request: Request, current_user: dict = Depends(get_current_
 
 @app.get("/api/v1/gate/check/{requirement_id}")
 async def gate_check(requirement_id: str, current_user: dict = Depends(get_current_user)):
-    result = gate_engine.check_requirement(requirement_id, "EV-001")
+    result = gate_engine.check_requirement(requirement_id, requirement_id)
     return gate_engine.get_status(requirement_id)
 
 @app.get("/api/v1/evidence/list")

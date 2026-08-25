@@ -55,22 +55,22 @@ class CounterfactualEngine:
         return results
     
     def _get_level(self, score: float) -> str:
-        if score >= 0.85:
+        if score >= 85:
             return "critical"
-        elif score >= 0.7:
+        elif score >= 70:
             return "high"
-        elif score >= 0.5:
+        elif score >= 50:
             return "medium"
-        elif score >= 0.3:
+        elif score >= 30:
             return "low"
         return "none"
     
     def _get_decision(self, score: float) -> str:
-        if score >= 0.7:
+        if score >= 70:
             return "block"
-        elif score >= 0.5:
+        elif score >= 50:
             return "challenge"
-        elif score >= 0.3:
+        elif score >= 30:
             return "monitor"
         return "allow"
     

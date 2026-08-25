@@ -3,8 +3,8 @@
 from alembic import op
 import sqlalchemy as sa
 
-revision = '001'
-down_revision = None
+revision = '002'
+down_revision = '001'
 branch_labels = None
 depends_on = None
 
@@ -19,7 +19,18 @@ def upgrade():
         USING (tenant_id = current_setting('app.current_tenant')::text)
         WITH CHECK (tenant_id = current_setting('app.current_tenant')::text);
     """)
+    
+    # Create function untuk set tenant context
+    op.execute("""
+        CREATE OR REPLACE FUNCTION app.set_tenant(tenant_id text)
+        RETURNS void AS $$
+        BEGIN
+            PERFORM set_config('app.current_tenant', tenant_id, false);
+        END;
+        $$ LANGUAGE plpgsql;
+    """)
 
 def downgrade():
     op.execute("DROP POLICY IF EXISTS tenant_isolation_policy ON orders;")
     op.execute("ALTER TABLE orders DISABLE ROW LEVEL SECURITY;")
+    op.execute("DROP FUNCTION IF EXISTS app.set_tenant(text);")

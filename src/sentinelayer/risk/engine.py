@@ -33,7 +33,7 @@ class RiskEngine:
     
     def add_signal(self, name: str, score: float, source: str = "", details: Dict[str, Any] = None) -> None:
         weight = self.signal_weights.get(name, 1.0)
-        confidence = min(1.0, max(0.0, score * 0.8 + 0.2))
+        confidence = 0.8
         
         if not isinstance(score, (int, float)) or math.isnan(score) or math.isinf(score):
             score = 0.0
