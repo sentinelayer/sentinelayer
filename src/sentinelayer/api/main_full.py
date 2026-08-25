@@ -7,6 +7,8 @@ import uuid
 from pydantic import BaseModel, EmailStr
 from typing import List
 
+from sentinelayer.api.routes import auth
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,15 +31,6 @@ app.add_middleware(
 )
 
 # ============ MODELS ============
-
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-class LoginResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    expires_in: int
 
 class OrderCreate(BaseModel):
     product_id: str
@@ -67,7 +60,8 @@ async def root():
         "service": "SentinelLayer",
         "version": "0.1.0",
         "status": "operational",
-        "docs": "/docs"
+        "docs": "/docs",
+        "auth": "/api/v1/auth"
     }
 
 @app.get("/health")
@@ -77,24 +71,6 @@ async def health_check():
 @app.get("/metrics")
 async def metrics():
     return {"message": "Metrics endpoint"}
-
-# ============ AUTH ============
-
-@app.post("/api/v1/auth/login", response_model=LoginResponse)
-async def login(request: LoginRequest):
-    if not request.email or not request.password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email and password required"
-        )
-    
-    # Simple token (tanpa JWT library untuk sementara)
-    token = f"fake-token-{uuid.uuid4()}-{int(time.time())}"
-    
-    return LoginResponse(
-        access_token=token,
-        expires_in=900
-    )
 
 # ============ ORDERS ============
 
@@ -176,6 +152,10 @@ async def delete_order(order_id: str, request: Request):
     
     del orders_db[order_id]
     return {"message": "Order deleted"}
+
+# ============ INCLUDE ROUTERS ============
+
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 
 # ============ ERROR HANDLERS ============
 
