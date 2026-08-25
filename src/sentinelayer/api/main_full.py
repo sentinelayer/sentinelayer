@@ -305,3 +305,6 @@ app.middleware("http")(metrics_middleware)
 async def metrics_endpoint():
     from fastapi.responses import Response
     return Response(content=get_metrics(), media_type="text/plain")
+from sentinelayer.api.v2.routes import router as v2_router
+
+app.include_router(v2_router, prefix="/api/v2", tags=["v2"])
