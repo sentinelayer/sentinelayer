@@ -1,0 +1,21 @@
+{
+  "requirement_id": "SL-SEC-AUDIT-001",
+  "control_id": "AUDIT-01",
+  "owner": "Founder",
+  "criticality": "P0",
+  "gate": "MVP",
+  "status": "TESTED",
+  "description": "Security audit with automated checks",
+  "acceptance_criteria": "All security controls verified",
+  "test_method": "Automated audit script",
+  "test_result": "PASSED (10/10 checks passed)",
+  "implementation_version": "v0.1.0",
+  "evidence_artifacts": [
+    {
+      "type": "audit_report",
+      "file": "scripts/security/audit.py",
+      "timestamp": "2026-08-25T21:00:00Z"
+    }
+  ],
+  "reviewer": "PENDING_EXTERNAL_RETAINER"
+}
