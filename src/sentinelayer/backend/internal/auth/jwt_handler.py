@@ -1,57 +1,44 @@
+import os
+import time
+import jwt
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
-from jose import jwt, JWTError
-import os
 
 class TokenPayload(BaseModel):
-    sub: str  # user_id
+    sub: str
     tenant_id: str
     exp: datetime
-    application_id: Optional[str] = None
-    session_id: Optional[str] = None
     email: Optional[str] = None
     roles: Optional[list] = []
 
 class JWTConfig:
-    # Di production, ambil dari environment variable
-    SECRET_KEY = os.getenv("JWT_SECRET_KEY", "CHANGE_ME_IN_PRODUCTION_USE_KMS")
-    ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+    @staticmethod
+    def get_secret_key() -> str:
+        secret = os.getenv("JWT_SECRET_KEY", "")
+        # GAGAL START kalo default atau ga diset
+        if not secret or secret == "CHANGE_ME_IN_PRODUCTION_USE_KMS":
+            raise RuntimeError(
+                "❌ JWT_SECRET_KEY must be set to a secure value in production! "
+                "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+            )
+        return secret
+    
+    ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "15"))
-    REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("JWT_REFRESH_EXPIRE_DAYS", "7"))
 
-def create_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
-    """Create JWT token"""
+def create_token(data: Dict[str, Any]) -> str:
     to_encode = data.copy()
-    
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=JWTConfig.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+    expire = datetime.now(timezone.utc) + timedelta(minutes=JWTConfig.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
-    
-    return jwt.encode(to_encode, JWTConfig.SECRET_KEY, algorithm=JWTConfig.ALGORITHM)
+    return jwt.encode(to_encode, JWTConfig.get_secret_key(), algorithm=JWTConfig.ALGORITHM)
 
 def verify_token(token: str) -> Optional[TokenPayload]:
-    """Verify JWT token"""
     try:
-        payload = jwt.decode(token, JWTConfig.SECRET_KEY, algorithms=[JWTConfig.ALGORITHM])
+        payload = jwt.decode(token, JWTConfig.get_secret_key(), algorithms=[JWTConfig.ALGORITHM])
         return TokenPayload(**payload)
-    except JWTError:
+    except jwt.PyJWTError:
         return None
 
 def create_access_token(data: Dict[str, Any]) -> str:
-    """Create access token with default expiration"""
     return create_token(data)
-
-def create_refresh_token(data: Dict[str, Any]) -> str:
-    """Create refresh token with longer expiration"""
-    return create_token(data, timedelta(days=JWTConfig.REFRESH_TOKEN_EXPIRE_DAYS))
-
-def decode_token(token: str) -> Optional[Dict[str, Any]]:
-    """Decode token without validation (for debugging)"""
-    try:
-        return jwt.decode(token, JWTConfig.SECRET_KEY, algorithms=[JWTConfig.ALGORITHM], options={"verify_signature": False})
-    except:
-        return None

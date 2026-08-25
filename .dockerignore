@@ -21,3 +21,4 @@ Dockerfile
 docker-compose.yml
 README.md
 PROGRESS.md
+private/
