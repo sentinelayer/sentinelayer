@@ -1,0 +1,37 @@
+groups:
+  - name: sentinelayer_alerts
+    rules:
+      - alert: ServiceDown
+        expr: up{job="sentinelayer"} == 0
+        for: 1m
+        annotations:
+          summary: "SentinelLayer service is down"
+          severity: critical
+      
+      - alert: HighErrorRate
+        expr: rate(sentinelayer_requests_total{status_code=~"5.."}[5m]) / rate(sentinelayer_requests_total[5m]) > 0.05
+        for: 2m
+        annotations:
+          summary: "High error rate (>5%)"
+          severity: warning
+      
+      - alert: WAFBlockSpike
+        expr: rate(sentinelayer_waf_blocks_total[5m]) > 10
+        for: 2m
+        annotations:
+          summary: "WAF blocking spike detected"
+          severity: warning
+      
+      - alert: RateLimitHits
+        expr: rate(sentinelayer_rate_limit_hits_total[5m]) > 5
+        for: 2m
+        annotations:
+          summary: "High rate limit hits detected"
+          severity: warning
+      
+      - alert: SlowRequests
+        expr: histogram_quantile(0.95, sum(rate(sentinelayer_request_duration_seconds_bucket[5m])) by (le, endpoint)) > 2
+        for: 3m
+        annotations:
+          summary: "Slow requests detected (p95 > 2s)"
+          severity: warning

@@ -10,3 +10,4 @@ htmlcov/
 .DS_Store
 railway.json
 render.yaml
+node_modules
