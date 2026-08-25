@@ -197,3 +197,10 @@ class EvidenceMatrix:
 
 def get_evidence_matrix() -> EvidenceMatrix:
     return EvidenceMatrix()
+_evidence_matrix = None
+
+def get_evidence_matrix():
+    global _evidence_matrix
+    if _evidence_matrix is None:
+        _evidence_matrix = EvidenceMatrix()
+    return _evidence_matrix

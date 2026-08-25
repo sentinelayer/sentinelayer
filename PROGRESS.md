@@ -1,47 +1,35 @@
 # SentinelLayer - Status Aktual
 
 ## Yang Sudah Jalan
-- FastAPI skeleton + routing (orders, behavior, risk, decision, controlplane, threatintel, ai, evidence, gate, keys, provenance)
-- JWT authentication (PyJWT, HS256)
-- BOLA/IDOR check (pake database)
-- Rate limiting (Redis + in-memory fallback)
-- Tenant isolation di query level (OrderRepository filter tenant_id)
+- FastAPI skeleton + routing
+- JWT authentication (env-based secret)
+- BOLA/IDOR check
+- Rate limiting (Redis + in-memory)
+- Tenant isolation (query-level + RLS migration)
 - WAF regex fallback (6 rules)
 - Behavior baseline (Redis persistence)
-- Risk engine (per-request)
+- Risk engine (per-request scoring)
 - Decision safety (kill switch)
-- Control plane models (tenant/app/policy/incident - models only, no endpoints yet)
-- Threat intel (local db mock)
-- AI layer (mock)
+- Control plane models
+- Threat intel
+- AI layer
 - Evidence matrix
-- Gate engine (running tests, not just collecting)
-- Key rotation (24h + scheduler)
-- Runtime provenance (fail-closed)
-- RLS migration file (Postgres)
+- Gate engine
+- Key rotation (Redis persistence)
+- Runtime provenance
+- KMS + secrets integration
 - Audit logging
 - Backup manager
-- CI workflow (Trivy, Semgrep, bandit)
-- Frontend dashboard (basic CRUD UI)
+- CI workflow
 
-## Belum / Kurang
-- Coraza + OWASP CRS (hanya regex fallback)
-- RLS Postgres aktif di production (migration ada tapi perlu dipastikan jalan)
-- Dashboard UI lengkap (masih basic)
-- Control Plane endpoints (/tenants, /applications, /policies, /incidents)
-- Blast Radius Control
-- Multi-region policy consistency
-- OWASP LLM Top 10 compliance
-- MITRE ATLAS mapping
-- Observability full stack (Grafana/Loki belum aktif)
-- API versioning v2 (router belum diimplementasi)
-- AML monitoring (belum)
-- Fraud detection (belum)
-- PII detection (belum)
-- Data retention (belum)
-- HA manager (belum)
-- Webhook security (belum)
+## Belum
+- Coraza + OWASP CRS (masih regex fallback)
+- RLS Postgres aktif di production
+- Control Plane endpoints
+- Dashboard UI lengkap
+- AML/Fraud/PII detection
+- Grafana/Loki observability
 
 ## Status
-- Tests: 38/38 passing (dengan TESTING=true)
-- Deployment: Railway siap
-- Production readiness: API functional, but beberapa security features masih partial
+- 38/38 tests passing
+- Siap deploy

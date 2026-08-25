@@ -202,3 +202,10 @@ class ControlPlane:
 
 def get_control_plane() -> ControlPlane:
     return ControlPlane()
+_control_plane = None
+
+def get_control_plane():
+    global _control_plane
+    if _control_plane is None:
+        _control_plane = ControlPlane()
+    return _control_plane

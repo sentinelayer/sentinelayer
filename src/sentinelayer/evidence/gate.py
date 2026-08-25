@@ -199,3 +199,10 @@ class GateEngine:
 
 def get_gate_engine() -> GateEngine:
     return GateEngine()
+_gate_engine = None
+
+def get_gate_engine():
+    global _gate_engine
+    if _gate_engine is None:
+        _gate_engine = GateEngine()
+    return _gate_engine

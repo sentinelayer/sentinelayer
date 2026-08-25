@@ -133,3 +133,10 @@ class RiskEngine:
 
 def get_risk_engine() -> RiskEngine:
     return RiskEngine()
+_risk_engine = None
+
+def get_risk_engine():
+    global _risk_engine
+    if _risk_engine is None:
+        _risk_engine = RiskEngine()
+    return _risk_engine

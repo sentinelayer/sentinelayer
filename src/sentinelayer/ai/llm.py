@@ -116,3 +116,10 @@ class LLMLayer:
 
 def get_llm_layer() -> LLMLayer:
     return LLMLayer()
+_llm_layer = None
+
+def get_llm_layer():
+    global _llm_layer
+    if _llm_layer is None:
+        _llm_layer = LLMLayer()
+    return _llm_layer

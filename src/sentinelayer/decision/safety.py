@@ -100,5 +100,10 @@ class DecisionSafetyLayer:
             "rollback_stack_size": len(self.rollback_stack)
         }
 
+_decision_safety = None
+
 def get_decision_safety() -> DecisionSafetyLayer:
-    return DecisionSafetyLayer()
+    global _decision_safety
+    if _decision_safety is None:
+        _decision_safety = DecisionSafetyLayer()
+    return _decision_safety

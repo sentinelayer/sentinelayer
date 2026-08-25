@@ -40,3 +40,10 @@ class SecretsManager:
 
 def get_secrets_manager() -> SecretsManager:
     return SecretsManager()
+_secrets_manager = None
+
+def get_secrets_manager():
+    global _secrets_manager
+    if _secrets_manager is None:
+        _secrets_manager = SecretsManager()
+    return _secrets_manager

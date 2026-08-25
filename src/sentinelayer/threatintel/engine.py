@@ -155,3 +155,10 @@ class ThreatIntelEngine:
 
 def get_threat_intel() -> ThreatIntelEngine:
     return ThreatIntelEngine()
+_threat_intel = None
+
+def get_threat_intel():
+    global _threat_intel
+    if _threat_intel is None:
+        _threat_intel = ThreatIntelEngine()
+    return _threat_intel
