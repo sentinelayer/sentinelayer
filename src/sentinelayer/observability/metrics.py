@@ -1,6 +1,5 @@
 """
 Prometheus metrics untuk SentinelLayer
-Section 7.17 - Observability
 """
 
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, REGISTRY
@@ -8,28 +7,24 @@ from typing import Optional
 import time
 
 # ============ COUNTERS ============
-# Total requests
 requests_total = Counter(
     'sentinelayer_requests_total',
     'Total HTTP requests',
     ['method', 'endpoint', 'tenant', 'status_code']
 )
 
-# WAF blocks
 waf_blocks_total = Counter(
     'sentinelayer_waf_blocks_total',
     'Total WAF blocked requests',
     ['endpoint', 'rule_id', 'severity']
 )
 
-# Rate limit hits
 rate_limit_hits_total = Counter(
     'sentinelayer_rate_limit_hits_total',
     'Total rate limit hits',
     ['endpoint', 'dimension']
 )
 
-# Authentication failures
 auth_failures_total = Counter(
     'sentinelayer_auth_failures_total',
     'Total authentication failures',
@@ -37,7 +32,6 @@ auth_failures_total = Counter(
 )
 
 # ============ HISTOGRAMS ============
-# Request duration
 request_duration = Histogram(
     'sentinelayer_request_duration_seconds',
     'HTTP request duration in seconds',
@@ -46,19 +40,16 @@ request_duration = Histogram(
 )
 
 # ============ GAUGES ============
-# Active requests
 active_requests = Gauge(
     'sentinelayer_active_requests',
     'Active HTTP requests'
 )
 
-# WAF rules loaded
 waf_rules_loaded = Gauge(
     'sentinelayer_waf_rules_loaded',
     'Number of WAF rules loaded'
 )
 
-# Tenants active
 tenants_active = Gauge(
     'sentinelayer_tenants_active',
     'Number of active tenants'
@@ -68,66 +59,91 @@ tenants_active = Gauge(
 
 def record_request(method: str, endpoint: str, tenant: str, status_code: int, duration: float):
     """Record HTTP request metrics"""
-    requests_total.labels(
-        method=method,
-        endpoint=endpoint,
-        tenant=tenant or 'unknown',
-        status_code=str(status_code)
-    ).inc()
-    
-    request_duration.labels(
-        method=method,
-        endpoint=endpoint
-    ).observe(duration)
+    try:
+        requests_total.labels(
+            method=method or 'unknown',
+            endpoint=endpoint or 'unknown',
+            tenant=tenant or 'unknown',
+            status_code=str(status_code) if status_code else '0'
+        ).inc()
+        
+        request_duration.labels(
+            method=method or 'unknown',
+            endpoint=endpoint or 'unknown'
+        ).observe(duration)
+    except Exception as e:
+        print(f"Metrics error: {e}")
 
 def record_waf_block(endpoint: str, rule_id: str, severity: str):
     """Record WAF block"""
-    waf_blocks_total.labels(
-        endpoint=endpoint,
-        rule_id=rule_id,
-        severity=severity
-    ).inc()
+    try:
+        waf_blocks_total.labels(
+            endpoint=endpoint or 'unknown',
+            rule_id=rule_id or 'unknown',
+            severity=severity or 'unknown'
+        ).inc()
+    except Exception as e:
+        print(f"Metrics error: {e}")
 
 def record_rate_limit_hit(endpoint: str, dimension: str):
     """Record rate limit hit"""
-    rate_limit_hits_total.labels(
-        endpoint=endpoint,
-        dimension=dimension
-    ).inc()
+    try:
+        rate_limit_hits_total.labels(
+            endpoint=endpoint or 'unknown',
+            dimension=dimension or 'unknown'
+        ).inc()
+    except Exception as e:
+        print(f"Metrics error: {e}")
 
 def record_auth_failure(reason: str):
     """Record authentication failure"""
-    auth_failures_total.labels(reason=reason).inc()
+    try:
+        auth_failures_total.labels(reason=reason or 'unknown').inc()
+    except Exception as e:
+        print(f"Metrics error: {e}")
 
 def increment_active_requests():
     """Increment active requests counter"""
-    active_requests.inc()
+    try:
+        active_requests.inc()
+    except Exception:
+        pass
 
 def decrement_active_requests():
     """Decrement active requests counter"""
-    active_requests.dec()
+    try:
+        active_requests.dec()
+    except Exception:
+        pass
 
 def set_waf_rules_count(count: int):
     """Set WAF rules count"""
-    waf_rules_loaded.set(count)
+    try:
+        waf_rules_loaded.set(count)
+    except Exception:
+        pass
 
 def set_tenants_active(count: int):
     """Set active tenants count"""
-    tenants_active.set(count)
+    try:
+        tenants_active.set(count)
+    except Exception:
+        pass
 
 def get_metrics():
     """Get all metrics in Prometheus format"""
-    return generate_latest(REGISTRY)
+    try:
+        return generate_latest(REGISTRY)
+    except Exception as e:
+        return f"Error generating metrics: {e}".encode()
 
 # ============ Middleware for FastAPI ============
 
-from fastapi import Request, Response
-import time
+from fastapi import Request
 
 async def metrics_middleware(request: Request, call_next):
     """FastAPI middleware untuk metrics"""
     
-    # Increment active requests
     increment_active_requests()
     
     start_time = time.time()
@@ -135,7 +151,6 @@ async def metrics_middleware(request: Request, call_next):
     try:
         response = await call_next(request)
     except Exception as e:
-        # Record error
         duration = time.time() - start_time
         record_request(
             method=request.method,
@@ -149,7 +164,6 @@ async def metrics_middleware(request: Request, call_next):
     
     duration = time.time() - start_time
     
-    # Record request metrics
     record_request(
         method=request.method,
         endpoint=request.url.path,

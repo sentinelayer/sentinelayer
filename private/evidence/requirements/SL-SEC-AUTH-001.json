@@ -5,7 +5,7 @@
   "criticality": "P0",
   "gate": "MVP",
   "status": "TESTED",
-  "description": "JWT Authentication",
-  "test_result": "PASSED (4/4 tests)",
+  "description": "AUTH Control",
+  "test_result": "PASSED",
   "implementation_version": "v0.1.0"
 }

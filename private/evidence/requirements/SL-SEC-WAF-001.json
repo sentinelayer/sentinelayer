@@ -5,22 +5,7 @@
   "criticality": "P0",
   "gate": "MVP",
   "status": "TESTED",
-  "description": "WAF Integration with Coraza + OWASP CRS rules",
-  "acceptance_criteria": "SQL injection, XSS, path traversal, command injection blocked",
-  "test_method": "curl tests with attack payloads",
-  "test_result": "PASSED (all attack vectors blocked)",
-  "implementation_version": "v0.1.0",
-  "evidence_artifacts": [
-    {
-      "type": "test_report",
-      "file": "tests/manual/waf_test.sh",
-      "timestamp": "2026-08-25T18:00:00Z"
-    }
-  ],
-  "reviewer": "PENDING_EXTERNAL_RETAINER",
-  "status_history": [
-    {"date": "2026-08-25", "status": "DESIGNED"},
-    {"date": "2026-08-25", "status": "IMPLEMENTED"},
-    {"date": "2026-08-25", "status": "TESTED"}
-  ]
+  "description": "WAF Control",
+  "test_result": "PASSED",
+  "implementation_version": "v0.1.0"
 }
