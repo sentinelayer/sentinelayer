@@ -1,56 +1,18 @@
-# Stage 1: Builder
 FROM python:3.11-slim AS builder
-
 WORKDIR /app
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy and install dependencies
 COPY pyproject.toml requirements.txt ./
-RUN pip install --no-cache-dir --user -e .
+RUN pip install --no-cache-dir -e .
 
-# Stage 2: Runtime
 FROM python:3.11-slim
-
 WORKDIR /app
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY src/ ./src/
+COPY private/ ./private/
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create non-root user
 RUN useradd -m -u 1000 sentinelayer
-
-# Copy from builder
-COPY --from=builder /root/.local /home/sentinelayer/.local
-ENV PATH=/home/sentinelayer/.local/bin:$PATH
-
-# Copy application code
-COPY --chown=sentinelayer:sentinelayer src/ ./src/
-COPY --chown=sentinelayer:sentinelayer private/ ./private/
-COPY --chown=sentinelayer:sentinelayer pyproject.toml requirements.txt ./
-
-# Set ownership
-RUN chown -R sentinelayer:sentinelayer /app
-
-# Switch to non-root user
 USER sentinelayer
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
 
 EXPOSE 8000
 
-# Run with production settings
-CMD ["uvicorn", "src.sentinelayer.api.main_full:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--workers", "4", \
-     "--log-level", "warning"]
+CMD ["uvicorn", "src.sentinelayer.api.main_full:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
