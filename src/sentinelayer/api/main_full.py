@@ -1,112 +1,65 @@
-from fastapi import FastAPI, Request, Depends, HTTPException, status
+from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse
 import time
 import logging
+import uuid
+from pydantic import BaseModel, EmailStr
+from typing import List
 
-from sentinelayer.api.routes import auth, orders
-from sentinelayer.api.middleware.auth import AuthMiddleware
-from sentinelayer.api.middleware.ratelimit import RateLimitMiddleware
-from sentinelayer.api.middleware.tenant import TenantMiddleware
-from sentinelayer.api.middleware.waf import WAFMiddleware
-from sentinelayer.api.middleware.security_headers import SecurityHeadersMiddleware
-from sentinelayer.observability.metrics import (
-    metrics_middleware, get_metrics, set_waf_rules_count,
-    record_waf_block, record_rate_limit_hit, record_auth_failure
-)
-from sentinelayer.observability.logging import setup_logging, logging_middleware
-
-# Setup structured logging
-setup_logging()
+# Setup logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Create FastAPI app
 app = FastAPI(
     title="SentinelLayer API",
-    description="Security control and enforcement platform (Blueprint 10/10)",
+    description="Security control and enforcement platform",
     version="0.1.0",
     docs_url="/docs"
 )
 
-# Security headers (first middleware)
-app.add_middleware(SecurityHeadersMiddleware)
-
-# CORS (with production settings)
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://*.sentinelayer.com",
-        "https://sentinelayer.com",
-        "http://localhost:3000",
-        "http://localhost:8000",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
-    max_age=86400,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Init middlewares
-waf_middleware = WAFMiddleware()
-auth_middleware = AuthMiddleware()
-rate_limit_middleware = RateLimitMiddleware()
-tenant_middleware = TenantMiddleware()
+# ============ MODELS ============
 
-# Set WAF rules count for metrics
-set_waf_rules_count(len(waf_middleware.waf.rules))
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
 
-@app.middleware("http")
-async def security_middleware(request: Request, call_next):
-    public_paths = ["/", "/health", "/docs", "/redoc", "/openapi.json", "/api/v1/auth/login", "/metrics"]
-    
-    # 1. WAF (all requests)
-    if request.url.path not in public_paths:
-        result = await waf_middleware(request)
-        if result and result.get("blocked"):
-            for violation in result.get("violations", []):
-                record_waf_block(
-                    endpoint=request.url.path,
-                    rule_id=violation["rule_id"],
-                    severity=violation["severity"]
-                )
-    
-    # 2. Rate limit
-    if request.url.path not in public_paths:
-        try:
-            await rate_limit_middleware(request)
-        except HTTPException as e:
-            record_rate_limit_hit(
-                endpoint=request.url.path,
-                dimension="ip"
-            )
-            raise e
-    
-    # 3. Auth
-    if request.url.path not in public_paths:
-        try:
-            await auth_middleware(request)
-        except HTTPException as e:
-            record_auth_failure(reason="invalid_token")
-            raise e
-    
-    # 4. Tenant isolation
-    if request.url.path not in public_paths:
-        await tenant_middleware(request)
-    
-    # Process request
-    start_time = time.time()
-    response = await call_next(request)
-    response.headers["X-Process-Time"] = str(time.time() - start_time)
-    
-    # Add WAF headers
-    if hasattr(request.state, "waf_violations"):
-        response.headers["X-WAF-Violations"] = str(request.state.waf_violations)
-        response.headers["X-WAF-Severity"] = request.state.waf_severity
-    
-    return response
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
 
-# Apply observability middlewares
-app.middleware("http")(metrics_middleware)
-app.middleware("http")(logging_middleware)
+class OrderCreate(BaseModel):
+    product_id: str
+    quantity: int
+    total_amount: float
+
+class OrderResponse(BaseModel):
+    id: str
+    user_id: str
+    product_id: str
+    quantity: int
+    total_amount: float
+    status: str
+    tenant_id: str
+    created_at: str
+    updated_at: str
+
+# ============ STORAGE ============
+
+orders_db = {}
+
+# ============ ROOT ============
 
 @app.get("/")
 async def root():
@@ -114,16 +67,7 @@ async def root():
         "service": "SentinelLayer",
         "version": "0.1.0",
         "status": "operational",
-        "docs": "/docs",
-        "metrics": "/metrics",
-        "security": {
-            "jwt": "enabled",
-            "rate_limit": "enabled",
-            "tenant_isolation": "enabled",
-            "bola_protection": "enabled",
-            "waf": "enabled",
-            "security_headers": "enabled"
-        }
+        "docs": "/docs"
     }
 
 @app.get("/health")
@@ -132,12 +76,108 @@ async def health_check():
 
 @app.get("/metrics")
 async def metrics():
-    """Prometheus metrics endpoint"""
-    return Response(content=get_metrics(), media_type="text/plain")
+    return {"message": "Metrics endpoint"}
 
-# Include routers
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
-app.include_router(orders.router, prefix="/api/v1/orders", tags=["orders"])
+# ============ AUTH ============
+
+@app.post("/api/v1/auth/login", response_model=LoginResponse)
+async def login(request: LoginRequest):
+    if not request.email or not request.password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email and password required"
+        )
+    
+    # Simple token (tanpa JWT library untuk sementara)
+    token = f"fake-token-{uuid.uuid4()}-{int(time.time())}"
+    
+    return LoginResponse(
+        access_token=token,
+        expires_in=900
+    )
+
+# ============ ORDERS ============
+
+@app.post("/api/v1/orders/", response_model=OrderResponse)
+async def create_order(order: OrderCreate, request: Request):
+    tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
+    user_id = request.headers.get("X-User-ID", "user-default")
+    
+    order_id = str(uuid.uuid4())
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    
+    order_data = {
+        "id": order_id,
+        "user_id": user_id,
+        "product_id": order.product_id,
+        "quantity": order.quantity,
+        "total_amount": order.total_amount,
+        "status": "pending",
+        "tenant_id": tenant_id,
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    orders_db[order_id] = order_data
+    return OrderResponse(**order_data)
+
+@app.get("/api/v1/orders/", response_model=List[OrderResponse])
+async def list_orders(request: Request):
+    tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
+    
+    result = [
+        OrderResponse(**order) 
+        for order in orders_db.values() 
+        if order["tenant_id"] == tenant_id
+    ]
+    return result
+
+@app.get("/api/v1/orders/{order_id}", response_model=OrderResponse)
+async def get_order(order_id: str, request: Request):
+    tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
+    
+    order = orders_db.get(order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    return OrderResponse(**order)
+
+@app.put("/api/v1/orders/{order_id}", response_model=OrderResponse)
+async def update_order(order_id: str, order: OrderCreate, request: Request):
+    tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
+    
+    existing = orders_db.get(order_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if existing["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    existing["product_id"] = order.product_id
+    existing["quantity"] = order.quantity
+    existing["total_amount"] = order.total_amount
+    existing["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    
+    return OrderResponse(**existing)
+
+@app.delete("/api/v1/orders/{order_id}")
+async def delete_order(order_id: str, request: Request):
+    tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
+    
+    order = orders_db.get(order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    del orders_db[order_id]
+    return {"message": "Order deleted"}
+
+# ============ ERROR HANDLERS ============
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

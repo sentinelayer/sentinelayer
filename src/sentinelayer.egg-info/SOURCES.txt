@@ -9,9 +9,14 @@ src/sentinelayer.egg-info/requires.txt
 src/sentinelayer.egg-info/top_level.txt
 src/sentinelayer/api/main.py
 src/sentinelayer/api/main_full.py
+src/sentinelayer/api/main_simple.py
+src/sentinelayer/api/middleware/__init__.py
 src/sentinelayer/api/middleware/auth.py
 src/sentinelayer/api/middleware/ratelimit.py
+src/sentinelayer/api/middleware/security_headers.py
 src/sentinelayer/api/middleware/tenant.py
+src/sentinelayer/api/middleware/waf.py
+src/sentinelayer/api/routes/__init__.py
 src/sentinelayer/api/routes/auth.py
 src/sentinelayer/api/routes/health.py
 src/sentinelayer/api/routes/orders.py
@@ -22,3 +27,6 @@ src/sentinelayer/database/models/base.py
 src/sentinelayer/database/models/order.py
 src/sentinelayer/gateway/__init__.py
 src/sentinelayer/gateway/ratelimit/sliding_window.py
+src/sentinelayer/gateway/waf/coraza_wrapper.py
+src/sentinelayer/observability/logging.py
+src/sentinelayer/observability/metrics.py
