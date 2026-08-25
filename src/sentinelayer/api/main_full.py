@@ -15,6 +15,7 @@ from sentinelayer.backend.internal.auth.authorization import AuthorizationMiddle
 
 from sentinelayer.api.middleware.auth import AuthMiddleware
 from sentinelayer.api.middleware.waf import WAFMiddleware
+from sentinelayer.api.middleware.pipeline import security_pipeline
 from sentinelayer.api.middleware.ratelimit import RateLimitMiddleware
 from sentinelayer.api.middleware.tenant import TenantMiddleware
 
@@ -59,24 +60,7 @@ bola_middleware = AuthorizationMiddleware()
 
 @app.middleware("http")
 async def security_middleware(request: Request, call_next):
-    public_paths = ["/", "/health", "/docs", "/redoc", "/openapi.json", "/metrics", "/api/v1/auth/login"]
-    
-    if TESTING:
-        if request.url.path not in public_paths:
-            await waf_middleware(request)
-        response = await call_next(request)
-        return response
-    
-    if request.url.path not in public_paths:
-        await waf_middleware(request)
-        await auth_middleware(request)
-        await rate_limit_middleware(request)
-        await rate_limit_middleware(request)
-        await tenant_middleware(request)
-    
-    response = await call_next(request)
-    return response
-
+    return await security_pipeline(request, call_next)
 async def get_current_user(request: Request):
     if TESTING:
         return {"sub": "test-user", "tenant_id": "tenant-test", "roles": ["user"]}
@@ -300,6 +284,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 from sentinelayer.observability.metrics import metrics_middleware, get_metrics
 
 app.middleware("http")(metrics_middleware)
+async def security_middleware(request: Request, call_next):
+    return await security_pipeline(request, call_next)
 
 
 @app.get("/metrics")

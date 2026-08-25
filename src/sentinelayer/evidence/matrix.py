@@ -43,7 +43,7 @@ class EvidenceMatrix:
         
         # Generate hash
         content = f"{requirement_id}:{control_id}:{artifact}:{time.time()}"
-        hash_val = hashlib.sha256(content.encode()).hexdigest()
+        hash_val = hashlib.sha256(open(artifact, "rb").read()).hexdigest()
         
         evidence = Evidence(
             evidence_id=evidence_id,
@@ -85,6 +85,10 @@ class EvidenceMatrix:
         return True
     
     def validate_evidence(self, evidence_id: str) -> bool:
+        if time.time() - evidence.timestamp > evidence.validity * 86400:
+            evidence.status = "EXPIRED"
+            self.save_evidence(evidence)
+            return False
         """Validate evidence and check expiration"""
         evidence = self.evidences.get(evidence_id)
         if not evidence:

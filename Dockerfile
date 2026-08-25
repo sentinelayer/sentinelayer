@@ -5,7 +5,7 @@ RUN pip install --no-cache-dir -e .
 COPY src/ ./src/
 COPY scripts/ ./scripts/
 COPY scripts/ ./scripts/
-COPY private/ ./private/
+COPY private/ ./private/ 2>/dev/null || true
 EXPOSE 8000
 RUN python scripts/run_migrations.py
 RUN python scripts/ensure_rls.py || echo "RLS already applied"
