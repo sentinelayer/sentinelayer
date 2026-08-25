@@ -1,17 +1,19 @@
+![Header Animation](header.svg)
+
 # SentinelLayer
 
 Building **API Security Platform** — WAF + Behavioral Analysis + Risk Decision + Observability.
 
 ---
 
-## 🔥 What I'm Building
+## 🚀 What I'm Building
 
-**SentinelLayer** is an all-in-one API security solution designed to protect modern applications from:
+SentinelLayer is an all-in-one API security solution designed to protect modern applications from:
 - Cyber attacks (SQLi, XSS, SSRF, etc.)
 - Business logic abuse
 - Data leaks
 
-Built for solo founders, startups, and enterprises who need **simple, affordable, and effective security**.
+Built for solo founders, startups, and enterprises who need simple, affordable, and effective security.
 
 ---
 
@@ -52,4 +54,5 @@ Built for solo founders, startups, and enterprises who need **simple, affordable
 
 ## 📊 GitHub Stats
 
-![SentinelLayer's GitHub stats](https://github-readme-stats.vercel.app/api?username=sentinelayer&show_icons=true&theme=dark)
+![GitHub Stats](https://github-readme-stats.vercel.app/api?username=sentinelayer&show_icons=true&theme=dark)
+![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=sentinelayer&layout=compact&theme=dark)
