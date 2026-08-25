@@ -3,6 +3,8 @@ Name: sentinelayer
 Version: 0.1.0
 Summary: Security control and enforcement platform (Blueprint 10/10)
 Requires-Python: >=3.11
+Requires-Dist: httpx<1,>=0.27
+Requires-Dist: httpx<1,>=0.27
 Requires-Dist: fastapi<1,>=0.115
 Requires-Dist: uvicorn[standard]<1,>=0.30
 Requires-Dist: pydantic<3,>=2.8
