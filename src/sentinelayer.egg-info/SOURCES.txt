@@ -7,4 +7,6 @@ src/sentinelayer.egg-info/dependency_links.txt
 src/sentinelayer.egg-info/requires.txt
 src/sentinelayer.egg-info/top_level.txt
 src/sentinelayer/backend/__init__.py
+src/sentinelayer/backend/internal/auth/jwt_handler.py
 src/sentinelayer/gateway/__init__.py
+src/sentinelayer/gateway/ratelimit/sliding_window.py

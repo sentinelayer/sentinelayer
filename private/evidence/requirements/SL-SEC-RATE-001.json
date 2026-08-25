@@ -1,0 +1,28 @@
+{
+  "requirement_id": "SL-SEC-RATE-001",
+  "control_id": "RATE-01",
+  "owner": "Founder",
+  "criticality": "P0",
+  "gate": "MVP",
+  "status": "TESTED",
+  "description": "Redis sliding window rate limiting with resource-aware limits",
+  "acceptance_criteria": "Endpoint-specific limits enforced, distributed attack detection",
+  "test_method": "pytest unit tests with fakeredis",
+  "test_result": "PASSED (5/5 tests passed on 2026-08-25)",
+  "failure_behavior": "FAIL-OPEN (Redis unavailable -> allow + alert)",
+  "rollback_strategy": "Disable rate limiting middleware",
+  "implementation_version": "v0.1.0",
+  "evidence_artifacts": [
+    {
+      "type": "test_report",
+      "file": "tests/unit/gateway/test_rate_limiter.py",
+      "timestamp": "2026-08-25T15:00:00Z"
+    }
+  ],
+  "reviewer": "PENDING_EXTERNAL_RETAINER",
+  "status_history": [
+    {"date": "2026-08-25", "status": "DESIGNED"},
+    {"date": "2026-08-25", "status": "IMPLEMENTED"},
+    {"date": "2026-08-25", "status": "TESTED"}
+  ]
+}
