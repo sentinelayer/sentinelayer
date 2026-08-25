@@ -1,33 +1,37 @@
 import os
 import base64
-import hashlib
-from typing import Optional
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.backends import default_backend
 
 class KMS:
     def __init__(self):
         self.provider = os.getenv("KMS_PROVIDER", "local")
         self.key_id = os.getenv("KMS_KEY_ID", "local-key")
-        self.encryption_key = os.getenv("ENCRYPTION_KEY", "")
+        key_b64 = os.getenv("ENCRYPTION_KEY", "")
+        if not key_b64:
+            key_bytes = os.urandom(32)
+            self.encryption_key = key_bytes
+        else:
+            self.encryption_key = base64.b64decode(key_b64)
     
     def encrypt(self, plaintext: str) -> str:
         if self.provider == "local":
-            if not self.encryption_key:
-                self.encryption_key = base64.b64encode(os.urandom(32)).decode()
-            key_bytes = base64.b64decode(self.encryption_key)
-            plaintext_bytes = plaintext.encode()
-            encrypted = bytes(a ^ b for a, b in zip(plaintext_bytes, key_bytes[:len(plaintext_bytes)]))
-            return base64.b64encode(encrypted).decode()
+            aesgcm = AESGCM(self.encryption_key)
+            nonce = os.urandom(12)
+            ciphertext = aesgcm.encrypt(nonce, plaintext.encode(), None)
+            combined = nonce + ciphertext
+            return base64.b64encode(combined).decode()
         else:
             raise NotImplementedError(f"KMS provider {self.provider} not implemented")
     
     def decrypt(self, ciphertext: str) -> str:
         if self.provider == "local":
-            if not self.encryption_key:
-                raise ValueError("Encryption key not set")
-            key_bytes = base64.b64decode(self.encryption_key)
-            ciphertext_bytes = base64.b64decode(ciphertext)
-            decrypted = bytes(a ^ b for a, b in zip(ciphertext_bytes, key_bytes[:len(ciphertext_bytes)]))
-            return decrypted.decode()
+            combined = base64.b64decode(ciphertext)
+            nonce = combined[:12]
+            ct = combined[12:]
+            aesgcm = AESGCM(self.encryption_key)
+            plaintext = aesgcm.decrypt(nonce, ct, None)
+            return plaintext.decode()
         else:
             raise NotImplementedError(f"KMS provider {self.provider} not implemented")
     

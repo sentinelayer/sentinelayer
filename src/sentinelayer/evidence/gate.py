@@ -14,16 +14,12 @@ class GateCheck:
     details: Dict[str, Any] = field(default_factory=dict)
 
 class GateEngine:
-    """Machine-enforced acceptance gate engine"""
-    
     def __init__(self):
         self.checks: List[GateCheck] = []
         self.gate_results: Dict[str, bool] = {}
         self.test_dir = "tests"
-        self.coverage_threshold = 0.7
     
     def check_requirement(self, requirement_id: str, evidence_id: str) -> bool:
-        """Run all checks for a requirement"""
         checks = [
             self.check_implementation(requirement_id),
             self.check_test(requirement_id),
@@ -37,15 +33,12 @@ class GateEngine:
         all_passed = all(c.passed for c in checks)
         self.gate_results[requirement_id] = all_passed
         
-        # Log hasil
         for check in checks:
-            print(f"  {check.name}: {'✅ PASS' if check.passed else '❌ FAIL'} - {check.reason}")
+            print(f"  {check.name}: {'PASS' if check.passed else 'FAIL'} - {check.reason}")
         
         return all_passed
     
     def check_implementation(self, requirement_id: str) -> GateCheck:
-        """Check if implementation file exists"""
-        # Mapping requirement ID ke file path
         impl_map = {
             "SL-SEC-AUTH-001": "src/sentinelayer/backend/internal/auth/jwt_handler.py",
             "SL-SEC-BOLA-001": "src/sentinelayer/backend/internal/auth/authorization.py",
@@ -57,37 +50,25 @@ class GateEngine:
         
         filepath = impl_map.get(requirement_id)
         if not filepath:
-            return GateCheck(
-                name="Implementation",
-                passed=False,
-                reason=f"No mapping for requirement {requirement_id}"
-            )
+            return GateCheck(name="Implementation", passed=False, reason=f"No mapping for {requirement_id}")
         
-        if os.path.exists(filepath):
-            # Check file size (not empty)
-            size = os.path.getsize(filepath)
-            if size > 100:
-                return GateCheck(
-                    name="Implementation",
-                    passed=True,
-                    reason=f"File exists ({size} bytes)"
-                )
-            else:
-                return GateCheck(
-                    name="Implementation",
-                    passed=False,
-                    reason=f"File exists but empty ({size} bytes)"
-                )
-        else:
-            return GateCheck(
-                name="Implementation",
-                passed=False,
-                reason=f"File not found: {filepath}"
-            )
+        if not os.path.exists(filepath):
+            return GateCheck(name="Implementation", passed=False, reason=f"File not found: {filepath}")
+        
+        try:
+            with open(filepath, "r") as f:
+                content = f.read()
+                if len(content) < 100:
+                    return GateCheck(name="Implementation", passed=False, reason=f"File too small: {len(content)} bytes")
+                
+                if "def " not in content and "class " not in content:
+                    return GateCheck(name="Implementation", passed=False, reason="No functions or classes found")
+                
+                return GateCheck(name="Implementation", passed=True, reason=f"Implementation found ({len(content)} bytes)")
+        except Exception as e:
+            return GateCheck(name="Implementation", passed=False, reason=f"Error reading file: {e}")
     
     def check_test(self, requirement_id: str) -> GateCheck:
-        """Check if tests exist and pass"""
-        # Cek ada file test
         test_files = []
         for root, dirs, files in os.walk("tests"):
             for file in files:
@@ -95,138 +76,83 @@ class GateEngine:
                     test_files.append(os.path.join(root, file))
         
         if not test_files:
-            return GateCheck(
-                name="Automated Test",
-                passed=False,
-                reason="No test files found"
-            )
+            return GateCheck(name="Automated Test", passed=False, reason="No test files found")
         
-        # Run pytest dengan --collect-only buat lihat test count
         try:
             result = subprocess.run(
-                ["pytest", "--collect-only", "-q", "tests/"],
+                ["pytest", "-q", "--tb=no", "tests/"],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=60
             )
-            test_count = result.stdout.count("test_")
             
-            if test_count > 0:
-                return GateCheck(
-                    name="Automated Test",
-                    passed=True,
-                    reason=f"{test_count} tests found"
-                )
-            else:
-                return GateCheck(
-                    name="Automated Test",
-                    passed=False,
-                    reason="No test cases collected"
-                )
+            if "FAILED" in result.stdout or "ERROR" in result.stdout:
+                return GateCheck(name="Automated Test", passed=False, reason="Some tests failed")
+            
+            return GateCheck(name="Automated Test", passed=True, reason="All tests passed")
+        except subprocess.TimeoutExpired:
+            return GateCheck(name="Automated Test", passed=False, reason="Test timeout")
         except Exception as e:
-            return GateCheck(
-                name="Automated Test",
-                passed=False,
-                reason=f"Pytest error: {str(e)}"
-            )
+            return GateCheck(name="Automated Test", passed=False, reason=f"Test error: {e}")
     
     def check_security(self, requirement_id: str) -> GateCheck:
-        """Check if security tests pass"""
-        # Cek ada WAF test
-        waf_test = "tests/unit/waf/test_waf.py"
-        if os.path.exists(waf_test):
-            return GateCheck(
-                name="Security Test",
-                passed=True,
-                reason=f"WAF tests exist"
-            )
+        security_tests = ["tests/unit/waf/test_waf.py", "tests/unit/auth/test_bola.py"]
+        found = [f for f in security_tests if os.path.exists(f)]
         
-        # Cek ada BOLA test
-        bola_test = "tests/unit/auth/test_bola.py"
-        if os.path.exists(bola_test):
-            return GateCheck(
-                name="Security Test",
-                passed=True,
-                reason=f"BOLA tests exist"
-            )
+        if not found:
+            return GateCheck(name="Security Test", passed=False, reason="No security tests found")
         
-        return GateCheck(
-            name="Security Test",
-            passed=False,
-            reason="No security tests found"
-        )
+        try:
+            result = subprocess.run(
+                ["pytest", "-q", "--tb=no"] + found,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            
+            if "FAILED" in result.stdout:
+                return GateCheck(name="Security Test", passed=False, reason="Security tests failed")
+            
+            return GateCheck(name="Security Test", passed=True, reason=f"{len(found)} security test files passed")
+        except Exception as e:
+            return GateCheck(name="Security Test", passed=False, reason=f"Security test error: {e}")
     
     def check_evidence(self, evidence_id: str) -> GateCheck:
-        """Check if evidence exists and is valid"""
         evidence_file = f"private/evidence/requirements/{evidence_id}.json"
         
         if not os.path.exists(evidence_file):
-            return GateCheck(
-                name="Evidence",
-                passed=False,
-                reason=f"Evidence file not found: {evidence_file}"
-            )
+            return GateCheck(name="Evidence", passed=False, reason=f"Evidence not found: {evidence_file}")
         
         try:
             with open(evidence_file, "r") as f:
                 data = json.load(f)
                 status = data.get("status", "UNKNOWN")
                 if status in ["VALID", "TESTED", "VERIFIED"]:
-                    return GateCheck(
-                        name="Evidence",
-                        passed=True,
-                        reason=f"Evidence status: {status}"
-                    )
+                    return GateCheck(name="Evidence", passed=True, reason=f"Status: {status}")
                 else:
-                    return GateCheck(
-                        name="Evidence",
-                        passed=False,
-                        reason=f"Evidence status: {status} (not valid)"
-                    )
+                    return GateCheck(name="Evidence", passed=False, reason=f"Invalid status: {status}")
         except Exception as e:
-            return GateCheck(
-                name="Evidence",
-                passed=False,
-                reason=f"Evidence error: {str(e)}"
-            )
+            return GateCheck(name="Evidence", passed=False, reason=f"Evidence error: {e}")
     
     def check_reviewer(self, evidence_id: str) -> GateCheck:
-        """Check if evidence has been reviewed"""
         evidence_file = f"private/evidence/requirements/{evidence_id}.json"
         
         if not os.path.exists(evidence_file):
-            return GateCheck(
-                name="Reviewer",
-                passed=False,
-                reason="Evidence not found"
-            )
+            return GateCheck(name="Reviewer", passed=False, reason="Evidence not found")
         
         try:
             with open(evidence_file, "r") as f:
                 data = json.load(f)
                 reviewer = data.get("reviewer", "PENDING")
                 if reviewer and reviewer != "PENDING":
-                    return GateCheck(
-                        name="Reviewer",
-                        passed=True,
-                        reason=f"Reviewed by: {reviewer}"
-                    )
+                    return GateCheck(name="Reviewer", passed=True, reason=f"Reviewed by: {reviewer}")
                 else:
-                    return GateCheck(
-                        name="Reviewer",
-                        passed=False,
-                        reason="Reviewer pending"
-                    )
+                    return GateCheck(name="Reviewer", passed=False, reason="Reviewer pending")
         except Exception as e:
-            return GateCheck(
-                name="Reviewer",
-                passed=False,
-                reason=f"Reviewer check error: {str(e)}"
-            )
+            return GateCheck(name="Reviewer", passed=False, reason=f"Reviewer error: {e}")
     
     def check_dependencies(self, requirement_id: str) -> GateCheck:
-        """Check if all dependencies are installed"""
-        required_packages = ["fastapi", "uvicorn", "sqlalchemy", "redis", "jose", "pytest"]
+        required_packages = ["fastapi", "uvicorn", "sqlalchemy", "redis", "jwt", "pytest", "cryptography"]
         missing = []
         
         for pkg in required_packages:
@@ -236,20 +162,11 @@ class GateEngine:
                 missing.append(pkg)
         
         if missing:
-            return GateCheck(
-                name="Dependencies",
-                passed=False,
-                reason=f"Missing packages: {', '.join(missing)}"
-            )
+            return GateCheck(name="Dependencies", passed=False, reason=f"Missing: {', '.join(missing)}")
         
-        return GateCheck(
-            name="Dependencies",
-            passed=True,
-            reason=f"All {len(required_packages)} packages installed"
-        )
+        return GateCheck(name="Dependencies", passed=True, reason="All packages installed")
     
     def check_rollback(self, requirement_id: str) -> GateCheck:
-        """Check if rollback strategy exists"""
         rollback_map = {
             "SL-SEC-AUTH-001": "Rollback to previous JWT version",
             "SL-SEC-BOLA-001": "Disable BOLA check",
@@ -260,20 +177,11 @@ class GateEngine:
         
         strategy = rollback_map.get(requirement_id)
         if strategy:
-            return GateCheck(
-                name="Rollback",
-                passed=True,
-                reason=f"Strategy defined: {strategy[:50]}..."
-            )
+            return GateCheck(name="Rollback", passed=True, reason=strategy)
         
-        return GateCheck(
-            name="Rollback",
-            passed=False,
-            reason=f"No rollback strategy for {requirement_id}"
-        )
+        return GateCheck(name="Rollback", passed=False, reason=f"No strategy for {requirement_id}")
     
     def get_status(self, requirement_id: str) -> Dict[str, Any]:
-        """Get gate status for requirement"""
         if requirement_id in self.gate_results:
             passed = self.gate_results[requirement_id]
             return {

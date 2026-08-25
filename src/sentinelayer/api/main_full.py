@@ -117,10 +117,6 @@ async def root():
 async def health_check():
     return {"status": "healthy", "timestamp": time.time()}
 
-@app.get("/metrics")
-async def metrics():
-    return {"message": "Metrics endpoint"}
-
 def check_bola_order(order_id: str, tenant_id: str, user_id: str, roles: list = None):
     repo = OrderRepository(db_manager, tenant_id)
     order = repo.get_order(order_id)
@@ -293,7 +289,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Error: {exc}")
     return JSONResponse(
         status_code=500,
-        content={"error": str(exc), "path": request.url.path}
+        content={"error": "Internal server error", "path": request.url.path}
     )
 
 # ============ METRICS MIDDLEWARE ============
@@ -301,10 +297,9 @@ from sentinelayer.observability.metrics import metrics_middleware, get_metrics
 
 app.middleware("http")(metrics_middleware)
 
+
 @app.get("/metrics")
 async def metrics_endpoint():
     from fastapi.responses import Response
+    from sentinelayer.observability.metrics import get_metrics
     return Response(content=get_metrics(), media_type="text/plain")
-from sentinelayer.api.v2.routes import router as v2_router
-
-app.include_router(v2_router, prefix="/api/v2", tags=["v2"])

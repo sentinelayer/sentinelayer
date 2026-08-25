@@ -1,51 +1,47 @@
-# SentinelLayer Execution Dashboard
-**Blueprint Status:** 10/10 (Designed)
-**Technical GA:** ✅ 100% COMPLETE
-**Commercial GA:** ⏳ 50% IN PROGRESS
+# SentinelLayer - Status Aktual
 
-## ✅ Technical GA Complete!
-All P0 requirements implemented, tested, and verified.
+## Yang Sudah Jalan (di kode)
+- FastAPI skeleton + routing (orders, behavior, risk, decision, controlplane, threatintel, ai, evidence, gate, keys, provenance)
+- JWT authentication (HS256)
+- BOLA/IDOR check (pake database)
+- Rate limiting (Redis + in-memory fallback)
+- Tenant isolation di query level (OrderRepository filter tenant_id)
+- WAF regex fallback (6 rules)
+- Behavior baseline (Redis persistence)
+- Risk engine (per-request)
+- Decision safety (kill switch)
+- Control plane models (tenant/app/policy)
+- Threat intel (local db mock)
+- AI layer (mock)
+- Evidence matrix
+- Gate engine (running tests, not just collecting)
+- Key rotation (24h + scheduler)
+- Runtime provenance (fail-closed)
+- Audit logging
+- Backup manager
+- AML monitor
+- Fraud detector
+- PII detection
+- Data retention
+- HA manager
+- Webhook security
 
-| ID | Control | Status |
-|----|---------|--------|
-| SL-SEC-AUTH-001 | JWT Validation | ✅ TESTED |
-| SL-SEC-RATE-001 | Rate Limiting | ✅ TESTED |
-| SL-SEC-BOLA-001 | Object-Level Authorization | ✅ TESTED |
-| SL-SEC-ISO-001 | Tenant Isolation (RLS) | ✅ TESTED |
-| SL-SEC-API-001 | FastAPI Integration | ✅ TESTED |
-| SL-SEC-WAF-001 | WAF (Coraza+CRS) | ✅ TESTED |
-| SL-SEC-OBS-001 | Observability | ✅ TESTED |
-| SL-SEC-DEVOPS-001 | Docker + CI/CD | ✅ TESTED |
-| SL-SEC-PERF-001 | Load Testing | ✅ TESTED |
-| SL-SEC-PROD-001 | Production Deployment | ✅ TESTED |
-| SL-SEC-AUDIT-001 | Security Audit | ✅ TESTED |
+## Yang Belum / Kurang
+- Coraza + OWASP CRS (hanya regex fallback)
+- RLS Postgres (migration ada tapi perlu dipastikan jalan)
+- Dashboard (frontend masih boilerplate)
+- Full Control Plane (CRUD tenant/app/policy/incident)
+- Sequence detection (basic)
+- Signal correlation (basic)
+- Counterfactual (basic)
+- OWASP LLM Top 10 compliance
+- MITRE ATLAS mapping
+- Blast Radius Control
+- Multi-region policy consistency
+- Observability full stack (Grafana/Loki belum aktif)
+- API versioning v2 (router belum diimplementasi)
 
-## ⏳ Commercial GA Progress
-
-| Area | Status | Due |
-|------|--------|-----|
-| External Retainer | ⏳ SEEKING | Month 1 |
-| Pilot Customer 1 | ⏳ PIPELINE | Month 1 |
-| Pilot Customer 2 | ⏳ PIPELINE | Month 1 |
-| Pilot Customer 3 | ⏳ PIPELINE | Month 2 |
-| First Payment | ⏳ TARGET | Month 3 |
-| Case Studies | ⏳ TARGET | Month 4 |
-| Product Launch | ⏳ TARGET | Month 6 |
-
-## 📊 Key Metrics
-- **Technical GA**: ✅ 100%
-- **Security Controls**: 11/11 ✅
-- **Evidence Items**: 11/11 ✅
-- **Pilot Customers**: 0/3 ⏳
-- **Paying Customers**: 0/1 ⏳
-
-## 🚀 Next Actions
-1. [ ] Find external retainer (vCISO)
-2. [ ] Sign 3 pilot customers
-3. [ ] Gather testimonials
-4. [ ] Launch product
-5. [ ] Get first payment
-
-## 🏆 Verdict
-"SentinelLayer is technically production-ready. All security controls are implemented, tested, and verified. Ready for commercial launch."
-- Founder
+## Status
+- Tests: 38/38 passing (dengan TESTING=true)
+- Deployment: Railway/Render siap
+- Production readiness: masih perlu fix beberapa blocker
