@@ -1,11 +1,12 @@
+import time
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
-import time
+from sentinelayer.risk.correlation import get_signal_correlator
 
 @dataclass
 class RiskSignal:
     name: str
-    score: float  # 0-1
+    score: float
     weight: float = 1.0
     confidence: float = 0.5
     source: str = ""
@@ -13,10 +14,9 @@ class RiskSignal:
     details: Dict[str, Any] = field(default_factory=dict)
 
 class RiskEngine:
-    """Risk scoring engine with confidence calculation"""
-    
     def __init__(self):
         self.signals: List[RiskSignal] = []
+        self.correlator = get_signal_correlator()
         self.risk_thresholds = {
             "low": 0.3,
             "medium": 0.5,
@@ -28,15 +28,13 @@ class RiskEngine:
             "anomaly_detection": 1.0,
             "rate_limit": 1.2,
             "auth_failure": 0.8,
-            "business_flow": 1.3,
-            "threat_intel": 1.4,
+            "sequence_detection": 1.4,
+            "correlation": 1.3,
         }
     
     def add_signal(self, name: str, score: float, source: str = "", details: Dict[str, Any] = None) -> None:
-        """Add a risk signal to the engine"""
         weight = self.signal_weights.get(name, 1.0)
-        confidence = min(1.0, score * 0.8 + 0.2)  # Simple confidence proxy
-        
+        confidence = min(1.0, score * 0.8 + 0.2)
         signal = RiskSignal(
             name=name,
             score=score,
@@ -48,15 +46,18 @@ class RiskEngine:
         self.signals.append(signal)
     
     def calculate_risk(self) -> Dict[str, Any]:
-        """Calculate overall risk score"""
         if not self.signals:
             return {
                 "score": 0.0,
                 "level": "none",
                 "confidence": 0.0,
                 "signals": [],
+                "correlations": [],
                 "decision": "allow"
             }
+        
+        signal_dicts = [{"name": s.name, "score": s.score, "timestamp": s.timestamp} for s in self.signals]
+        correlations = self.correlator.correlate(signal_dicts)
         
         total_weighted_score = 0.0
         total_weight = 0.0
@@ -71,7 +72,10 @@ class RiskEngine:
         avg_score = total_weighted_score / total_weight if total_weight > 0 else 0
         avg_confidence = confidence_sum / len(self.signals) if self.signals else 0
         
-        # Determine risk level
+        if correlations:
+            correlation_boost = min(0.3, len(correlations) * 0.05)
+            avg_score = min(1.0, avg_score + correlation_boost)
+        
         if avg_score >= self.risk_thresholds["critical"]:
             level = "critical"
             decision = "block"
@@ -104,12 +108,21 @@ class RiskEngine:
                 }
                 for s in self.signals
             ],
+            "correlations": [
+                {
+                    "source": c.source,
+                    "target": c.target,
+                    "score": c.score,
+                    "details": c.details
+                }
+                for c in correlations
+            ],
             "signal_count": len(self.signals)
         }
     
     def clear_signals(self) -> None:
-        """Clear all signals"""
         self.signals = []
+        self.correlator.clear()
 
 def get_risk_engine() -> RiskEngine:
     return RiskEngine()

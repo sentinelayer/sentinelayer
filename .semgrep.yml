@@ -1,0 +1,46 @@
+rules:
+  - id: python-hardcoded-secret
+    pattern: |
+      $SECRET = "..."
+    message: Hardcoded secret found
+    languages: [python]
+    severity: ERROR
+
+  - id: python-sql-injection
+    pattern-either:
+      - pattern: |
+          cursor.execute("..." + $VAR)
+      - pattern: |
+          cursor.execute(f"...{$VAR}")
+    message: Possible SQL injection
+    languages: [python]
+    severity: ERROR
+
+  - id: python-command-injection
+    pattern: |
+      os.system("..." + $VAR)
+    message: Possible command injection
+    languages: [python]
+    severity: ERROR
+
+  - id: python-eval
+    pattern: |
+      eval(...)
+    message: eval() used
+    languages: [python]
+    severity: WARNING
+
+  - id: python-pickle
+    pattern: |
+      pickle.loads(...)
+    message: pickle.loads used
+    languages: [python]
+    severity: WARNING
+
+  - id: python-bare-except
+    pattern: |
+      except:
+        ...
+    message: Bare except
+    languages: [python]
+    severity: WARNING

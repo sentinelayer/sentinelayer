@@ -1,7 +1,6 @@
 from sqlalchemy import Column, String, Integer, Float
 from .base import Base, TenantAwareMixin
 import uuid
-import time
 
 class OrderStatus:
     PENDING = "pending"
@@ -34,14 +33,11 @@ class Order(Base, TenantAwareMixin):
         }
 
 class OrderRepository:
-    """Repository untuk operasi Order dengan tenant isolation"""
-    
     def __init__(self, db_manager, tenant_id: str):
         self.db_manager = db_manager
         self.tenant_id = tenant_id
     
     def create_order(self, order_data: dict) -> Order:
-        """Create new order with tenant isolation"""
         order = Order(
             id=order_data.get("id", str(uuid.uuid4())),
             user_id=order_data["user_id"],
@@ -53,38 +49,34 @@ class OrderRepository:
             status=order_data.get("status", OrderStatus.PENDING)
         )
         
-        with self.db_manager.get_session() as session:
+        with self.db_manager.get_session(self.tenant_id) as session:
             session.add(order)
             session.commit()
             session.refresh(order)
             return order
     
     def get_order(self, order_id: str):
-        """Get order by ID with tenant isolation"""
-        with self.db_manager.get_session() as session:
+        with self.db_manager.get_session(self.tenant_id) as session:
             return session.query(Order).filter(
                 Order.id == order_id,
                 Order.tenant_id == self.tenant_id
             ).first()
     
     def get_all_orders(self):
-        """Get all orders for this tenant"""
-        with self.db_manager.get_session() as session:
+        with self.db_manager.get_session(self.tenant_id) as session:
             return session.query(Order).filter(
                 Order.tenant_id == self.tenant_id
             ).all()
     
     def get_user_orders(self, user_id: str):
-        """Get orders for specific user within tenant"""
-        with self.db_manager.get_session() as session:
+        with self.db_manager.get_session(self.tenant_id) as session:
             return session.query(Order).filter(
                 Order.tenant_id == self.tenant_id,
                 Order.user_id == user_id
             ).all()
     
     def update_order(self, order_id: str, updates: dict):
-        """Update order with tenant isolation"""
-        with self.db_manager.get_session() as session:
+        with self.db_manager.get_session(self.tenant_id) as session:
             order = session.query(Order).filter(
                 Order.id == order_id,
                 Order.tenant_id == self.tenant_id
@@ -101,8 +93,7 @@ class OrderRepository:
             return order
     
     def delete_order(self, order_id: str) -> bool:
-        """Delete order with tenant isolation"""
-        with self.db_manager.get_session() as session:
+        with self.db_manager.get_session(self.tenant_id) as session:
             order = session.query(Order).filter(
                 Order.id == order_id,
                 Order.tenant_id == self.tenant_id

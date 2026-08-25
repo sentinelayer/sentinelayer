@@ -1,31 +1,42 @@
 import os
-import base64
+import json
 from typing import Optional
+from sentinelayer.security.kms import get_kms
 
 class SecretsManager:
-    """Secrets manager - baca dari environment variable, bukan plaintext file"""
+    def __init__(self, secrets_file: str = "private/secrets.json"):
+        self.secrets_file = secrets_file
+        self.kms = get_kms()
+        self.secrets = self.load_secrets()
     
-    def __init__(self):
-        # Semua secret dari environment variable
-        self.jwt_secret = os.getenv("JWT_SECRET_KEY", "")
-        self.encryption_key = os.getenv("ENCRYPTION_KEY", "")
-        self.database_url = os.getenv("DATABASE_URL", "")
-        self.redis_url = os.getenv("REDIS_URL", "")
+    def load_secrets(self) -> dict:
+        try:
+            with open(self.secrets_file, "r") as f:
+                data = json.load(f)
+                for key, value in data.items():
+                    if isinstance(value, str) and value.startswith("encrypted:"):
+                        try:
+                            data[key] = self.kms.decrypt(value.replace("encrypted:", ""))
+                        except:
+                            pass
+                return data
+        except:
+            return {}
     
     def get_secret(self, key: str, default: Optional[str] = None) -> Optional[str]:
-        """Get secret from environment"""
+        if key in self.secrets:
+            return self.secrets[key]
         return os.getenv(key, default)
     
-    def get_jwt_secret(self) -> str:
-        if not self.jwt_secret:
-            raise ValueError("JWT_SECRET_KEY not set in environment")
-        return self.jwt_secret
+    def set_secret(self, key: str, value: str) -> None:
+        encrypted = self.kms.encrypt(value)
+        self.secrets[key] = encrypted
+        self.save_secrets()
     
-    def get_encryption_key(self) -> str:
-        if not self.encryption_key:
-            # Generate fallback (tapi sebaiknya di-set di env)
-            return base64.b64encode(os.urandom(32)).decode()
-        return self.encryption_key
+    def save_secrets(self) -> None:
+        os.makedirs("private", exist_ok=True)
+        with open(self.secrets_file, "w") as f:
+            json.dump(self.secrets, f, indent=2)
 
 def get_secrets_manager() -> SecretsManager:
     return SecretsManager()

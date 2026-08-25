@@ -237,3 +237,23 @@ def get_baseline_manager() -> BaselineManager:
     if _baseline_manager is None:
         _baseline_manager = BaselineManager()
     return _baseline_manager
+from sentinelayer.behavior.sequence import get_sequence_detector
+
+class BaselineManager:
+    def __init__(self):
+        self.learning_mode = True
+        self.learning_samples = 100
+        self.redis_client = None
+        self.sequence_detector = get_sequence_detector()
+        self._init_redis()
+        self.profiles: Dict[str, BaselineProfile] = {}
+        self.load_all_profiles()
+    
+    def record_sequence_event(self, user_id: str, tenant_id: str, event_type: str, details: Dict = None):
+        return self.sequence_detector.add_event(user_id, tenant_id, event_type, details)
+    
+    def get_user_sequence(self, user_id: str, tenant_id: str):
+        return self.sequence_detector.get_user_sequence(user_id, tenant_id)
+    
+    def get_sequence_matches(self):
+        return self.sequence_detector.get_recent_matches()

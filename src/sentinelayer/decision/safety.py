@@ -133,3 +133,74 @@ class DecisionSafetyLayer:
 
 def get_decision_safety() -> DecisionSafetyLayer:
     return DecisionSafetyLayer()
+from sentinelayer.decision.counterfactual import get_counterfactual_engine
+
+class DecisionSafetyLayer:
+    def __init__(self):
+        self.decisions: Dict[str, Decision] = {}
+        self.kill_switch_active = False
+        self.rollback_stack: List[Dict[str, Any]] = []
+        self.last_decisions: List[Decision] = []
+        self.max_history = 100
+        self.counterfactual = get_counterfactual_engine()
+    
+    def make_decision(
+        self,
+        request_id: str,
+        risk_result: Dict[str, Any],
+        context: Dict[str, Any] = None
+    ) -> Decision:
+        if self.kill_switch_active:
+            return Decision(
+                action="block",
+                risk_level="critical",
+                risk_score=1.0,
+                confidence=1.0,
+                reason="Kill switch active",
+                metadata={"kill_switch": True}
+            )
+        
+        counterfactuals = self.counterfactual.generate(risk_result)
+        
+        risk_decision = risk_result.get("decision", "allow")
+        risk_level = risk_result.get("level", "none")
+        risk_score = risk_result.get("score", 0.0)
+        confidence = risk_result.get("confidence", 0.0)
+        
+        signals = risk_result.get("signals", [])
+        for signal in signals:
+            if signal.get("name") == "waf_block" and signal.get("score") > 0.8:
+                risk_decision = "block"
+                break
+            if signal.get("name") == "sequence_detection" and signal.get("score") > 0.8:
+                risk_decision = "block"
+                break
+        
+        decision = Decision(
+            action=risk_decision,
+            risk_level=risk_level,
+            risk_score=risk_score,
+            confidence=confidence,
+            reason=f"Risk level: {risk_level}, decision: {risk_decision}",
+            metadata={
+                "context": context or {},
+                "counterfactuals": [
+                    {
+                        "original": c.original_decision,
+                        "alternative": c.alternative_decision,
+                        "reasoning": c.reasoning
+                    }
+                    for c in counterfactuals[:3]
+                ]
+            }
+        )
+        
+        self.decisions[request_id] = decision
+        self.last_decisions.append(decision)
+        if len(self.last_decisions) > self.max_history:
+            self.last_decisions.pop(0)
+        
+        return decision
+    
+    def get_counterfactual_history(self):
+        return self.counterfactual.get_history()

@@ -29,13 +29,21 @@ class DatabaseManager:
         
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
     
-    def get_session(self) -> Session:
-        return self.SessionLocal()
+    def get_session(self, tenant_id: str = None) -> Session:
+        session = self.SessionLocal()
+        
+        if tenant_id and not self.is_sqlite:
+            try:
+                session.execute(text("SELECT app.set_tenant(:tenant_id)"), {"tenant_id": tenant_id})
+            except Exception as e:
+                print(f"Could not set tenant context: {e}")
+        
+        return session
     
     def create_tables(self):
         Base.metadata.create_all(self.engine)
-        print("✅ Tables created")
+        print("Tables created")
     
     def drop_tables(self):
         Base.metadata.drop_all(self.engine)
-        print("✅ Tables dropped")
+        print("Tables dropped")
