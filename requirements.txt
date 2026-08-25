@@ -33,7 +33,7 @@ python-multipart==0.0.32
 PyYAML==6.0.3
 redis==5.3.1
 rsa==4.9.1
--e git+https://github.com/sentinelayer/sentinelayer@18e482704e0e1901ebe38818eff3e5307243259d#egg=sentinelayer
+-e git+https://github.com/sentinelayer/sentinelayer@e32b434c651c321d0d08f447277af556092643d8#egg=sentinelayer
 six==1.17.0
 sortedcontainers==2.4.0
 SQLAlchemy==2.0.52
