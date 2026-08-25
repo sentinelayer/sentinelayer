@@ -61,3 +61,5 @@ Thumbs.db
 *.bak
 *.swp
 *.swo
+*.pyc
+__pycache__/
