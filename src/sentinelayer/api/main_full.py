@@ -244,3 +244,43 @@ async def analyze_request(request: Request):
         "recommendations": analysis.recommendations,
         "confidence": analysis.confidence
     }
+
+# ============ EVIDENCE + GATE + KEY ROTATION ============
+from sentinelayer.evidence.matrix import get_evidence_matrix
+from sentinelayer.evidence.gate import get_gate_engine
+from sentinelayer.security.key_rotation import get_key_rotation
+
+evidence_matrix = get_evidence_matrix()
+gate_engine = get_gate_engine()
+key_rotation = get_key_rotation()
+
+@app.get("/api/v1/evidence/list")
+async def list_evidence():
+    return {
+        "evidence": [e.__dict__ for e in evidence_matrix.list_evidence()],
+        "stats": evidence_matrix.get_stats()
+    }
+
+@app.post("/api/v1/evidence/create")
+async def create_evidence(req: Request):
+    data = await req.json()
+    evidence = evidence_matrix.create_evidence(
+        requirement_id=data.get("requirement_id", "REQ-001"),
+        control_id=data.get("control_id", "CTRL-001"),
+        artifact=data.get("artifact", "test_artifact")
+    )
+    return {"evidence_id": evidence.evidence_id, "status": "CREATED"}
+
+@app.get("/api/v1/gate/check/{requirement_id}")
+async def check_gate(requirement_id: str):
+    result = gate_engine.check_requirement(requirement_id, "EV-001")
+    return gate_engine.get_status(requirement_id)
+
+@app.get("/api/v1/keys/status")
+async def key_status():
+    return key_rotation.get_stats()
+
+@app.post("/api/v1/keys/rotate")
+async def rotate_keys():
+    key_rotation.rotate_key(key_rotation.current_key_id, "api_request")
+    return {"message": "Keys rotated", "new_key_id": key_rotation.current_key_id}
