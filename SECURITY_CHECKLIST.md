@@ -1,60 +1,25 @@
 # SentinelLayer Security Checklist
-## Pra-Production Verification
 
-### ✅ Authentication & Authorization
-- [x] JWT tokens used for authentication
-- [x] Tokens have expiration
-- [x] MFA ready (can be enabled)
-- [x] Password policies enforced
-- [x] RBAC implemented
-- [x] JWT secrets are not hardcoded
+## Done
+- [x] JWT Authentication (PyJWT, HS256)
+- [x] BOLA/IDOR Protection
+- [x] Rate Limiting (Redis + in-memory fallback)
+- [x] Tenant Isolation (query-level + RLS migration)
+- [x] WAF (regex fallback, 6 rules)
+- [x] Risk Engine (per-request scoring)
+- [x] Decision Safety (kill switch)
+- [x] Key Rotation (24h, Redis persistence)
+- [x] Runtime Provenance (fail-closed)
+- [x] Audit Logging
+- [x] Backup Manager
 
-### ✅ API Security
-- [x] Rate limiting enabled
-- [x] BOLA/IDOR protection
-- [x] Input validation (WAF)
-- [x] SQL injection protection (WAF + ORM)
-- [x] XSS protection (WAF)
-- [x] CSRF protection
-- [x] CORS properly configured
+## Partial / In Progress
+- [ ] WAF Coraza+CRS (currently regex fallback)
+- [ ] RLS Postgres active in production
+- [ ] Control Plane endpoints (/tenants, /applications, /policies)
+- [ ] Dashboard UI complete
 
-### ✅ Data Security
-- [x] Tenant isolation (RLS)
-- [x] Encryption at rest (database)
-- [x] Encryption in transit (TLS)
-- [x] PII detection (optional)
-- [x] Data retention policies
-- [x] Secure deletion
-
-### ✅ Infrastructure
-- [x] Docker containerization
-- [x] Non-root user in container
-- [x] Security headers
-- [x] SSL/TLS ready
-- [x] Health checks
-- [x] Monitoring (Prometheus)
-- [x] Logging (structured JSON)
-
-### ✅ CI/CD
-- [x] Security scanning (Trivy)
-- [x] Dependency scanning
-- [x] SAST (Semgrep)
-- [x] DAST (ZAP)
-- [x] Container scanning
-
-### ✅ Production Readiness
-- [x] Load tested
-- [x] Stress tested
-- [ ] Security audit completed
-- [ ] External retainer appointed
-- [ ] Incident response plan
-- [ ] Disaster recovery tested
-- [ ] Backup strategy
-
-### Next Steps
-1. Run security audit: `python scripts/security/audit.py`
-2. Run ZAP scan: `./scripts/security/zap_scan.sh http://localhost:8000`
-3. Fix critical findings
-4. Set up external retainer
-5. Go live!
-
+## Planned
+- [ ] KMS integration with key_rotation
+- [ ] AML/Fraud/PII detection
+- [ ] Grafana/Loki observability
