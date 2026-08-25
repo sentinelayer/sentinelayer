@@ -317,3 +317,5 @@ app.add_middleware(SecurityHeadersMiddleware)
 from sentinelayer.security.attestation import get_attestation
 attestation = get_attestation()
 logger.info(f"Runtime attestation: {attestation.get_status()}")
+from sentinelayer.api.health import router as health_router
+app.include_router(health_router, prefix="", tags=["health"])
