@@ -247,6 +247,8 @@ async def decision_stats(current_user: dict = Depends(get_current_user)):
 
 @app.post("/api/v1/decision/killswitch")
 async def toggle_killswitch(request: Request, current_user: dict = Depends(get_current_user)):
+    if current_user.get("roles") and "admin" not in current_user.get("roles"):
+        raise HTTPException(status_code=403, detail="Admin role required")
     data = await request.json()
     if data.get("action") == "activate":
         decision_safety.activate_kill_switch(data.get("reason", "Manual"))
@@ -280,6 +282,8 @@ async def keys_status(current_user: dict = Depends(get_current_user)):
 
 @app.post("/api/v1/keys/rotate")
 async def keys_rotate(current_user: dict = Depends(get_current_user)):
+    if current_user.get("roles") and "admin" not in current_user.get("roles"):
+        raise HTTPException(status_code=403, detail="Admin role required")
     key_rotation.rotate_key(key_rotation.current_key_id, current_user.get("sub", "system"))
     return {"status": "rotated", "new_key": key_rotation.current_key_id}
 
