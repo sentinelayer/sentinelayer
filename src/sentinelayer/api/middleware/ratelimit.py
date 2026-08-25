@@ -15,7 +15,7 @@ try:
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
     limiter = RedisSlidingWindowRateLimiter(redis_url)
     logger.info("Using Redis rate limiter")
-except:
+except Exception as e:
     limiter = SimpleRateLimiter()
     logger.warning("Redis not available, using simple rate limiter")
 

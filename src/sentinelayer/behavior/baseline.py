@@ -120,7 +120,7 @@ class BaselineManager:
             self.redis_client = redis.from_url(redis_url, decode_responses=True)
             self.redis_client.ping()
             print("✅ Baseline: Redis connected")
-        except:
+        except Exception as e:
             self.redis_client = None
             print("⚠️ Baseline: Redis not available, using in-memory only")
     
@@ -143,7 +143,7 @@ class BaselineManager:
             if data:
                 try:
                     return BaselineProfile.from_dict(json.loads(data))
-                except:
+                except Exception as e:
                     pass
         return None
     
@@ -158,7 +158,7 @@ class BaselineManager:
                     profile = BaselineProfile.from_dict(json.loads(data))
                     pk = self.get_profile_key(profile.endpoint, profile.method, profile.user_id, profile.tenant_id)
                     self.profiles[pk] = profile
-                except:
+                except Exception as e:
                     pass
         print(f"✅ Loaded {len(self.profiles)} baseline profiles from Redis")
     

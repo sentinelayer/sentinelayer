@@ -56,7 +56,7 @@ try:
     _limiter.redis.ping()
     print("✅ Using Redis rate limiter")
     get_rate_limiter = lambda: _limiter
-except:
+except Exception as e:
     print("⚠️ Redis not available, using simple rate limiter")
     _limiter = SimpleRateLimiter()
     get_rate_limiter = lambda: _limiter

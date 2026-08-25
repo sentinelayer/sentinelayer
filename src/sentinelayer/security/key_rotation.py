@@ -2,8 +2,12 @@ import os
 import time
 import json
 import secrets
+import threading
+import logging
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class KeyEntry:
@@ -18,9 +22,21 @@ class KeyRotation:
     def __init__(self):
         self.keys: Dict[str, KeyEntry] = {}
         self.current_key_id: Optional[str] = None
-        self.rotation_interval = 30
+        self.rotation_interval = 1  # 1 hari (bukan 30)
         self.key_history = []
         self.load_keys()
+        self.start_auto_rotation()
+    
+    def start_auto_rotation(self):
+        """Start background thread for auto-rotation"""
+        def rotate_loop():
+            while True:
+                time.sleep(3600)  # Cek setiap 1 jam
+                self.check_and_rotate()
+        
+        thread = threading.Thread(target=rotate_loop, daemon=True)
+        thread.start()
+        logger.info("✅ Auto-rotation started (check every 1 hour)")
     
     def generate_key(self, length: int = 32) -> str:
         return secrets.token_urlsafe(length)
@@ -52,37 +68,25 @@ class KeyRotation:
         new_key_id = f"{key_id}_{int(time.time())}"
         return self.create_key(new_key_id, rotated_by)
     
+    def check_and_rotate(self) -> Optional[KeyEntry]:
+        if not self.current_key_id or self.current_key_id not in self.keys:
+            return None
+        key = self.keys[self.current_key_id]
+        if time.time() > key.expires_at:
+            logger.info(f"🔄 Key {self.current_key_id} expired, rotating...")
+            return self.rotate_key(self.current_key_id, "auto_rotation")
+        return None
+    
     def get_current_key(self) -> Optional[KeyEntry]:
         if self.current_key_id and self.current_key_id in self.keys:
             return self.keys[self.current_key_id]
         return None
     
-    def get_key(self, key_id: str) -> Optional[KeyEntry]:
-        return self.keys.get(key_id)
-    
-    def validate_key(self, key_id: str, key_value: str) -> bool:
-        key = self.keys.get(key_id)
-        if not key or not key.is_active:
-            return False
-        return key.key_value == key_value
-    
-    def check_and_rotate(self, key_id: Optional[str] = None) -> Optional[KeyEntry]:
-        key_id = key_id or self.current_key_id
-        if not key_id or key_id not in self.keys:
-            return None
-        key = self.keys[key_id]
-        if time.time() > key.expires_at:
-            return self.rotate_key(key_id, "auto_rotation")
-        return key
-    
     def get_stats(self) -> Dict[str, Any]:
-        total_keys = len(self.keys)
-        active_keys = sum(1 for k in self.keys.values() if k.is_active)
         return {
-            "total_keys": total_keys,
-            "active_keys": active_keys,
+            "total_keys": len(self.keys),
+            "active_keys": sum(1 for k in self.keys.values() if k.is_active),
             "current_key_id": self.current_key_id,
-            "last_rotation": self.key_history[-1]["timestamp"] if self.key_history else 0,
             "rotation_interval_days": self.rotation_interval,
             "history_count": len(self.key_history)
         }

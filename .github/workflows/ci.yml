@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD
 
 on:
   push:
@@ -10,42 +10,19 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    - name: Install dependencies
-      run: |
-        pip install -e .
-        pip install pytest pytest-cov
-    - name: Run tests
-      env:
-        TESTING: "true"
-      run: |
-        pytest tests/ -v --cov=src/sentinelayer --cov-report=xml
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-
-  security:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - name: Run safety check
-      run: |
-        pip install safety
-        safety check
-    - name: Run bandit
-      run: |
-        pip install bandit
-        bandit -r src/ -f json -o bandit_report.json || true
-
-  build:
-    runs-on: ubuntu-latest
-    needs: [test, security]
-    if: github.ref == 'refs/heads/main'
-    steps:
-    - uses: actions/checkout@v3
-    - name: Build Docker image
-      run: docker build -t sentinelayer:latest .
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install -e .
+          pip install pytest pytest-cov bandit safety
+      - name: Run tests
+        env:
+          TESTING: "true"
+        run: pytest tests/ -v --cov=src/sentinelayer --cov-report=xml
+      - name: Run bandit (FAILS if issues found)
+        run: bandit -r src/ -f json -o bandit_report.json
+      - name: Run safety check
+        run: safety check

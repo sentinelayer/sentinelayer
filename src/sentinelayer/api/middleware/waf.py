@@ -32,7 +32,7 @@ class WAFMiddleware:
             try:
                 body_bytes = await request.body()
                 body = body_bytes.decode('utf-8', errors='ignore')[:10000]
-            except:
+            except Exception as e:
                 pass
         
         # Get headers
