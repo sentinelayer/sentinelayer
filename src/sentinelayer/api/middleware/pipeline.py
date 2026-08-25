@@ -28,6 +28,7 @@ async def security_pipeline(request: Request, call_next):
     if waf_result["blocked"]:
         from fastapi.responses import JSONResponse
         return JSONResponse(status_code=403, content={"error": "Blocked by WAF", "violations": waf_result["violations"]})
+for v in waf_result["violations"]: record_waf_block(v.get("rule_id", "unknown"), v.get("severity", "medium"))
 
     user_id = getattr(request.state, "user_id", "unknown")
     tenant_id = getattr(request.state, "tenant_id", "default")
@@ -55,6 +56,7 @@ async def security_pipeline(request: Request, call_next):
         risk.add_signal("anomaly_detection", anomaly.get("score", 0.5) * 100)
 
     if waf_result["violations"]:
+for v in waf_result["violations"]: record_waf_block(v.get("rule_id", "unknown"), v.get("severity", "medium"))
         risk.add_signal("waf_block", 80.0)
 
     risk_result = risk.calculate_risk()

@@ -282,6 +282,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # ============ METRICS MIDDLEWARE ============
 from sentinelayer.observability.metrics import metrics_middleware, get_metrics
+from sentinelayer.observability.metrics import record_waf_block
 
 app.middleware("http")(metrics_middleware)
 async def security_middleware(request: Request, call_next):
@@ -292,6 +293,7 @@ async def security_middleware(request: Request, call_next):
 async def metrics_endpoint():
     from fastapi.responses import Response
     from sentinelayer.observability.metrics import get_metrics
+from sentinelayer.observability.metrics import record_waf_block
     return Response(content=get_metrics(), media_type="text/plain")
 
 # ============ DASHBOARD SECTION 16 ============
@@ -320,8 +322,8 @@ async def dashboard_security(current_user: dict = Depends(get_current_user)):
     return {
         "waf": {
             "status": "active",
-            "rules_loaded": 6,
-            "blocks_today": 0
+            "rules_loaded": len(waf.rules),
+            "blocks_today": len(waf_blocks)
         },
         "rate_limit": {
             "status": "active",
@@ -338,3 +340,30 @@ async def dashboard_security(current_user: dict = Depends(get_current_user)):
             "method": "row_level_security"
         }
     }
+
+@app.post("/api/v1/tenants")
+async def create_tenant(data: dict, current_user: dict = Depends(get_current_user)):
+    if "admin" not in current_user.get("roles", []):
+        raise HTTPException(status_code=403, detail="Admin required")
+    tenant = control_plane.create_tenant(data.get("name"), data.get("description", ""))
+    return {"id": tenant.id, "name": tenant.name}
+
+@app.get("/api/v1/tenants")
+async def list_tenants(current_user: dict = Depends(get_current_user)):
+    if "admin" not in current_user.get("roles", []):
+        raise HTTPException(status_code=403, detail="Admin required")
+    return [{"id": t.id, "name": t.name} for t in control_plane.list_tenants()]
+
+@app.post("/api/v1/applications")
+async def create_application(data: dict, current_user: dict = Depends(get_current_user)):
+    if "admin" not in current_user.get("roles", []):
+        raise HTTPException(status_code=403, detail="Admin required")
+    app = control_plane.create_application(data.get("tenant_id"), data.get("name"))
+    return {"id": app.id, "name": app.name}
+
+@app.post("/api/v1/policies")
+async def create_policy(data: dict, current_user: dict = Depends(get_current_user)):
+    if "admin" not in current_user.get("roles", []):
+        raise HTTPException(status_code=403, detail="Admin required")
+    policy = control_plane.create_policy(data.get("tenant_id"), data.get("name"), data.get("type", "waf"))
+    return {"id": policy.id, "name": policy.name}

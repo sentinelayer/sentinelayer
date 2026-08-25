@@ -30,3 +30,7 @@ async def metrics_middleware(request: Request, call_next):
     record_request(request.method, request.url.path, response.status_code, duration)
     active_requests.dec()
     return response
+waf_blocks = Counter('sentinelayer_waf_blocks_total', 'WAF blocked requests', ['rule_id', 'severity'])
+
+def record_waf_block(rule_id: str, severity: str):
+    waf_blocks.labels(rule_id=rule_id, severity=severity).inc()
