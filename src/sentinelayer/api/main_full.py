@@ -196,3 +196,51 @@ async def metrics_middleware(request: Request, call_next):
     )
     decrement_active_requests()
     return response
+
+# ============ THREAT INTELLIGENCE + AI ============
+from sentinelayer.threatintel.engine import get_threat_intel
+from sentinelayer.ai.llm import get_llm_layer
+
+threat_intel = get_threat_intel()
+llm_layer = get_llm_layer()
+
+@app.get("/api/v1/threatintel/check")
+async def check_threatintel(ip: str):
+    result = threat_intel.check_ip(ip)
+    return {
+        "ip": result.ip,
+        "score": result.score,
+        "is_malicious": result.is_malicious,
+        "categories": result.categories,
+        "source": result.source
+    }
+
+@app.get("/api/v1/ai/analyze")
+async def analyze_request(request: Request):
+    request_data = {
+        "request_id": request.headers.get("X-Request-ID", "unknown"),
+        "method": request.method,
+        "endpoint": request.url.path,
+        "user_id": getattr(request.state, "user_id", "unknown"),
+        "tenant_id": getattr(request.state, "tenant_id", "unknown"),
+        "client_ip": request.client.host if request.client else "unknown",
+        "url": str(request.url)
+    }
+    
+    # Mock risk result
+    risk_result = {
+        "score": 0.3,
+        "level": "low",
+        "decision": "allow",
+        "confidence": 0.8,
+        "signals": []
+    }
+    
+    analysis = llm_layer.analyze_request(request_data, risk_result)
+    return {
+        "request_id": analysis.request_id,
+        "summary": analysis.summary,
+        "risk_level": analysis.risk_level,
+        "recommendations": analysis.recommendations,
+        "confidence": analysis.confidence
+    }
