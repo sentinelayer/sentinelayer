@@ -173,3 +173,21 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"error": str(exc), "path": request.url.path}
     )
+
+# Add WAF middleware
+from sentinelayer.api.middleware.waf import WAFMiddleware
+
+# Initialize WAF
+waf_middleware = WAFMiddleware()
+
+# Apply WAF to all requests
+@app.middleware("http")
+async def waf_middleware_wrapper(request: Request, call_next):
+    # Apply WAF (skip for public paths)
+    public_paths = ["/", "/health", "/docs", "/redoc", "/openapi.json", "/metrics", "/api/v1/auth/login"]
+    
+    if request.url.path not in public_paths:
+        await waf_middleware(request)
+    
+    response = await call_next(request)
+    return response
