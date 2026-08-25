@@ -15,7 +15,19 @@ class WAFEngine:
             {"id": "ADMIN-001", "pattern": r"(/admin|/administrator|/wp-admin|/phpmyadmin|/dashboard)", "severity": "medium"},
             {"id": "SSRF-001", "pattern": r"(169\.254\.169\.254|metadata\.google|127\.0\.0\.1|192\.168\.|10\.)", "severity": "critical"},
         ]
-        logger.info(f"WAF initialized with {len(self.rules)} regex rules (fallback mode)")
+        self.rule_versions = {r["id"]: "1.0" for r in self.rules}
+        logger.info(f"WAF initialized with {len(self.rules)} regex rules")
+    
+    def add_rule(self, rule: Dict[str, Any]):
+        self.rules.append(rule)
+        self.rule_versions[rule["id"]] = "1.0"
+    
+    def remove_rule(self, rule_id: str) -> bool:
+        for i, rule in enumerate(self.rules):
+            if rule["id"] == rule_id:
+                self.rules.pop(i)
+                return True
+        return False
     
     def inspect_request(self, path: str, query: str, body: str, headers: Dict) -> Dict:
         violations = []
