@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 import time
 import logging
 import uuid
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import List, Optional
 
 from sentinelayer.api.routes import auth
@@ -69,19 +69,7 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    # Check database
-    try:
-        with db_manager.get_session() as session:
-            session.execute("SELECT 1")
-        db_status = "healthy"
-    except Exception as e:
-        db_status = f"unhealthy: {e}"
-    
-    return {
-        "status": "healthy",
-        "timestamp": time.time(),
-        "database": db_status
-    }
+    return {"status": "healthy", "timestamp": time.time()}
 
 @app.get("/metrics")
 async def metrics():
@@ -173,21 +161,3 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"error": str(exc), "path": request.url.path}
     )
-
-# Add WAF middleware
-from sentinelayer.api.middleware.waf import WAFMiddleware
-
-# Initialize WAF
-waf_middleware = WAFMiddleware()
-
-# Apply WAF to all requests
-@app.middleware("http")
-async def waf_middleware_wrapper(request: Request, call_next):
-    # Apply WAF (skip for public paths)
-    public_paths = ["/", "/health", "/docs", "/redoc", "/openapi.json", "/metrics", "/api/v1/auth/login"]
-    
-    if request.url.path not in public_paths:
-        await waf_middleware(request)
-    
-    response = await call_next(request)
-    return response

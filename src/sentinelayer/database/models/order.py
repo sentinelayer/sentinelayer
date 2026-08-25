@@ -1,16 +1,13 @@
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Enum as SQLEnum
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, String, Integer, Float
 from .base import Base, TenantAwareMixin
-import enum
 import uuid
-from datetime import datetime
+import time
 
-class OrderStatus(str, enum.Enum):
+class OrderStatus:
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
-    REFUNDED = "refunded"
 
 class Order(Base, TenantAwareMixin):
     __tablename__ = "orders"
@@ -22,7 +19,7 @@ class Order(Base, TenantAwareMixin):
     total_amount = Column(Float, nullable=False)
     status = Column(String(20), default=OrderStatus.PENDING)
     created_by = Column(String(36), nullable=False)
-    
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -37,14 +34,14 @@ class Order(Base, TenantAwareMixin):
         }
 
 class OrderRepository:
+    """Repository untuk operasi Order dengan tenant isolation"""
+    
     def __init__(self, db_manager, tenant_id: str):
         self.db_manager = db_manager
         self.tenant_id = tenant_id
     
-    def _apply_tenant_filter(self, query):
-        return query.filter(Order.tenant_id == self.tenant_id)
-    
     def create_order(self, order_data: dict) -> Order:
+        """Create new order with tenant isolation"""
         order = Order(
             id=order_data.get("id", str(uuid.uuid4())),
             user_id=order_data["user_id"],
@@ -56,39 +53,42 @@ class OrderRepository:
             status=order_data.get("status", OrderStatus.PENDING)
         )
         
-        with self.db_manager.get_session(self.tenant_id) as session:
+        with self.db_manager.get_session() as session:
             session.add(order)
             session.commit()
             session.refresh(order)
             return order
     
-    def get_order(self, order_id: str) -> Order | None:
-        with self.db_manager.get_session(self.tenant_id) as session:
-            query = session.query(Order).filter(Order.id == order_id)
-            if self.db_manager.is_sqlite:
-                query = self._apply_tenant_filter(query)
-            return query.first()
+    def get_order(self, order_id: str):
+        """Get order by ID with tenant isolation"""
+        with self.db_manager.get_session() as session:
+            return session.query(Order).filter(
+                Order.id == order_id,
+                Order.tenant_id == self.tenant_id
+            ).first()
     
-    def get_user_orders(self, user_id: str) -> list[Order]:
-        with self.db_manager.get_session(self.tenant_id) as session:
-            query = session.query(Order).filter(Order.user_id == user_id)
-            if self.db_manager.is_sqlite:
-                query = self._apply_tenant_filter(query)
-            return query.all()
+    def get_all_orders(self):
+        """Get all orders for this tenant"""
+        with self.db_manager.get_session() as session:
+            return session.query(Order).filter(
+                Order.tenant_id == self.tenant_id
+            ).all()
     
-    def get_all_orders(self) -> list[Order]:
-        with self.db_manager.get_session(self.tenant_id) as session:
-            query = session.query(Order)
-            if self.db_manager.is_sqlite:
-                query = self._apply_tenant_filter(query)
-            return query.all()
+    def get_user_orders(self, user_id: str):
+        """Get orders for specific user within tenant"""
+        with self.db_manager.get_session() as session:
+            return session.query(Order).filter(
+                Order.tenant_id == self.tenant_id,
+                Order.user_id == user_id
+            ).all()
     
-    def update_order(self, order_id: str, updates: dict) -> Order | None:
-        with self.db_manager.get_session(self.tenant_id) as session:
-            query = session.query(Order).filter(Order.id == order_id)
-            if self.db_manager.is_sqlite:
-                query = self._apply_tenant_filter(query)
-            order = query.first()
+    def update_order(self, order_id: str, updates: dict):
+        """Update order with tenant isolation"""
+        with self.db_manager.get_session() as session:
+            order = session.query(Order).filter(
+                Order.id == order_id,
+                Order.tenant_id == self.tenant_id
+            ).first()
             if not order:
                 return None
             
@@ -101,11 +101,12 @@ class OrderRepository:
             return order
     
     def delete_order(self, order_id: str) -> bool:
-        with self.db_manager.get_session(self.tenant_id) as session:
-            query = session.query(Order).filter(Order.id == order_id)
-            if self.db_manager.is_sqlite:
-                query = self._apply_tenant_filter(query)
-            order = query.first()
+        """Delete order with tenant isolation"""
+        with self.db_manager.get_session() as session:
+            order = session.query(Order).filter(
+                Order.id == order_id,
+                Order.tenant_id == self.tenant_id
+            ).first()
             if not order:
                 return False
             
