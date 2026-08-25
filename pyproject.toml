@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentinelayer"
+version = "0.1.0"
+description = "Security control and enforcement platform (Blueprint 10/10)"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.30,<1",
+  "pydantic>=2.8,<3",
+  "pydantic-settings>=2.4,<3",
+  "pytest>=8,<9",
+  "python-jose[cryptography]>=3.3,<4",
+  "passlib[bcrypt]>=1.7,<2",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["sentinelayer*"]
+exclude = ["tests*", "private*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
