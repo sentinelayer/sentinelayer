@@ -256,3 +256,13 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"error": str(exc), "path": request.url.path}
     )
+
+# ============ RUNTIME PROVENANCE ============
+from sentinelayer.security.provenance import get_provenance
+provenance = get_provenance()
+logger.info(f"🔐 Runtime provenance status: {provenance.get_status()}")
+
+# Kalo di production dan gagal, exit
+if ENVIRONMENT == "production" and not provenance.verified:
+    logger.critical("❌ Runtime provenance verification failed in production!")
+    raise RuntimeError("Runtime provenance verification failed")
