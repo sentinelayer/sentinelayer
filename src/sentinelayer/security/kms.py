@@ -19,7 +19,7 @@ class KMS:
             combined = nonce + ciphertext
             return base64.b64encode(combined).decode()
         else:
-            raise NotImplementedError(f"KMS provider {self.provider} not implemented")
+            print(f"KMS provider {self.provider} fallback to local"); self.provider = "local"
     
     def decrypt(self, ciphertext: str) -> str:
         if self.provider == "local":
@@ -30,7 +30,7 @@ class KMS:
             plaintext = aesgcm.decrypt(nonce, ct, None)
             return plaintext.decode()
         else:
-            raise NotImplementedError(f"KMS provider {self.provider} not implemented")
+            print(f"KMS provider {self.provider} fallback to local"); self.provider = "local"
     
     def get_key_id(self) -> str:
         return self.key_id

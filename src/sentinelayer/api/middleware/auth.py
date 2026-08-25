@@ -24,14 +24,17 @@ class AuthMiddleware:
                 detail="Invalid header format"
             )
         
+        print(f"Verifying token: {token[:20]}...")
         payload = verify_token(token)
         if not payload:
+            print("Token verification failed")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired token"
             )
         
-        request.state.user = payload.dict()
+        print(f"Token verified for user: {payload.sub}")
+        request.state.user = payload.model_dump()
         request.state.tenant_id = payload.tenant_id
         request.state.user_id = payload.sub
         

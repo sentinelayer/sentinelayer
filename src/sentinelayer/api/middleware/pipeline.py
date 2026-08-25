@@ -1,5 +1,6 @@
 import time
 from fastapi import Request
+from fastapi.responses import JSONResponse
 from sentinelayer.gateway.waf.regex_waf import get_waf_engine
 from sentinelayer.behavior.baseline import get_baseline_manager
 from sentinelayer.risk.engine import get_risk_engine
@@ -26,9 +27,7 @@ async def security_pipeline(request: Request, call_next):
 
     waf_result = waf.inspect_request(path, query, body, dict(request.headers))
     if waf_result["blocked"]:
-        from fastapi.responses import JSONResponse
         return JSONResponse(status_code=403, content={"error": "Blocked by WAF", "violations": waf_result["violations"]})
-for v in waf_result["violations"]: record_waf_block(v.get("rule_id", "unknown"), v.get("severity", "medium"))
 
     user_id = getattr(request.state, "user_id", "unknown")
     tenant_id = getattr(request.state, "tenant_id", "default")
@@ -56,7 +55,6 @@ for v in waf_result["violations"]: record_waf_block(v.get("rule_id", "unknown"),
         risk.add_signal("anomaly_detection", anomaly.get("score", 0.5) * 100)
 
     if waf_result["violations"]:
-for v in waf_result["violations"]: record_waf_block(v.get("rule_id", "unknown"), v.get("severity", "medium"))
         risk.add_signal("waf_block", 80.0)
 
     risk_result = risk.calculate_risk()
@@ -67,7 +65,6 @@ for v in waf_result["violations"]: record_waf_block(v.get("rule_id", "unknown"),
     )
 
     if decision_result.action == "block":
-        from fastapi.responses import JSONResponse
         return JSONResponse(status_code=403, content={"error": "Request blocked by security policy", "risk_score": risk_result["score"]})
 
     response = await call_next(request)
@@ -80,7 +77,7 @@ for v in waf_result["violations"]: record_waf_block(v.get("rule_id", "unknown"),
         "response_time": 0,
         "status_code": response.status_code,
         "request_size": len(body),
-        "response_size": len(response.body)
+        "response_size": len(response.body) if hasattr(response, "body") else 0
     })
 
     return response

@@ -1,27 +1,20 @@
 import socket
 from urllib.parse import urlparse
 
+PRIVATE_IPS = [
+    '127.0.0.1', '10.', '172.16.', '172.17.', '172.18.', '172.19.',
+    '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.',
+    '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.',
+    '192.168.', '169.254.'
+]
+
 def is_private_ip(ip: str) -> bool:
-    try:
-        parts = ip.split('.')
-        if len(parts) != 4:
-            return False
-        first = int(parts[0])
-        if first == 10:
+    for prefix in PRIVATE_IPS:
+        if ip.startswith(prefix):
             return True
-        if first == 172 and 16 <= int(parts[1]) <= 31:
-            return True
-        if first == 192 and int(parts[1]) == 168:
-            return True
-        if first == 127:
-            return True
-        if ip.startswith('169.254.'):
-            return True
-    except:
-        pass
     return False
 
-def resolve_and_validate(url: str) -> bool:
+def validate_url(url: str) -> bool:
     try:
         parsed = urlparse(url)
         hostname = parsed.hostname

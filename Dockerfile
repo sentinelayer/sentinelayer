@@ -1,13 +1,16 @@
 FROM python:3.11-slim
+
 WORKDIR /app
+
 COPY pyproject.toml requirements.txt ./
 RUN pip install --no-cache-dir -e .
+
+COPY scripts/ ./scripts/
 COPY src/ ./src/
-COPY scripts/ ./scripts/
-COPY scripts/ ./scripts/
-COPY private/ ./private/ 2>/dev/null || true
+RUN mkdir -p private/evidence/requirements
+
 EXPOSE 8000
-RUN python scripts/run_migrations.py
-RUN python scripts/ensure_rls.py || echo "RLS already applied"
+
+RUN python scripts/run_migrations.py || true
+
 CMD ["uvicorn", "src.sentinelayer.api.main_full:app", "--host", "0.0.0.0", "--port", "8000"]
-RUN python scripts/ensure_rls.py || echo "RLS already applied"

@@ -163,7 +163,7 @@ class BaselineManager:
         print(f"Loaded {len(self.profiles)} baseline profiles from Redis")
     
     def record_request(self, request_data: Dict[str, Any]) -> BaselineProfile:
-        print(f"Recording behavior: {request_data.get(endpoint)} for user {request_data.get(user_id)}")
+        print(f"Recording behavior: {request_data.get("endpoint")} for user {request_data.get("user_id")}")
         pk = self.get_profile_key(
             request_data.get("endpoint", ""),
             request_data.get("method", "GET"),

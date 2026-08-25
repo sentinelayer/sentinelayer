@@ -44,7 +44,6 @@ def test_unauthorized():
         assert response.status_code == 401
 
 def test_authorized():
-    """Test dengan token valid -> harus 200"""
     token = test_login()
     response = client.post(
         "/api/v1/orders/",
