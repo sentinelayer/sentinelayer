@@ -49,3 +49,24 @@ rm -rf test_rls.db *.db
 
 dev:
 uvicorn src.sentinelayer.api.main_full:app --host 0.0.0.0 --port 8000 --reload
+
+# Load testing commands
+load-test-smoke:
+k6 run tests/load/smoke_test.js
+
+load-test-load:
+k6 run tests/load/load_test.js
+
+load-test-stress:
+k6 run tests/load/stress_test.js
+
+load-test-perf:
+k6 run tests/load/performance_test.js
+
+load-test-all:
+./tests/load/run_tests.sh
+
+load-test-docker:
+docker-compose -f docker-compose.test.yml up -d
+@echo "K6 is running. Check Grafana at http://localhost:3000 (admin/admin)"
+@echo "To stop: docker-compose -f docker-compose.test.yml down"
