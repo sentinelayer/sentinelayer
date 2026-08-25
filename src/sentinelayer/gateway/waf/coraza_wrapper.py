@@ -72,11 +72,11 @@ class WAFEngine:
             locations=["path"]
         ))
         
-        # SSRF - FIXED
+        # SSRF
         self.rules.append(WAFRule(
             id="SSRF-001",
-            name="SSRF - Private IP",
-            pattern=r"(127\.0\.0\.1|192\.168\.|10\.|172\.16\.|169\.254\.|::1|metadata\.google|instance-data)",
+            name="SSRF",
+            pattern=r"(169\.254\.169\.254|metadata\.google|127\.0\.0\.1|192\.168\.|10\.)",
             action="block",
             severity="critical",
             locations=["query", "body"]
@@ -85,12 +85,10 @@ class WAFEngine:
     def inspect_request(self, path: str, query: str, body: str, headers: Dict) -> Dict:
         violations = []
         
-        # Decode URL
         decoded_path = unquote(path)
         decoded_query = unquote(query)
         decoded_body = unquote(body)
         
-        # Check each location
         for location, text in [("path", decoded_path), ("query", decoded_query), ("body", decoded_body)]:
             if not text:
                 continue
