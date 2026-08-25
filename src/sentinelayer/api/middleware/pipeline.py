@@ -3,12 +3,11 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from sentinelayer.gateway.waf.regex_waf import get_waf_engine
 from sentinelayer.behavior.baseline import get_baseline_manager
-from sentinelayer.risk.engine import get_risk_engine
+from sentinelayer.risk.engine import get_risk_engine, RiskSignal
 from sentinelayer.decision.safety import get_decision_safety
 
 waf = get_waf_engine()
 behavior = get_baseline_manager()
-risk = get_risk_engine()
 decision = get_decision_safety()
 
 async def security_pipeline(request: Request, call_next):
@@ -51,13 +50,17 @@ async def security_pipeline(request: Request, call_next):
         "response_time": 0,
         "status_code": 200
     })
+    
+    risk_signals = []
     if anomaly.get("is_anomaly", False):
-        risk.add_signal("anomaly_detection", anomaly.get("score", 0.5) * 100)
+        risk_signals.append(RiskSignal("anomaly_detection", anomaly.get("score", 0.5) * 100, 1.0, 0.8, "behavior"))
 
     if waf_result["violations"]:
-        risk.add_signal("waf_block", 80.0)
+        risk_signals.append(RiskSignal("waf_block", 80.0, 1.5, 0.9, "waf"))
 
-    risk_result = risk.calculate_risk()
+    risk_engine = get_risk_engine()
+    risk_result = risk_engine.calculate_risk(risk_signals)
+    
     decision_result = decision.make_decision(
         request_id=request.headers.get("X-Request-ID", "unknown"),
         risk_result=risk_result,

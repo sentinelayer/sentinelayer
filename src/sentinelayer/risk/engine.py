@@ -15,7 +15,6 @@ class RiskSignal:
 
 class RiskEngine:
     def __init__(self):
-        self.signals: List[RiskSignal] = []
         self.risk_thresholds = {
             "low": 30,
             "medium": 50,
@@ -31,27 +30,7 @@ class RiskEngine:
             "correlation": 1.3,
         }
     
-    def add_signal(self, name: str, score: float, source: str = "", details: Dict[str, Any] = None) -> None:
-        weight = self.signal_weights.get(name, 1.0)
-        confidence = 0.8
-        
-        if not isinstance(score, (int, float)) or math.isnan(score) or math.isinf(score):
-            score = 0.0
-        score = max(0.0, min(100.0, score))
-        
-        signal = RiskSignal(
-            name=name,
-            score=score,
-            weight=weight,
-            confidence=confidence,
-            source=source,
-            details=details or {}
-        )
-        self.signals.append(signal)
-    
-    def calculate_risk(self) -> Dict[str, Any]:
-        signals = self.signals
-        
+    def calculate_risk(self, signals: List[RiskSignal]) -> Dict[str, Any]:
         if not signals:
             return {
                 "score": 0,
@@ -109,7 +88,7 @@ class RiskEngine:
             level = "none"
             decision = "allow"
         
-        result = {
+        return {
             "score": avg_score,
             "level": level,
             "confidence": avg_confidence,
@@ -126,12 +105,6 @@ class RiskEngine:
             ],
             "signal_count": len(signals)
         }
-        
-        self.signals = []
-        return result
-    
-    def clear_signals(self) -> None:
-        self.signals = []
 
 def get_risk_engine() -> RiskEngine:
     return RiskEngine()

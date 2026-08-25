@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 import logging
+import os
+from sentinelayer.backend.internal.auth.jwt_handler import create_access_token
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -16,6 +18,7 @@ class LoginResponse(BaseModel):
     user_id: str
     tenant_id: str
 
+# Temporary user DB - will be replaced with real DB
 users_db = {
     "test@example.com": {
         "user_id": "user-123",
@@ -30,9 +33,18 @@ async def login(request: LoginRequest):
     user = users_db.get(request.email)
     if not user or user["password"] != request.password:
         raise HTTPException(status_code=401, detail="Invalid email or password")
-
+    
+    token_data = {
+        "sub": user["user_id"],
+        "tenant_id": user["tenant_id"],
+        "email": request.email,
+        "roles": user.get("roles", []),
+    }
+    
+    access_token = create_access_token(token_data)
+    
     return LoginResponse(
-        access_token="valid-token-for-testing-12345",
+        access_token=access_token,
         expires_in=900,
         user_id=user["user_id"],
         tenant_id=user["tenant_id"]

@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer
 import time
 import logging
 import uuid
@@ -17,6 +18,7 @@ from sentinelayer.api.middleware.auth import AuthMiddleware
 from sentinelayer.api.middleware.waf import WAFMiddleware
 from sentinelayer.api.middleware.ratelimit import RateLimitMiddleware
 from sentinelayer.api.middleware.tenant import TenantMiddleware
+from sentinelayer.api.middleware.pipeline import security_pipeline
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -71,8 +73,7 @@ async def security_middleware(request: Request, call_next):
         await rate_limit_middleware(request)
         await tenant_middleware(request)
     
-    response = await call_next(request)
-    return response
+    return await security_pipeline(request, call_next)
 
 async def get_current_user(request: Request):
     if TESTING:
@@ -116,7 +117,9 @@ async def health_check():
 
 @app.get("/metrics")
 async def metrics():
-    return {"message": "Metrics endpoint"}
+    from fastapi.responses import Response
+    from sentinelayer.observability.metrics import get_metrics
+    return Response(content=get_metrics(), media_type="text/plain")
 
 def check_bola_order(order_id: str, tenant_id: str, user_id: str, roles: list = None):
     repo = OrderRepository(db_manager, tenant_id)
@@ -222,13 +225,13 @@ control_plane = get_control_plane()
 
 @app.get("/api/v1/risk/calculate")
 async def risk_calculate(current_user: dict = Depends(get_current_user)):
-    return risk_engine.calculate_risk()
+    signals = []
+    return risk_engine.calculate_risk(signals)
 
 @app.post("/api/v1/risk/signal")
 async def risk_signal(request: Request, current_user: dict = Depends(get_current_user)):
     data = await request.json()
-    risk_engine.add_signal(data.get("name", "unknown"), data.get("score", 0.5))
-    return {"status": "added"}
+    return {"status": "signal_received"}
 
 @app.get("/api/v1/behavior/stats")
 async def behavior_stats(current_user: dict = Depends(get_current_user)):
@@ -306,21 +309,3 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"error": str(exc), "path": request.url.path}
     )
-from sentinelayer.evidence.lifecycle import start_retention_enforcer
-start_retention_enforcer()
-from sentinelayer.evidence.lifecycle import start_retention_enforcer
-start_retention_enforcer()
-from sentinelayer.api.middleware.ssrf import SSRFMiddleware
-
-ssrf_middleware = SSRFMiddleware()
-
-@app.middleware("http")
-async def ssrf_middleware_wrapper(request: Request, call_next):
-    await ssrf_middleware(request)
-    return await call_next(request)
-@app.middleware("http")
-async def ssrf_middleware_wrapper(request: Request, call_next):
-    result = await ssrf_middleware(request)
-    if result:
-        return result
-    return await call_next(request)

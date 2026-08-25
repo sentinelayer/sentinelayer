@@ -1,5 +1,6 @@
 from fastapi import Request, HTTPException, status
 from typing import Optional
+from sentinelayer.backend.internal.auth.jwt_handler import verify_token
 
 class AuthMiddleware:
     async def __call__(self, request: Request) -> Optional[dict]:
@@ -23,18 +24,20 @@ class AuthMiddleware:
                 detail="Invalid header format"
             )
 
-        if token == "valid-token-for-testing-12345":
-            request.state.user = {
-                "sub": "user-123",
-                "tenant_id": "tenant-acme",
-                "email": "test@example.com",
-                "roles": ["user", "admin"]
-            }
-            request.state.tenant_id = "tenant-acme"
-            request.state.user_id = "user-123"
-            return request.state.user
+        payload = verify_token(token)
+        if not payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired token"
+            )
 
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
-        )
+        request.state.user = {
+            "sub": payload.sub,
+            "tenant_id": payload.tenant_id,
+            "email": payload.email,
+            "roles": payload.roles
+        }
+        request.state.tenant_id = payload.tenant_id
+        request.state.user_id = payload.sub
+
+        return request.state.user
