@@ -15,6 +15,7 @@ class RiskSignal:
 
 class RiskEngine:
     def __init__(self):
+        self.signals: List[RiskSignal] = []
         self.risk_thresholds = {
             "low": 30,
             "medium": 50,
@@ -30,7 +31,28 @@ class RiskEngine:
             "correlation": 1.3,
         }
     
-    def calculate_risk(self, signals: List[RiskSignal]) -> Dict[str, Any]:
+    def add_signal(self, name: str, score: float, source: str = "", details: Dict[str, Any] = None) -> None:
+        weight = self.signal_weights.get(name, 1.0)
+        confidence = min(1.0, max(0.0, score * 0.8 + 0.2))
+        
+        if not isinstance(score, (int, float)) or math.isnan(score) or math.isinf(score):
+            score = 0.0
+        score = max(0.0, min(100.0, score))
+        
+        signal = RiskSignal(
+            name=name,
+            score=score,
+            weight=weight,
+            confidence=confidence,
+            source=source,
+            details=details or {}
+        )
+        self.signals.append(signal)
+    
+    def calculate_risk(self, signals: Optional[List[RiskSignal]] = None) -> Dict[str, Any]:
+        if signals is None:
+            signals = self.signals
+        
         if not signals:
             return {
                 "score": 0,
@@ -45,22 +67,18 @@ class RiskEngine:
         confidence_sum = 0.0
         
         for signal in signals:
-            if not isinstance(signal.score, (int, float)):
-                continue
-            if math.isnan(signal.score) or math.isinf(signal.score):
+            if not isinstance(signal.score, (int, float)) or math.isnan(signal.score) or math.isinf(signal.score):
                 continue
             
             score = max(0.0, min(100.0, signal.score))
             weight = self.signal_weights.get(signal.name, 1.0)
             confidence = signal.confidence
             
-            if not isinstance(confidence, (int, float)) or math.isnan(confidence):
+            if not isinstance(confidence, (int, float)) or math.isnan(confidence) or math.isinf(confidence):
                 confidence = 0.5
-            
             confidence = max(0.0, min(1.0, confidence))
             
-            weighted = score * weight
-            total_weighted_score += weighted
+            total_weighted_score += score * weight
             total_weight += weight
             confidence_sum += confidence
         
@@ -73,10 +91,8 @@ class RiskEngine:
                 "decision": "allow"
             }
         
-        avg_score = total_weighted_score / total_weight
-        avg_confidence = confidence_sum / len(signals)
-        
-        avg_score = max(0.0, min(100.0, avg_score))
+        avg_score = max(0.0, min(100.0, total_weighted_score / total_weight))
+        avg_confidence = confidence_sum / len(signals) if signals else 0.0
         
         if avg_score >= self.risk_thresholds["critical"]:
             level = "critical"
@@ -111,6 +127,9 @@ class RiskEngine:
             ],
             "signal_count": len(signals)
         }
+    
+    def clear_signals(self) -> None:
+        self.signals = []
 
 def get_risk_engine() -> RiskEngine:
     return RiskEngine()
