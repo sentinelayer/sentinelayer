@@ -26,3 +26,12 @@ services:
       - "6379:6379"
 volumes:
   postgres_data:
+  waf:
+    build:
+      context: ./waf
+      dockerfile: Dockerfile
+    container_name: sentinelayer-waf
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
