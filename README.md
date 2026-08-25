@@ -1,23 +1,24 @@
-![Header Animation](header.svg)
-
 # SentinelLayer
 
-Building **API Security Platform** — WAF + Behavioral Analysis + Risk Decision + Observability.
+**API Security Platform — WAF + Behavioral Analysis + Risk Decision + Observability**
+
+---
 
 ## What I'm Building
 
-SentinelLayer is an all-in-one API security solution designed to protect modern applications from:
-- Cyber attacks (SQLi, XSS, SSRF, etc.)
-- Business logic abuse
-- Data leaks
+SentinelLayer is an all-in-one API security solution designed to protect modern applications from cyber attacks, business logic abuse, and data leaks.
 
 Built for solo founders, startups, and enterprises who need simple, affordable, and effective security.
 
+---
+
 ## Tech Stack
 
-- Backend: Python, FastAPI, PostgreSQL, Redis
-- Frontend: React, TypeScript
-- Infra: Docker, Railway, Render
+- Python, FastAPI, PostgreSQL, Redis
+- React, TypeScript
+- Docker, Railway, Render
+
+---
 
 ## Focus Areas
 
@@ -27,10 +28,14 @@ Built for solo founders, startups, and enterprises who need simple, affordable, 
 - Risk Scoring & Decision Safety
 - Observability (Prometheus, Grafana)
 
+---
+
 ## Contact
 
 - GitHub: [@sentinelayer](https://github.com/sentinelayer)
 - Email: muhamadivan969@gmail.com
+
+---
 
 ## Philosophy
 
@@ -40,8 +45,10 @@ Built for solo founders, startups, and enterprises who need simple, affordable, 
 > Verified does not mean accepted.  
 > Accepted does not mean proven in production."
 
+---
+
 ## GitHub Stats
 
-![SentinelLayer's GitHub stats](https://github-readme-stats.vercel.app/api?username=sentinelayer&show_icons=true&theme=dark)
+![GitHub Stats](https://github-readme-stats.vercel.app/api?username=sentinelayer&show_icons=true&theme=dark)
 
 ![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=sentinelayer&layout=compact&theme=dark)
