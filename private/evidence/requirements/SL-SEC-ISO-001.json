@@ -1,0 +1,28 @@
+{
+  "requirement_id": "SL-SEC-ISO-001",
+  "control_id": "ISO-01",
+  "owner": "Founder",
+  "criticality": "P0",
+  "gate": "MVP",
+  "status": "TESTED",
+  "description": "PostgreSQL RLS (Row Level Security) for tenant isolation",
+  "acceptance_criteria": "Tenant A cannot access Tenant B data, RLS policies enforced at database level",
+  "test_method": "pytest unit tests with SQLite RLS simulation",
+  "test_result": "PASSED (5/5 tests passed on 2026-08-25)",
+  "failure_behavior": "FAIL-CLOSED (All queries must have tenant context)",
+  "rollback_strategy": "Disable RLS policies, use application-level filtering",
+  "implementation_version": "v0.1.0",
+  "evidence_artifacts": [
+    {
+      "type": "test_report",
+      "file": "tests/unit/database/test_rls.py",
+      "timestamp": "2026-08-25T16:00:00Z"
+    }
+  ],
+  "reviewer": "PENDING_EXTERNAL_RETAINER",
+  "status_history": [
+    {"date": "2026-08-25", "status": "DESIGNED"},
+    {"date": "2026-08-25", "status": "IMPLEMENTED"},
+    {"date": "2026-08-25", "status": "TESTED"}
+  ]
+}
