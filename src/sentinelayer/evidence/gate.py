@@ -177,7 +177,7 @@ class GateEngine:
         
         strategy = rollback_map.get(requirement_id)
         if strategy:
-            return GateCheck(name="Rollback", passed=True, reason=strategy)
+            return GateCheck(name="Rollback", passed=False, reason="Rollback not actually tested")
         
         return GateCheck(name="Rollback", passed=False, reason=f"No strategy for {requirement_id}")
     

@@ -4,6 +4,7 @@ COPY pyproject.toml requirements.txt ./
 RUN pip install --no-cache-dir -e .
 COPY src/ ./src/
 COPY scripts/ ./scripts/
+COPY scripts/ ./scripts/
 COPY private/ ./private/
 EXPOSE 8000
 RUN python scripts/run_migrations.py
