@@ -9,6 +9,7 @@ from sentinelayer.api.middleware.auth import AuthMiddleware
 from sentinelayer.api.middleware.ratelimit import RateLimitMiddleware
 from sentinelayer.api.middleware.tenant import TenantMiddleware
 from sentinelayer.api.middleware.waf import WAFMiddleware
+from sentinelayer.api.middleware.security_headers import SecurityHeadersMiddleware
 from sentinelayer.observability.metrics import (
     metrics_middleware, get_metrics, set_waf_rules_count,
     record_waf_block, record_rate_limit_hit, record_auth_failure
@@ -26,13 +27,22 @@ app = FastAPI(
     docs_url="/docs"
 )
 
-# CORS
+# Security headers (first middleware)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# CORS (with production settings)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://*.sentinelayer.com",
+        "https://sentinelayer.com",
+        "http://localhost:3000",
+        "http://localhost:8000",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    max_age=86400,
 )
 
 # Init middlewares
@@ -52,7 +62,6 @@ async def security_middleware(request: Request, call_next):
     if request.url.path not in public_paths:
         result = await waf_middleware(request)
         if result and result.get("blocked"):
-            # Record WAF block metric
             for violation in result.get("violations", []):
                 record_waf_block(
                     endpoint=request.url.path,
@@ -112,7 +121,8 @@ async def root():
             "rate_limit": "enabled",
             "tenant_isolation": "enabled",
             "bola_protection": "enabled",
-            "waf": "enabled"
+            "waf": "enabled",
+            "security_headers": "enabled"
         }
     }
 
