@@ -1,0 +1,15 @@
+{
+  "evidence_id": "EV-001",
+  "requirement_id": "SL-SEC-AUTH-001",
+  "control_id": "AUTH-01",
+  "artifact": "jwt_handler.py",
+  "timestamp": 1698765432.123,
+  "hash": "mock_hash",
+  "owner": "founder",
+  "reviewer": "PENDING",
+  "retention": 365,
+  "validity": 90,
+  "chain_of_custody": [],
+  "implementation_version": "0.1.0",
+  "status": "TESTED"
+}
