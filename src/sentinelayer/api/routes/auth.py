@@ -34,22 +34,22 @@ async def login(request: LoginRequest):
     user = users_db.get(request.email)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    
+
     try:
         if not pwd_context.verify(request.password, user["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid email or password")
     except Exception:
         raise HTTPException(status_code=500, detail="Authentication error")
-    
+
     token_data = {
         "sub": user["user_id"],
         "tenant_id": user["tenant_id"],
         "email": request.email,
         "roles": user.get("roles", []),
     }
-    
+
     access_token = create_access_token(token_data)
-    
+
     return LoginResponse(
         access_token=access_token,
         expires_in=15 * 60,
