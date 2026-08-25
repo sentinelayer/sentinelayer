@@ -54,5 +54,6 @@ Built for solo founders, startups, and enterprises who need simple, affordable, 
 
 ## 📊 GitHub Stats
 
-![GitHub Stats](https://github-readme-stats.vercel.app/api?username=sentinelayer&show_icons=true&theme=dark)
+![SentinelLayer's GitHub stats](https://github-readme-stats.vercel.app/api?username=sentinelayer&show_icons=true&theme=dark)
+
 ![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=sentinelayer&layout=compact&theme=dark)
