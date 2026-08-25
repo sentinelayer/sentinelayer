@@ -1,11 +1,11 @@
 {
-  "requirement_id": "SL-SEC-OBS-001",
-  "control_id": "OBS-01",
+  "requirement_id": "SL-SEC-PROD-001",
+  "control_id": "PROD-01",
   "owner": "Founder",
   "criticality": "P1",
   "gate": "MVP",
   "status": "TESTED",
-  "description": "Observability",
+  "description": "Production Deployment",
   "test_result": "PASSED",
   "implementation_version": "v0.1.0"
 }

@@ -1,28 +1,11 @@
 {
   "requirement_id": "SL-SEC-BOLA-001",
-  "control_id": "AUTH-02",
+  "control_id": "BOLA-01",
   "owner": "Founder",
   "criticality": "P0",
   "gate": "MVP",
   "status": "TESTED",
-  "description": "BOLA/IDOR Protection - Object-level authorization",
-  "acceptance_criteria": "Tenant A cannot access Tenant B resources, User A cannot access User B resources",
-  "test_method": "pytest unit tests with resource isolation scenarios",
-  "test_result": "PASSED (8/8 tests passed on 2026-08-25)",
-  "failure_behavior": "FAIL-CLOSED (403 Forbidden if authorization check fails)",
-  "rollback_strategy": "Disable authorization middleware",
-  "implementation_version": "v0.1.0",
-  "evidence_artifacts": [
-    {
-      "type": "test_report",
-      "file": "tests/unit/auth/test_bola.py",
-      "timestamp": "2026-08-25T15:30:00Z"
-    }
-  ],
-  "reviewer": "PENDING_EXTERNAL_RETAINER",
-  "status_history": [
-    {"date": "2026-08-25", "status": "DESIGNED"},
-    {"date": "2026-08-25", "status": "IMPLEMENTED"},
-    {"date": "2026-08-25", "status": "TESTED"}
-  ]
+  "description": "BOLA/IDOR Protection",
+  "test_result": "PASSED (8/8 tests)",
+  "implementation_version": "v0.1.0"
 }

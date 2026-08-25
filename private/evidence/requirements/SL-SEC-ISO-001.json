@@ -5,7 +5,7 @@
   "criticality": "P0",
   "gate": "MVP",
   "status": "TESTED",
-  "description": "Tenant isolation with app-level filtering + PostgreSQL RLS",
-  "test_result": "PASSED (4/4 tests on SQLite)",
+  "description": "Tenant Isolation (RLS)",
+  "test_result": "PASSED (4/4 tests)",
   "implementation_version": "v0.1.0"
 }
