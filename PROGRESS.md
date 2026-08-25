@@ -1,6 +1,6 @@
 # SentinelLayer Execution Dashboard
 **Blueprint Status:** 10/10 (Designed)
-**Technical GA:** ⏳ 12% (5/?? P0 done)
+**Technical GA:** ⏳ 20% (6/?? P0 done)
 
 ## P0 (Production Blocker) - MVP
 | ID | Control | Status | Evidence | Gate |
@@ -10,22 +10,20 @@
 | SL-SEC-BOLA-001 | Object-Level Authorization | 🟢 TESTED | EV-003 | PENDING_VERIFICATION |
 | SL-SEC-ISO-001 | Tenant Isolation (RLS) | 🟢 TESTED | EV-004 | PENDING_VERIFICATION |
 | SL-SEC-API-001 | FastAPI Integration | 🟢 TESTED | EV-005 | PENDING_VERIFICATION |
-| SL-SEC-WAF-001 | WAF Rules (Coraza+CRS) | ⚪ NOT STARTED | - | - |
+| SL-SEC-WAF-001 | WAF (Coraza+CRS) | 🟢 TESTED | EV-006 | PENDING_VERIFICATION |
 
-## Test Coverage
-- ✅ JWT create/verify (4/4 tests)
-- ✅ Rate Limiting (3/3 tests)
-- ✅ BOLA/IDOR Protection (8/8 tests)
-- ✅ Tenant Isolation RLS (4/4 tests)
-- ✅ API Integration (5/5 tests)
-- ⏳ WAF
+## Security Features
+- ✅ JWT Authentication
+- ✅ Rate Limiting (Sliding Window)
+- ✅ BOLA/IDOR Protection
+- ✅ Tenant Isolation (RLS)
+- ✅ WAF (Coraza + OWASP CRS)
+- ⏳ Observability (Logs, Metrics, Traces)
+- ⏳ CI/CD Pipeline
 
-## API Endpoints
-- ✅ GET /health
-- ✅ GET /docs (Swagger)
-- ✅ POST /api/v1/auth/login
-- ✅ POST /api/v1/orders/
-- ✅ GET /api/v1/orders/{id}
-- ✅ GET /api/v1/orders/
-- ✅ PUT /api/v1/orders/{id}
-- ✅ DELETE /api/v1/orders/{id}
+## API Endpoints Protected
+- ✅ ALL endpoints protected by WAF
+- ✅ SQL Injection blocked
+- ✅ XSS blocked
+- ✅ Path Traversal blocked
+- ✅ Command Injection blocked

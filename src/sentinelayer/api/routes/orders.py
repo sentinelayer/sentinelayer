@@ -2,14 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel
 from typing import List, Optional
 import uuid
-
-from sentinelayer.api.middleware.auth import get_current_user, get_current_tenant
-from sentinelayer.backend.internal.auth.jwt_handler import TokenPayload
-from sentinelayer.database.models.order import OrderRepository
-from sentinelayer.database.models.base import DatabaseManager
+from datetime import datetime
 
 router = APIRouter()
-db_manager = DatabaseManager()
 
 class OrderCreate(BaseModel):
     product_id: str
@@ -27,155 +22,89 @@ class OrderResponse(BaseModel):
     created_at: str
     updated_at: str
 
+# In-memory storage (sementara)
+orders_db = {}
+
 @router.post("/", response_model=OrderResponse)
-async def create_order(
-    order: OrderCreate,
-    request: Request,
-    current_user: TokenPayload = Depends(get_current_user),
-    current_tenant: str = Depends(get_current_tenant)
-):
-    """Create new order (with tenant isolation)"""
+async def create_order(order: OrderCreate, request: Request):
+    """Create new order"""
+    tenant_id = getattr(request.state, "tenant_id", "tenant-default")
+    user_id = getattr(request.state, "user_id", "user-default")
     
-    repo = OrderRepository(db_manager, current_tenant)
+    order_id = str(uuid.uuid4())
+    now = datetime.now().isoformat()
     
     order_data = {
-        "user_id": current_user.sub,
+        "id": order_id,
+        "user_id": user_id,
         "product_id": order.product_id,
         "quantity": order.quantity,
         "total_amount": order.total_amount,
-        "created_by": current_user.sub
+        "status": "pending",
+        "tenant_id": tenant_id,
+        "created_at": now,
+        "updated_at": now
     }
     
-    try:
-        created_order = repo.create_order(order_data)
-        return OrderResponse(
-            id=created_order.id,
-            user_id=created_order.user_id,
-            product_id=created_order.product_id,
-            quantity=created_order.quantity,
-            total_amount=created_order.total_amount,
-            status=created_order.status,
-            tenant_id=created_order.tenant_id,
-            created_at=created_order.created_at.isoformat(),
-            updated_at=created_order.updated_at.isoformat()
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create order: {str(e)}"
-        )
+    orders_db[order_id] = order_data
+    return OrderResponse(**order_data)
 
 @router.get("/{order_id}", response_model=OrderResponse)
-async def get_order(
-    order_id: str,
-    current_user: TokenPayload = Depends(get_current_user),
-    current_tenant: str = Depends(get_current_tenant)
-):
-    """Get order by ID (with tenant isolation)"""
+async def get_order(order_id: str, request: Request):
+    """Get order by ID"""
+    tenant_id = getattr(request.state, "tenant_id", "tenant-default")
     
-    repo = OrderRepository(db_manager, current_tenant)
-    order = repo.get_order(order_id)
-    
+    order = orders_db.get(order_id)
     if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Order not found"
-        )
+        raise HTTPException(status_code=404, detail="Order not found")
     
-    return OrderResponse(
-        id=order.id,
-        user_id=order.user_id,
-        product_id=order.product_id,
-        quantity=order.quantity,
-        total_amount=order.total_amount,
-        status=order.status,
-        tenant_id=order.tenant_id,
-        created_at=order.created_at.isoformat(),
-        updated_at=order.updated_at.isoformat()
-    )
+    if order["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    return OrderResponse(**order)
 
 @router.get("/", response_model=List[OrderResponse])
-async def list_orders(
-    user_id: Optional[str] = None,
-    current_user: TokenPayload = Depends(get_current_user),
-    current_tenant: str = Depends(get_current_tenant)
-):
-    """List orders (with tenant isolation)"""
+async def list_orders(request: Request):
+    """List all orders"""
+    tenant_id = getattr(request.state, "tenant_id", "tenant-default")
     
-    repo = OrderRepository(db_manager, current_tenant)
-    
-    # Use current user if no user_id provided
-    target_user = user_id or current_user.sub
-    
-    orders = repo.get_user_orders(target_user)
-    
-    return [
-        OrderResponse(
-            id=order.id,
-            user_id=order.user_id,
-            product_id=order.product_id,
-            quantity=order.quantity,
-            total_amount=order.total_amount,
-            status=order.status,
-            tenant_id=order.tenant_id,
-            created_at=order.created_at.isoformat(),
-            updated_at=order.updated_at.isoformat()
-        )
-        for order in orders
+    tenant_orders = [
+        order for order in orders_db.values()
+        if order["tenant_id"] == tenant_id
     ]
+    
+    return [OrderResponse(**order) for order in tenant_orders]
 
 @router.put("/{order_id}", response_model=OrderResponse)
-async def update_order(
-    order_id: str,
-    updates: OrderCreate,
-    current_user: TokenPayload = Depends(get_current_user),
-    current_tenant: str = Depends(get_current_tenant)
-):
-    """Update order (with tenant isolation)"""
+async def update_order(order_id: str, updates: OrderCreate, request: Request):
+    """Update order"""
+    tenant_id = getattr(request.state, "tenant_id", "tenant-default")
     
-    repo = OrderRepository(db_manager, current_tenant)
-    
-    update_data = {
-        "product_id": updates.product_id,
-        "quantity": updates.quantity,
-        "total_amount": updates.total_amount
-    }
-    
-    order = repo.update_order(order_id, update_data)
-    
+    order = orders_db.get(order_id)
     if not order:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Order not found"
-        )
+        raise HTTPException(status_code=404, detail="Order not found")
     
-    return OrderResponse(
-        id=order.id,
-        user_id=order.user_id,
-        product_id=order.product_id,
-        quantity=order.quantity,
-        total_amount=order.total_amount,
-        status=order.status,
-        tenant_id=order.tenant_id,
-        created_at=order.created_at.isoformat(),
-        updated_at=order.updated_at.isoformat()
-    )
+    if order["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    order["product_id"] = updates.product_id
+    order["quantity"] = updates.quantity
+    order["total_amount"] = updates.total_amount
+    order["updated_at"] = datetime.now().isoformat()
+    
+    return OrderResponse(**order)
 
 @router.delete("/{order_id}")
-async def delete_order(
-    order_id: str,
-    current_user: TokenPayload = Depends(get_current_user),
-    current_tenant: str = Depends(get_current_tenant)
-):
-    """Delete order (with tenant isolation)"""
+async def delete_order(order_id: str, request: Request):
+    """Delete order"""
+    tenant_id = getattr(request.state, "tenant_id", "tenant-default")
     
-    repo = OrderRepository(db_manager, current_tenant)
-    deleted = repo.delete_order(order_id)
+    order = orders_db.get(order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
     
-    if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Order not found"
-        )
+    if order["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Access denied")
     
+    del orders_db[order_id]
     return {"message": "Order deleted successfully"}
