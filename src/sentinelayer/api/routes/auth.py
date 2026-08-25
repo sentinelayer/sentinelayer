@@ -6,13 +6,13 @@ import logging
 import jwt
 import time
 
-from sentinelayer.backend.internal.auth.jwt_handler import create_access_token, verify_token
+from sentinelayer.backend.internal.auth.jwt_handler import create_access_token
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 class LoginRequest(BaseModel):
-    email: str  # Ganti dari EmailStr ke str
+    email: str
     password: str
 
 class LoginResponse(BaseModel):
@@ -22,12 +22,12 @@ class LoginResponse(BaseModel):
     user_id: str
     tenant_id: str
 
-# Mock user database
+# Simple user DB (tanpa bcrypt dulu)
 users_db = {
     "test@example.com": {
         "user_id": "user-123",
         "tenant_id": "tenant-acme",
-        "password": "password123",
+        "password": "password123",  # Plaintext sementara
         "roles": ["user"]
     }
 }

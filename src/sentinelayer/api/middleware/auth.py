@@ -6,8 +6,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 class AuthMiddleware:
-    """Authentication middleware using JWT"""
-    
     async def __call__(self, request: Request) -> Optional[TokenPayload]:
         auth_header = request.headers.get("Authorization")
         if not auth_header:
@@ -36,8 +34,8 @@ class AuthMiddleware:
                 detail="Invalid or expired token"
             )
         
-        # Store user context
-        request.state.user = payload
+        # Store user context - pake model_dump() (V2) instead of dict() (deprecated)
+        request.state.user = payload.model_dump()
         request.state.tenant_id = payload.tenant_id
         request.state.user_id = payload.sub
         

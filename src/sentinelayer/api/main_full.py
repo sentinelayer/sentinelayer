@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Request, HTTPException, status
+from fastapi import FastAPI, Request, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import time
 import logging
 import uuid
+import os
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -11,15 +12,18 @@ from sentinelayer.api.routes import auth
 from sentinelayer.database.models.base import DatabaseManager
 from sentinelayer.database.models.order import OrderRepository, OrderStatus
 
-# Setup logging
+# ============ MIDDLEWARE ============
+from sentinelayer.api.middleware.auth import AuthMiddleware
+from sentinelayer.api.middleware.waf import WAFMiddleware
+from sentinelayer.api.middleware.ratelimit import RateLimitMiddleware
+from sentinelayer.api.middleware.tenant import TenantMiddleware
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Init database
 db_manager = DatabaseManager()
 db_manager.create_tables()
 
-# Create FastAPI app
 app = FastAPI(
     title="SentinelLayer API",
     description="Security control and enforcement platform",
@@ -27,7 +31,6 @@ app = FastAPI(
     docs_url="/docs"
 )
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,8 +39,53 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ============ MODELS ============
+# ============ TESTING MODE ============
+TESTING = os.getenv("TESTING", "false").lower() == "true"
+if TESTING:
+    logger.warning("⚠️ RUNNING IN TESTING MODE - AUTH DISABLED")
 
+# ============ INIT MIDDLEWARE ============
+auth_middleware = AuthMiddleware()
+waf_middleware = WAFMiddleware()
+rate_limit_middleware = RateLimitMiddleware()
+tenant_middleware = TenantMiddleware()
+
+# ============ GLOBAL SECURITY MIDDLEWARE ============
+@app.middleware("http")
+async def security_middleware(request: Request, call_next):
+    public_paths = ["/", "/health", "/docs", "/redoc", "/openapi.json", "/metrics", "/api/v1/auth/login"]
+    
+    # Kalo testing, skip auth
+    if TESTING:
+        # Tetap jalanin WAF & rate limit kalo mau
+        if request.url.path not in public_paths:
+            await waf_middleware(request)
+            await rate_limit_middleware(request)
+            # SKIP AUTH
+        response = await call_next(request)
+        return response
+    
+    # Production: jalanin semua middleware
+    if request.url.path not in public_paths:
+        await waf_middleware(request)
+        await rate_limit_middleware(request)
+        await auth_middleware(request)  # <- AUTH ONLY IN PRODUCTION
+        await tenant_middleware(request)
+    
+    response = await call_next(request)
+    return response
+
+# ============ DEPENDENCY ============
+async def get_current_user(request: Request):
+    if TESTING:
+        return {"sub": "test-user", "tenant_id": "tenant-test", "roles": ["user"]}
+    
+    user = getattr(request.state, 'user', None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
+
+# ============ MODELS ============
 class OrderCreate(BaseModel):
     product_id: str
     quantity: int
@@ -55,7 +103,6 @@ class OrderResponse(BaseModel):
     updated_at: str
 
 # ============ ROOT ============
-
 @app.get("/")
 async def root():
     return {
@@ -64,7 +111,12 @@ async def root():
         "status": "operational",
         "docs": "/docs",
         "auth": "/api/v1/auth",
-        "database": "postgresql"
+        "security": {
+            "waf": "enabled",
+            "rate_limit": "enabled",
+            "auth": "disabled (testing)" if TESTING else "enabled",
+            "tenant_isolation": "enabled"
+        }
     }
 
 @app.get("/health")
@@ -76,11 +128,10 @@ async def metrics():
     return {"message": "Metrics endpoint"}
 
 # ============ ORDERS ============
-
 @app.post("/api/v1/orders/", response_model=OrderResponse)
-async def create_order(order: OrderCreate, request: Request):
-    tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
-    user_id = request.headers.get("X-User-ID", "user-default")
+async def create_order(order: OrderCreate, request: Request, current_user: dict = Depends(get_current_user)):
+    tenant_id = current_user.get("tenant_id", "tenant-default")
+    user_id = current_user.get("sub", "user-default")
     
     repo = OrderRepository(db_manager, tenant_id)
     
@@ -97,8 +148,8 @@ async def create_order(order: OrderCreate, request: Request):
     return OrderResponse(**created.to_dict())
 
 @app.get("/api/v1/orders/", response_model=List[OrderResponse])
-async def list_orders(request: Request):
-    tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
+async def list_orders(request: Request, current_user: dict = Depends(get_current_user)):
+    tenant_id = current_user.get("tenant_id", "tenant-default")
     
     repo = OrderRepository(db_manager, tenant_id)
     orders = repo.get_all_orders()
@@ -106,8 +157,8 @@ async def list_orders(request: Request):
     return [OrderResponse(**order.to_dict()) for order in orders]
 
 @app.get("/api/v1/orders/{order_id}", response_model=OrderResponse)
-async def get_order(order_id: str, request: Request):
-    tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
+async def get_order(order_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    tenant_id = current_user.get("tenant_id", "tenant-default")
     
     repo = OrderRepository(db_manager, tenant_id)
     order = repo.get_order(order_id)
@@ -118,8 +169,8 @@ async def get_order(order_id: str, request: Request):
     return OrderResponse(**order.to_dict())
 
 @app.put("/api/v1/orders/{order_id}", response_model=OrderResponse)
-async def update_order(order_id: str, order: OrderCreate, request: Request):
-    tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
+async def update_order(order_id: str, order: OrderCreate, request: Request, current_user: dict = Depends(get_current_user)):
+    tenant_id = current_user.get("tenant_id", "tenant-default")
     
     repo = OrderRepository(db_manager, tenant_id)
     
@@ -137,8 +188,8 @@ async def update_order(order_id: str, order: OrderCreate, request: Request):
     return OrderResponse(**updated.to_dict())
 
 @app.delete("/api/v1/orders/{order_id}")
-async def delete_order(order_id: str, request: Request):
-    tenant_id = request.headers.get("X-Tenant-ID", "tenant-default")
+async def delete_order(order_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    tenant_id = current_user.get("tenant_id", "tenant-default")
     
     repo = OrderRepository(db_manager, tenant_id)
     deleted = repo.delete_order(order_id)
@@ -148,11 +199,7 @@ async def delete_order(order_id: str, request: Request):
     
     return {"message": "Order deleted successfully"}
 
-# ============ INCLUDE ROUTERS ============
-
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
-
-# ============ ERROR HANDLERS ============
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -161,126 +208,3 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"error": str(exc), "path": request.url.path}
     )
-
-# ============ METRICS MIDDLEWARE ============
-from sentinelayer.observability.metrics import (
-    record_request, increment_active_requests, decrement_active_requests
-)
-
-@app.middleware("http")
-async def metrics_middleware(request: Request, call_next):
-    increment_active_requests()
-    start_time = time.time()
-    
-    try:
-        response = await call_next(request)
-    except Exception as e:
-        duration = time.time() - start_time
-        record_request(
-            method=request.method,
-            endpoint=request.url.path,
-            tenant=getattr(request.state, 'tenant_id', 'unknown'),
-            status_code=500,
-            duration=duration
-        )
-        decrement_active_requests()
-        raise e
-    
-    duration = time.time() - start_time
-    record_request(
-        method=request.method,
-        endpoint=request.url.path,
-        tenant=getattr(request.state, 'tenant_id', 'unknown'),
-        status_code=response.status_code,
-        duration=duration
-    )
-    decrement_active_requests()
-    return response
-
-# ============ THREAT INTELLIGENCE + AI ============
-from sentinelayer.threatintel.engine import get_threat_intel
-from sentinelayer.ai.llm import get_llm_layer
-
-threat_intel = get_threat_intel()
-llm_layer = get_llm_layer()
-
-@app.get("/api/v1/threatintel/check")
-async def check_threatintel(ip: str):
-    result = threat_intel.check_ip(ip)
-    return {
-        "ip": result.ip,
-        "score": result.score,
-        "is_malicious": result.is_malicious,
-        "categories": result.categories,
-        "source": result.source
-    }
-
-@app.get("/api/v1/ai/analyze")
-async def analyze_request(request: Request):
-    request_data = {
-        "request_id": request.headers.get("X-Request-ID", "unknown"),
-        "method": request.method,
-        "endpoint": request.url.path,
-        "user_id": getattr(request.state, "user_id", "unknown"),
-        "tenant_id": getattr(request.state, "tenant_id", "unknown"),
-        "client_ip": request.client.host if request.client else "unknown",
-        "url": str(request.url)
-    }
-    
-    # Mock risk result
-    risk_result = {
-        "score": 0.3,
-        "level": "low",
-        "decision": "allow",
-        "confidence": 0.8,
-        "signals": []
-    }
-    
-    analysis = llm_layer.analyze_request(request_data, risk_result)
-    return {
-        "request_id": analysis.request_id,
-        "summary": analysis.summary,
-        "risk_level": analysis.risk_level,
-        "recommendations": analysis.recommendations,
-        "confidence": analysis.confidence
-    }
-
-# ============ EVIDENCE + GATE + KEY ROTATION ============
-from sentinelayer.evidence.matrix import get_evidence_matrix
-from sentinelayer.evidence.gate import get_gate_engine
-from sentinelayer.security.key_rotation import get_key_rotation
-
-evidence_matrix = get_evidence_matrix()
-gate_engine = get_gate_engine()
-key_rotation = get_key_rotation()
-
-@app.get("/api/v1/evidence/list")
-async def list_evidence():
-    return {
-        "evidence": [e.__dict__ for e in evidence_matrix.list_evidence()],
-        "stats": evidence_matrix.get_stats()
-    }
-
-@app.post("/api/v1/evidence/create")
-async def create_evidence(req: Request):
-    data = await req.json()
-    evidence = evidence_matrix.create_evidence(
-        requirement_id=data.get("requirement_id", "REQ-001"),
-        control_id=data.get("control_id", "CTRL-001"),
-        artifact=data.get("artifact", "test_artifact")
-    )
-    return {"evidence_id": evidence.evidence_id, "status": "CREATED"}
-
-@app.get("/api/v1/gate/check/{requirement_id}")
-async def check_gate(requirement_id: str):
-    result = gate_engine.check_requirement(requirement_id, "EV-001")
-    return gate_engine.get_status(requirement_id)
-
-@app.get("/api/v1/keys/status")
-async def key_status():
-    return key_rotation.get_stats()
-
-@app.post("/api/v1/keys/rotate")
-async def rotate_keys():
-    key_rotation.rotate_key(key_rotation.current_key_id, "api_request")
-    return {"message": "Keys rotated", "new_key_id": key_rotation.current_key_id}
