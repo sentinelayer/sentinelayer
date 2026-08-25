@@ -8,7 +8,7 @@ class RedisSlidingWindowRateLimiter:
     def __init__(self, redis_url: str = None):
         redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379")
         self.redis = redis.from_url(redis_url, decode_responses=True)
-
+    
     def is_allowed(self, dimension: str, identifier: str, endpoint: str = "", 
                    limit: Optional[int] = None, window: Optional[int] = None) -> Dict:
         key = f"ratelimit:{dimension}:{hashlib.sha256(identifier.encode()).hexdigest()[:16]}:{endpoint}"
@@ -49,3 +49,14 @@ class SimpleRateLimiter:
         
         self.requests[key].append(now)
         return {"allowed": True, "remaining": limit - len(self.requests[key]) - 1, "reset_in": window}
+
+# Auto-select: Redis jika tersedia, fallback ke Simple
+try:
+    _limiter = RedisSlidingWindowRateLimiter()
+    _limiter.redis.ping()
+    print("✅ Using Redis rate limiter")
+    get_rate_limiter = lambda: _limiter
+except:
+    print("⚠️ Redis not available, using simple rate limiter")
+    _limiter = SimpleRateLimiter()
+    get_rate_limiter = lambda: _limiter
