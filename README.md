@@ -1,16 +1,55 @@
-## Hi there 👋
+# SentinelLayer
 
-<!--
-**sentinelayer/sentinelayer** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+Building **API Security Platform** — WAF + Behavioral Analysis + Risk Decision + Observability.
 
-Here are some ideas to get you started:
+---
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+## 🔥 What I'm Building
+
+**SentinelLayer** is an all-in-one API security solution designed to protect modern applications from:
+- Cyber attacks (SQLi, XSS, SSRF, etc.)
+- Business logic abuse
+- Data leaks
+
+Built for solo founders, startups, and enterprises who need **simple, affordable, and effective security**.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Backend**: Python, FastAPI, PostgreSQL, Redis
+- **Frontend**: React, TypeScript
+- **Infra**: Docker, Railway, Render
+
+---
+
+## 📌 Focus Areas
+
+- JWT Authentication & Authorization
+- WAF with OWASP-style rules
+- Rate Limiting & Tenant Isolation
+- Risk Scoring & Decision Safety
+- Observability (Prometheus, Grafana)
+
+---
+
+## 📫 Contact
+
+- GitHub: [@sentinelayer](https://github.com/sentinelayer)
+- Email: muhamadivan969@gmail.com
+
+---
+
+## 🧩 Philosophy
+
+> "Designed does not mean implemented.  
+> Implemented does not mean tested.  
+> Tested does not mean verified.  
+> Verified does not mean accepted.  
+> Accepted does not mean proven in production."
+
+---
+
+## 📊 GitHub Stats
+
+![SentinelLayer's GitHub stats](https://github-readme-stats.vercel.app/api?username=sentinelayer&show_icons=true&theme=dark)
