@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Boolean, DateTime
 import uuid
 from datetime import datetime
-from src.sentinelayer.database import Base
+from control_plane.app.infrastructure.db.session import Base
 
 class User(Base):
     __tablename__ = "users"
