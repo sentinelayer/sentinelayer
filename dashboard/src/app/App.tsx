@@ -1,5 +1,7 @@
-import React, { useState } from "react";
-import { isLoggedIn, logout } from "../api/client";
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { isLoggedIn } from "../api/client";
+import { Layout } from "../components/Layout";
 import LoginPage from "../pages/login/LoginPage";
 import OverviewPage from "../pages/overview/OverviewPage";
 import ApplicationsPage from "../pages/applications/ApplicationsPage";
@@ -10,88 +12,42 @@ import AlertsPage from "../pages/alerts/AlertsPage";
 import EvidenceList from "../pages/evidence/EvidenceList";
 import RiskPage from "../pages/risk/RiskPage";
 import ConfigurationPage from "../pages/configuration/ConfigurationPage";
+import AttackGraphPage from "../pages/attack-graph/AttackGraphPage";
+import HeatmapPage from "../pages/heatmap/HeatmapPage";
+import UserRiskPage from "../pages/user-risk/UserRiskPage";
+import ExplainabilityPage from "../pages/explainability/ExplainabilityPage";
+import SLAPage from "../pages/sla/SLAPage";
+import BreakGlassPage from "../pages/admin/BreakGlassPage";
+import HighRiskActionsPage from "../pages/admin/HighRiskActionsPage";
 
-type Tab =
-  | "overview"
-  | "applications"
-  | "policies"
-  | "incidents"
-  | "events"
-  | "alerts"
-  | "evidence"
-  | "risk"
-  | "configuration";
-
-const TABS: { id: Tab; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "applications", label: "Applications" },
-  { id: "policies", label: "Policies" },
-  { id: "incidents", label: "Incidents" },
-  { id: "events", label: "Events" },
-  { id: "alerts", label: "Alerts" },
-  { id: "evidence", label: "Evidence" },
-  { id: "risk", label: "Risk" },
-  { id: "configuration", label: "Config" },
-];
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  if (!isLoggedIn()) return <Navigate to="/login" replace />;
+  return <Layout>{children}</Layout>;
+}
 
 export default function App() {
-  const [authed, setAuthed] = useState(isLoggedIn());
-  const [tab, setTab] = useState<Tab>("overview");
-
-  if (!authed) {
-    return <LoginPage onSuccess={() => setAuthed(true)} />;
-  }
-
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#0a0a0a", color: "#e8e8e8" }}>
-      <nav
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 8,
-          padding: 12,
-          borderBottom: "1px solid #333",
-          alignItems: "center",
-        }}
-      >
-        <strong style={{ color: "#00ff88", marginRight: 12 }}>SentinelLayer</strong>
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{
-              background: tab === t.id ? "#00ff88" : "#1a1a1a",
-              color: tab === t.id ? "#0a0a0a" : "#ccc",
-              border: "1px solid #333",
-              padding: "6px 10px",
-              cursor: "pointer",
-              borderRadius: 4,
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-        <button
-          onClick={() => {
-            logout();
-            setAuthed(false);
-          }}
-          style={{ marginLeft: "auto", background: "#331111", color: "#ff8888", border: "1px solid #553333", padding: "6px 10px", cursor: "pointer", borderRadius: 4 }}
-        >
-          Logout
-        </button>
-      </nav>
-      <main style={{ padding: 16 }}>
-        {tab === "overview" && <OverviewPage />}
-        {tab === "applications" && <ApplicationsPage />}
-        {tab === "policies" && <PoliciesPage />}
-        {tab === "incidents" && <IncidentsPage />}
-        {tab === "events" && <EventsPage />}
-        {tab === "alerts" && <AlertsPage />}
-        {tab === "evidence" && <EvidenceList />}
-        {tab === "risk" && <RiskPage />}
-        {tab === "configuration" && <ConfigurationPage />}
-      </main>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage onSuccess={() => (window.location.href = "/")} />} />
+        <Route path="/" element={<RequireAuth><OverviewPage /></RequireAuth>} />
+        <Route path="/applications" element={<RequireAuth><ApplicationsPage /></RequireAuth>} />
+        <Route path="/events" element={<RequireAuth><EventsPage /></RequireAuth>} />
+        <Route path="/alerts" element={<RequireAuth><AlertsPage /></RequireAuth>} />
+        <Route path="/incidents" element={<RequireAuth><IncidentsPage /></RequireAuth>} />
+        <Route path="/evidence" element={<RequireAuth><EvidenceList /></RequireAuth>} />
+        <Route path="/risk" element={<RequireAuth><RiskPage /></RequireAuth>} />
+        <Route path="/attack-graph" element={<RequireAuth><AttackGraphPage /></RequireAuth>} />
+        <Route path="/heatmap" element={<RequireAuth><HeatmapPage /></RequireAuth>} />
+        <Route path="/user-risk" element={<RequireAuth><UserRiskPage /></RequireAuth>} />
+        <Route path="/policies" element={<RequireAuth><PoliciesPage /></RequireAuth>} />
+        <Route path="/configuration" element={<RequireAuth><ConfigurationPage /></RequireAuth>} />
+        <Route path="/explainability" element={<RequireAuth><ExplainabilityPage /></RequireAuth>} />
+        <Route path="/sla" element={<RequireAuth><SLAPage /></RequireAuth>} />
+        <Route path="/admin/break-glass" element={<RequireAuth><BreakGlassPage /></RequireAuth>} />
+        <Route path="/admin/high-risk-actions" element={<RequireAuth><HighRiskActionsPage /></RequireAuth>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

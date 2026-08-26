@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 from control_plane.app.api.v1 import (
+    ai_assist,
+    threat_intel,
     offboarding,
     auth,
     tenants,
@@ -56,3 +58,5 @@ router.include_router(residency.router)
 router.include_router(events.router)
 router.include_router(events_ws.router)
 router.include_router(offboarding.router)
+router.include_router(threat_intel.router)
+router.include_router(ai_assist.router)

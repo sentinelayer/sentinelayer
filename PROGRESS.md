@@ -1,18 +1,26 @@
 # SentinelLayer Progress
 
-## This batch
-- Gateway service in docker-compose (Go 1.25 Dockerfile)
-- Postgres RLS policies (§9.2) + migration 0004 + session SET app.tenant_id
-- Applications/policies/incidents use db_with_tenant
-- Offboarding API soft/hard with before/after hash (§9.19)
-- Dashboard: login/register, applications, policies, incidents, overview
+## Code complete (this cycle)
+- [x] Gateway full pipeline (Coraza → auth → rate → risk → decision → upstream)
+- [x] Redis env (REDIS_ADDR / REDIS_URL)
+- [x] events_ws websocket
+- [x] MFA enrollment (setup / verify / disable / login) + smoke passed
+- [x] CI: unit, gateway build, security-integration (BOLA + tenant matrix)
+- [x] Release: cosign keyless + SBOM artifacts
+- [x] Dashboard react-router + Layout navigation
+- [x] Threat-intel static feed API
+- [x] AI explain off-path API (local, non-blocking)
+- [x] Provenance helper + docker-compose.prod.yml profile
+- [x] Alembic 0005 MFA columns
 
-## Verified previously
-- Live tenant isolation PASSED
-- Risk engine + behavior + blast radius unit tests PASSED
+## Remaining (cannot finish by code alone)
+- [ ] GitHub Actions green confirmation on origin (human check)
+- [ ] External Retainer contract + dual-control access
+- [ ] Real HA multi-AZ deployment + DR drill evidence
+- [ ] Pilot: 3 customers, success metrics, legal
+- [ ] Enterprise SSO / SCIM
+- [ ] Commercial GA (pricing, support SLA, compliance pack)
 
-## Still external / non-code
-- External Retainer signature
-- Full MFA device enrollment productization
-- Production cosign/SBOM pipeline attestation
-- Full adversarial matrix beyond BOLA API test
+## Estimated
+- Technical MVP path: \~40–45%
+- Overall blueprint 0→100: \~30–35%

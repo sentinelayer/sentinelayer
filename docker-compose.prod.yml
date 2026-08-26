@@ -1,0 +1,12 @@
+# Usage:
+#   HASH=$(sha256sum dist/gateway | awk '{print $1}')
+#   SL_APPROVED_ARTIFACT_HASH=$HASH SL_RUNNING_ARTIFACT_HASH=$HASH \
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+services:
+  gateway:
+    environment:
+      SL_ENFORCE_PROVENANCE: "true"
+      SL_APPROVED_ARTIFACT_HASH: ${SL_APPROVED_ARTIFACT_HASH}
+      SL_RUNNING_ARTIFACT_HASH: ${SL_RUNNING_ARTIFACT_HASH}
+      SL_ENV: production
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
