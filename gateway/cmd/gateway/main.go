@@ -74,7 +74,6 @@ limiter := NewRateLimiter(60)
 mux := http.NewServeMux()
 
 mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-// WAF
 for key, value := range r.URL.Query() {
 if waf.Process(value[0]) {
 w.WriteHeader(http.StatusForbidden)
@@ -83,7 +82,6 @@ return
 }
 }
 
-// Rate Limit
 clientIP := r.RemoteAddr
 if !limiter.Allow(clientIP) {
 w.WriteHeader(http.StatusTooManyRequests)
