@@ -26,10 +26,11 @@ services:
       retries: 5
 
   risk-engine:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: python -m uvicorn engine.risk.server:app --host 0.0.0.0 --port 8090
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: sh -c "pip install -q -r requirements.txt && PYTHONPATH=/app python -m uvicorn engine.risk.server:app --host 0.0.0.0 --port 8090"
     environment:
       PYTHONPATH: /app
     ports:
@@ -38,12 +39,14 @@ services:
       - redis
 
   control-plane:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - .:/app
     command: >
-      sh -c "alembic -c alembic.ini upgrade head &&
-             python -m uvicorn control_plane.app.main:app --host 0.0.0.0 --port 8005"
+      sh -c "pip install -q -r requirements.txt &&
+             PYTHONPATH=/app alembic -c alembic.ini upgrade head &&
+             PYTHONPATH=/app python -m uvicorn control_plane.app.main:app --host 0.0.0.0 --port 8005"
     environment:
       PYTHONPATH: /app
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sentinelayer
