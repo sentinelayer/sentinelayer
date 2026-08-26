@@ -1,20 +1,17 @@
-# ADR 0003: Fail Open vs Fail Closed
+# ADR 0003: Fail-Open / Fail-Closed Matrix
+
+## Status
+Accepted
 
 ## Context
-Security capabilities may fail during runtime.
+When WAF, Risk Engine, or Decision Safety Layer errors, the system must not choose randomly. Matrix is versioned and signed (P0: SL-SEC-FAIL-001).
 
 ## Decision
-- WAF: Fail Open (availability > security)
-- Auth: Fail Closed (security > availability)
-- Rate Limit: Fail Open
-- Risk: Fail Open
-- Decision: Fail Closed
-
-## Alternatives
-- All fail closed - too many outages
-- All fail open - insecure
+Critical paths (auth, tenant isolation, policy load, provenance): FAIL-CLOSED.
+Abuse/rate and non-critical enrichments: may FAIL-OPEN to MONITOR per signed matrix.
+Matrix itself is a signed artifact; unsigned matrix is rejected.
 
 ## Consequences
-- Different behavior per capability
-- Documented in fail-matrix.yaml
-- Last-known-good fallback
+- Decision Safety Layer is mandatory on the request path
+- Chaos/fault tests required before Production gate
+- Operational runbook must match matrix

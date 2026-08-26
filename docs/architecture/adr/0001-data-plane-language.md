@@ -1,16 +1,16 @@
-# ADR 0001: Data Plane Language
+# ADR 0001: Data Plane Language = Go
+
+## Status
+Accepted
 
 ## Context
-Gateway needs low latency, high concurrency, and WAF embedding.
+Data Plane handles every request (proxy, WAF, rate limit, decision). Must be low-latency, memory-safe enough, and easy to embed Coraza.
 
 ## Decision
-Use Go for Data Plane (gateway).
-
-## Alternatives
-- Python (FastAPI) - slower, harder to embed Coraza
-- Rust - too early for team skills
+Use Go for Gateway / Data Plane.
 
 ## Consequences
-- Go has Coraza integration
-- Good performance
-- Simple deployment (single binary)
+- Coraza (Go) integrates natively
+- Single binary deploy
+- Control Plane remains Python (FastAPI) for GRC, evidence, gates
+- Clear process boundary: Go = request path, Python = management path

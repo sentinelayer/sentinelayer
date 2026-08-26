@@ -1,16 +1,19 @@
 # ADR 0002: Policy Signing Hierarchy
 
+## Status
+Accepted
+
 ## Context
-Policies need cryptographic integrity and versioning.
+Unsigned or tampered policy must never activate (P0: SL-SEC-POLICY-001). Solo founder needs automatic rotation without dual-human ceremony every time.
 
 ## Decision
-Use HMAC-SHA256 for policy signing with rotation every 24 hours.
-
-## Alternatives
-- Ed25519 - more complex, slower
-- No signing - insecure
+- Root/policy signing key hierarchy
+- Active signing key rotates every 24h automatically
+- Previous key retained for verification window
+- Only signatures from current or retained keys accepted
+- Activation path rejects unsigned policy (fail-closed)
 
 ## Consequences
-- Simpler than asymmetric crypto
-- Rotation worker handles key lifecycle
-- Gateway verifies signatures
+- Key rotation worker required (already scaffolded)
+- Evidence must record which key version signed a policy
+- Compromise model: rotate + revoke window documented in operations
