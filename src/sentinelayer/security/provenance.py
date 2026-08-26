@@ -10,7 +10,6 @@ class RuntimeProvenance:
         self.manifest_path = "private/manifest.json"
         self.verified = False
         self.environment = os.getenv("ENVIRONMENT", "development")
-
         if self.environment == "production":
             self._verify_production()
         else:
