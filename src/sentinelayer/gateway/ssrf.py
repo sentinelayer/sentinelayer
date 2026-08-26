@@ -1,9 +1,8 @@
-import re
-import ipaddress
-import socket
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
+import ipaddress
+import socket
 
 class SSRFMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
@@ -15,10 +14,8 @@ class SSRFMiddleware(BaseHTTPMiddleware):
         ]
         self.blocked_domains = ["localhost", "metadata.google.internal", "169.254.169.254"]
 
-    def is_blocked_url(self, url: str) -> bool:
+    def is_blocked(self, url: str) -> bool:
         hostname = url.split("/")[0].split(":")[0]
-        
-        # Resolve DNS to check for rebinding
         try:
             ip = socket.gethostbyname(hostname)
             for blocked in self.blocked_ips:
@@ -36,15 +33,6 @@ class SSRFMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         for key, value in request.query_params.items():
             if any(x in key.lower() for x in ["url", "uri", "path", "redirect"]):
-                if self.is_blocked_url(value):
+                if self.is_blocked(value):
                     return JSONResponse(status_code=403, content={"error": "SSRF attempt blocked"})
-
-        response = await call_next(request)
-        
-        # Check redirects in response
-        if response.status_code in [301, 302, 307, 308]:
-            location = response.headers.get("location", "")
-            if location and self.is_blocked_url(location):
-                return JSONResponse(status_code=403, content={"error": "Blocked redirect to internal resource"})
-
-        return response
+        return await call_next(request)
