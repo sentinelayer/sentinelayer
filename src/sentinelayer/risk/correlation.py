@@ -1,21 +1,20 @@
-from typing import Dict, List
+from typing import Dict
 from collections import defaultdict
-from datetime import datetime
 
 class SignalCorrelator:
     def __init__(self):
-        self.signals = defaultdict(list)
-    
+        self.signals = defaultdict(lambda: defaultdict(list))
+
     def add_signal(self, signal_type: str, data: Dict):
-        self.signals[signal_type].append({
-            "data": data,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-    
+        tenant_id = data.get("tenant_id", "global")
+        self.signals[tenant_id][signal_type].append(data)
+
     def correlate(self, context: Dict) -> Dict:
-        total_signals = sum(len(v) for v in self.signals.values())
-        
-        # FIX: >=5 dulu, baru >=3
+        tenant_id = context.get("tenant_id", "global")
+        tenant_signals = self.signals.get(tenant_id, {})
+
+        total_signals = sum(len(v) for v in tenant_signals.values())
+
         if total_signals >= 5:
             return {"total_signals": total_signals, "risk_multiplier": 2.0, "priority": "critical"}
         elif total_signals >= 3:
