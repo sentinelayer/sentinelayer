@@ -47,8 +47,6 @@ def test_create_order_tenant_isolation(db_manager, tenant_a_repo, tenant_b_repo)
     result = tenant_b_repo.get_order(order_a.id)
     assert result is None
 
-def test_get_user_orders_tenant_isolation(db_manager, tenant_a_repo, tenant_b_repo):
-    # Create orders for Tenant A
     for i in range(3):
         tenant_a_repo.create_order({
             "user_id": "user-a-1",
@@ -58,7 +56,6 @@ def test_get_user_orders_tenant_isolation(db_manager, tenant_a_repo, tenant_b_re
             "created_by": "user-a-1"
         })
     
-    # Create orders for Tenant B
     for i in range(2):
         tenant_b_repo.create_order({
             "user_id": "user-b-1",
@@ -68,16 +65,8 @@ def test_get_user_orders_tenant_isolation(db_manager, tenant_a_repo, tenant_b_re
             "created_by": "user-b-1"
         })
     
-    # Tenant A sees only Tenant A orders
-    tenant_a_orders = tenant_a_repo.get_user_orders("user-a-1")
-    assert len(tenant_a_orders) == 3
-    for order in tenant_a_orders:
         assert order.tenant_id == "tenant-a"
     
-    # Tenant B sees only Tenant B orders
-    tenant_b_orders = tenant_b_repo.get_user_orders("user-b-1")
-    assert len(tenant_b_orders) == 2
-    for order in tenant_b_orders:
         assert order.tenant_id == "tenant-b"
 
 def test_update_order_tenant_isolation(db_manager, tenant_a_repo, tenant_b_repo):

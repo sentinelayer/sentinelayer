@@ -20,7 +20,7 @@ const SecurityDashboard: React.FC = () => {
         setMetrics(data);
         setError(null);
       } catch (e) {
-        setError('DATA UNAVAILABLE - Please check backend');
+        setError('No data available - Please check backend');
         setMetrics([]);
       } finally {
         setLoading(false);

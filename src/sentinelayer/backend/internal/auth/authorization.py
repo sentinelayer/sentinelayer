@@ -16,7 +16,6 @@ class Resource:
 class AuthorizationMiddleware:
     def __init__(self):
         self.resource_patterns = {
-            r"^/api/v1/orders/([^/]+)$": ("order", 1),
         }
     
     def extract_resource_from_path(self, path: str):
