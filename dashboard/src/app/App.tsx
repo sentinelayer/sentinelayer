@@ -1,59 +1,41 @@
-import React from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { Login } from '../pages/auth/Login'
-import { Guards } from './guards'
-import { Layout } from '../components/Layout'
-import { OverviewPage } from '../pages/overview/OverviewPage'
-import { EventsPage } from '../pages/events/EventsPage'
-import { AlertsPage } from '../pages/alerts/AlertsPage'
-import { IncidentList } from '../pages/incidents/IncidentList'
-import { EvidenceList } from '../pages/evidence/EvidenceList'
-import { RiskPage } from '../pages/risk/RiskPage'
-import { AttackGraphPage } from '../pages/attack-graph/AttackGraphPage'
-import { HeatmapPage } from '../pages/heatmap/HeatmapPage'
-import { UserRiskPage } from '../pages/user-risk/UserRiskPage'
-import { PolicyList } from '../pages/policies/PolicyList'
-import { PolicyEditor } from '../pages/policies/PolicyEditor'
-import { PolicyDiff } from '../pages/policies/PolicyDiff'
-import { ConfigurationPage } from '../pages/configuration/ConfigurationPage'
-import { ExplainabilityPage } from '../pages/explainability/ExplainabilityPage'
-import { BreakGlassPage } from '../pages/admin/break-glass/BreakGlassPage'
-import { HighRiskActionsPage } from '../pages/admin/high-risk/HighRiskActionsPage'
-import { SLAPage } from '../pages/sla/SLAPage'
+import React, { useState } from "react";
+import { isLoggedIn, logout } from "../api/client";
+import LoginPage from "../pages/login/LoginPage";
+import OverviewPage from "../pages/overview/OverviewPage";
+import ApplicationsPage from "../pages/applications/ApplicationsPage";
+import PoliciesPage from "../pages/policies/PoliciesPage";
+import IncidentsPage from "../pages/incidents/IncidentsPage";
 
-function App() {
-    return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/*" element={
-                    <Guards>
-                        <Layout>
-                            <Routes>
-                                <Route path="/" element={<OverviewPage />} />
-                                <Route path="/events" element={<EventsPage />} />
-                                <Route path="/alerts" element={<AlertsPage />} />
-                                <Route path="/incidents" element={<IncidentList />} />
-                                <Route path="/evidence" element={<EvidenceList />} />
-                                <Route path="/risk" element={<RiskPage />} />
-                                <Route path="/attack-graph" element={<AttackGraphPage />} />
-                                <Route path="/heatmap" element={<HeatmapPage />} />
-                                <Route path="/user-risk" element={<UserRiskPage />} />
-                                <Route path="/policies" element={<PolicyList />} />
-                                <Route path="/policies/:id/edit" element={<PolicyEditor />} />
-                                <Route path="/policies/:id/diff" element={<PolicyDiff />} />
-                                <Route path="/configuration" element={<ConfigurationPage />} />
-                                <Route path="/explainability" element={<ExplainabilityPage />} />
-                                <Route path="/admin/break-glass" element={<BreakGlassPage />} />
-                                <Route path="/admin/high-risk-actions" element={<HighRiskActionsPage />} />
-                                <Route path="/sla" element={<SLAPage />} />
-                            </Routes>
-                        </Layout>
-                    </Guards>
-                } />
-            </Routes>
-        </BrowserRouter>
-    )
+type Tab = "overview" | "applications" | "policies" | "incidents";
+
+export default function App() {
+  const [authed, setAuthed] = useState(isLoggedIn());
+  const [tab, setTab] = useState<Tab>("overview");
+
+  if (!authed) {
+    return <LoginPage onSuccess={() => setAuthed(true)} />;
+  }
+
+  return (
+    <div>
+      <nav style={{ display: "flex", gap: 12, padding: 12, borderBottom: "1px solid #333" }}>
+        <button onClick={() => setTab("overview")}>Overview</button>
+        <button onClick={() => setTab("applications")}>Applications</button>
+        <button onClick={() => setTab("policies")}>Policies</button>
+        <button onClick={() => setTab("incidents")}>Incidents</button>
+        <button
+          onClick={() => {
+            logout();
+            setAuthed(false);
+          }}
+        >
+          Logout
+        </button>
+      </nav>
+      {tab === "overview" && <OverviewPage />}
+      {tab === "applications" && <ApplicationsPage />}
+      {tab === "policies" && <PoliciesPage />}
+      {tab === "incidents" && <IncidentsPage />}
+    </div>
+  );
 }
-
-export default App

@@ -36,10 +36,30 @@ export async function apiPost<T = unknown>(path: string, body: unknown): Promise
 export async function login(email: string, password: string): Promise<{ access_token: string }> {
   const data = await apiPost<{ access_token: string }>("/api/v1/auth/login", { email, password });
   localStorage.setItem("sl_access_token", data.access_token);
+  try {
+    const payload = JSON.parse(atob(data.access_token.split(".")[1]));
+    if (payload.tenant_id) localStorage.setItem("sl_tenant_id", payload.tenant_id);
+  } catch {
+    /* ignore */
+  }
   return data;
+}
+
+export async function register(
+  email: string,
+  password: string,
+  full_name: string,
+  tenant_id: string
+): Promise<unknown> {
+  localStorage.setItem("sl_tenant_id", tenant_id);
+  return apiPost("/api/v1/auth/register", { email, password, full_name, tenant_id });
 }
 
 export function logout(): void {
   localStorage.removeItem("sl_access_token");
   localStorage.removeItem("sl_tenant_id");
+}
+
+export function isLoggedIn(): boolean {
+  return !!localStorage.getItem("sl_access_token");
 }

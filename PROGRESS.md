@@ -1,13 +1,18 @@
 # SentinelLayer Progress
 
-## Verified
-- Live tenant isolation PASSED (integration test against real CP + Postgres)
-- Risk engine healthy
-- Root cause of CP crash: configuration.py used `value: any` (builtin) → fixed to Any
-- Full API router restored
-- Dummy explainability seed removed
-- Incidents tenant-scoped
-- Health at /health and /api/v1/health
+## This batch
+- Gateway service in docker-compose (Go 1.25 Dockerfile)
+- Postgres RLS policies (§9.2) + migration 0004 + session SET app.tenant_id
+- Applications/policies/incidents use db_with_tenant
+- Offboarding API soft/hard with before/after hash (§9.19)
+- Dashboard: login/register, applications, policies, incidents, overview
 
-## External only
-- External Retainer contract signature (legal, not code)
+## Verified previously
+- Live tenant isolation PASSED
+- Risk engine + behavior + blast radius unit tests PASSED
+
+## Still external / non-code
+- External Retainer signature
+- Full MFA device enrollment productization
+- Production cosign/SBOM pipeline attestation
+- Full adversarial matrix beyond BOLA API test
