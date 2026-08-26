@@ -23,7 +23,14 @@ class WebhookSecurity:
         if nonce in self.nonce_cache:
             return False
         self.nonce_cache[nonce] = datetime.utcnow().isoformat()
+        self._cleanup_nonce_cache()
         return True
+
+    def _cleanup_nonce_cache(self):
+        cutoff = datetime.utcnow() - timedelta(minutes=5)
+        for nonce, timestamp in list(self.nonce_cache.items()):
+            if datetime.fromisoformat(timestamp) < cutoff:
+                del self.nonce_cache[nonce]
 
     def is_expired(self, timestamp: str, ttl_seconds: int = 300) -> bool:
         try:
