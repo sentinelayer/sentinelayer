@@ -1,66 +1,32 @@
-.PHONY: help install test lint format docker-build docker-up docker-down clean
+.PHONY: help install dev test lint format migrate deploy
 
 help:
 @echo "Available commands:"
-@echo "  make install      - Install dependencies"
-@echo "  make test         - Run tests"
-@echo "  make lint         - Run linters"
-@echo "  make format       - Format code"
-@echo "  make docker-build - Build Docker image"
-@echo "  make docker-up    - Start Docker Compose"
-@echo "  make docker-down  - Stop Docker Compose"
-@echo "  make clean        - Clean cache files"
+@echo "  install      Install dependencies"
+@echo "  dev          Run development server"
+@echo "  test         Run tests"
+@echo "  lint         Run linting"
+@echo "  format       Format code"
+@echo "  migrate      Run database migrations"
+@echo "  deploy       Deploy to Railway"
 
 install:
 pip install -e .
-pip install pytest pytest-cov black isort flake8 mypy
-
-test:
-pytest tests/ -v --cov=src/sentinelayer --cov-report=html
-
-lint:
-flake8 src/sentinelayer
-mypy src/sentinelayer --ignore-missing-imports
-
-format:
-black src/sentinelayer tests
-isort src/sentinelayer tests
-
-docker-build:
-docker build -t sentinelayer:latest .
-
-docker-up:
-docker-compose up -d
-@echo "Services started. API: http://localhost:8000"
-@echo "Prometheus: http://localhost:9090"
-@echo "Grafana: http://localhost:3000 (admin/admin)"
-
-docker-down:
-docker-compose down
-
-docker-logs:
-docker-compose logs -f
-
-clean:
-find . -type d -name "__pycache__" -exec rm -rf {} +
-find . -type f -name "*.pyc" -delete
-rm -rf .pytest_cache .coverage htmlcov
-rm -rf test_rls.db *.db
 
 dev:
 uvicorn src.sentinelayer.api.main_full:app --host 0.0.0.0 --port 8000 --reload
 
-# Load testing commands
-k6 run tests/load/smoke_test.js
+test:
+pytest tests/ -v
 
-k6 run tests/load/load_test.js
+lint:
+flake8 src/ tests/
 
-k6 run tests/load/stress_test.js
+format:
+black src/ tests/
 
-k6 run tests/load/performance_test.js
+migrate:
+alembic upgrade head
 
-./tests/load/run_tests.sh
-
-docker-compose -f docker-compose.test.yml up -d
-@echo "K6 is running. Check Grafana at http://localhost:3000 (admin/admin)"
-@echo "To stop: docker-compose -f docker-compose.test.yml down"
+deploy:
+railway deploy

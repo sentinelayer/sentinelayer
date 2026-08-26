@@ -1,8 +1,4 @@
-# Threat Intelligence Engine - uses provider abstraction
 from src.sentinelayer.threatintel.provider import get_provider
-import logging
-
-logger = logging.getLogger("sentinelayer.threatintel")
 
 class ThreatIntelEngine:
     def __init__(self):
