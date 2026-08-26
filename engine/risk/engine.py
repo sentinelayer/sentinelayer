@@ -1,5 +1,5 @@
 from typing import Dict, List
-from src.sentinelayer.risk.correlation import correlator
+import json
 
 class RiskEngine:
     def __init__(self):
@@ -10,9 +10,8 @@ class RiskEngine:
             "block": 85
         }
         self.confidence_threshold = 0.7
-        self.calibration_factor = 1.0
 
-    def calculate(self, context: Dict) -> float:
+    def calculate(self, context: Dict) -> Dict:
         score = 0
         confidence = 0.5
 
@@ -32,11 +31,6 @@ class RiskEngine:
         if context.get("multiple_tenants", False):
             score += 20
             confidence += 0.15
-
-        correlation_result = correlator.correlate(context)
-        if correlation_result.get("risk_multiplier", 1.0) > 1:
-            score = score * correlation_result["risk_multiplier"]
-            confidence = min(1.0, confidence + 0.2)
 
         score = min(100, max(0, score))
         confidence = min(1.0, max(0, confidence))
@@ -62,5 +56,3 @@ class RiskEngine:
             return "MONITOR"
         else:
             return "ALLOW"
-
-risk_engine = RiskEngine()

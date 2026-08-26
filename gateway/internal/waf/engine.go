@@ -1,25 +1,25 @@
 package waf
 
 type WAFEngine struct {
-Rules []string
+	Rules []string
 }
 
 func NewWAFEngine() *WAFEngine {
-return &WAFEngine{
-Rules: []string{
-"SQL Injection",
-"XSS Attack",
-"Path Traversal",
-"Command Injection",
-},
-}
+	return &WAFEngine{
+		Rules: []string{
+			"SQL Injection",
+			"XSS Attack",
+			"Path Traversal",
+			"Command Injection",
+		},
+	}
 }
 
 func (w *WAFEngine) Process(input string) bool {
-for _, rule := range w.Rules {
-if input == rule {
-return true
-}
-}
-return false
+	for _, rule := range w.Rules {
+		if input == rule {
+			return true
+		}
+	}
+	return false
 }
