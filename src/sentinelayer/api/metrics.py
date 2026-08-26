@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request
 from src.sentinelayer.incident.response import incident_response
+from src.sentinelayer.risk.engine import risk_engine
 import time
 
 router = APIRouter(prefix="/api/v1/metrics", tags=["metrics"])
@@ -32,11 +33,20 @@ async def security_metrics(request: Request):
     active_incidents = len([i for i in incident_response.get_incidents() if i["status"] == "open"])
     total_incidents = len(incident_response.get_incidents())
 
+    # Hitung risk score dari context saat ini
+    sample_context = {
+        "failed_attempts": auth_failure_counter,
+        "suspicious_ip": False,
+        "unusual_time": False,
+        "multiple_tenants": False
+    }
+    risk_score = risk_engine.calculate(sample_context)
+
     return [
         {"name": "WAF Blocks", "value": waf_block_counter, "status": "good"},
         {"name": "Active Threats", "value": active_incidents, "status": "warning" if active_incidents > 0 else "good"},
         {"name": "Auth Failures", "value": auth_failure_counter, "status": "critical" if auth_failure_counter > 100 else "good"},
-        {"name": "Risk Score", "value": 50, "status": "good"},
+        {"name": "Risk Score", "value": risk_score, "status": "good" if risk_score < 30 else "warning" if risk_score < 60 else "critical"},
         {"name": "Total Incidents", "value": total_incidents, "status": "good"},
         {"name": "Total Requests", "value": request_counter, "status": "good"},
         {"name": "Uptime", "value": f"{uptime_hours}h {uptime_minutes}m", "status": "good"}

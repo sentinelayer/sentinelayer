@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 interface Metric {
   name: string;
-  value: number;
+  value: number | string;
   status: 'good' | 'warning' | 'critical';
 }
 
@@ -18,14 +18,10 @@ const SecurityDashboard: React.FC = () => {
         if (!res.ok) throw new Error('Failed to fetch metrics');
         const data = await res.json();
         setMetrics(data);
+        setError(null);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error');
-        setMetrics([
-          { name: 'WAF Blocks', value: 0, status: 'good' },
-          { name: 'Active Threats', value: 0, status: 'good' },
-          { name: 'Auth Failures', value: 0, status: 'good' },
-          { name: 'Risk Score', value: 0, status: 'good' },
-        ]);
+        setError('DATA UNAVAILABLE - Please check backend');
+        setMetrics([]);
       } finally {
         setLoading(false);
       }
@@ -34,7 +30,8 @@ const SecurityDashboard: React.FC = () => {
   }, []);
 
   if (loading) return <div>Loading security metrics...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (error) return <div className="error">{error}</div>;
+  if (metrics.length === 0) return <div>No metrics available</div>;
 
   return (
     <div className="security-dashboard">

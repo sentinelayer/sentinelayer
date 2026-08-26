@@ -1,27 +1,40 @@
+import os
+import time
+import redis
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
-import time
-from collections import defaultdict
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, calls_per_minute: int = 60):
+    def __init__(self, app):
         super().__init__(app)
-        self.calls_per_minute = calls_per_minute
-        self.requests = defaultdict(list)
-    
+        self.redis_client = redis.Redis(
+            host=os.getenv("REDIS_HOST", "localhost"),
+            port=int(os.getenv("REDIS_PORT", 6379)),
+            db=0,
+            decode_responses=True
+        )
+        self.window_size = 60
+        self.max_requests = int(os.getenv("RATE_LIMIT", "60"))
+
     async def dispatch(self, request: Request, call_next):
         if request.url.path in ["/", "/docs", "/openapi.json", "/health", "/health/readiness"]:
             return await call_next(request)
-        
+
         client_ip = request.client.host if request.client else "unknown"
-        now = time.time()
-        window_start = now - 60
-        
-        self.requests[client_ip] = [t for t in self.requests[client_ip] if t > window_start]
-        
-        if len(self.requests[client_ip]) >= self.calls_per_minute:
-            return JSONResponse(status_code=429, content={"error": "Rate limit exceeded"})
-        
-        self.requests[client_ip].append(now)
+        key = f"ratelimit:{client_ip}"
+        current = int(time.time())
+
+        try:
+            self.redis_client.zremrangebyscore(key, 0, current - self.window_size)
+            count = self.redis_client.zcard(key)
+
+            if count >= self.max_requests:
+                return JSONResponse(status_code=429, content={"error": "Rate limit exceeded"})
+
+            self.redis_client.zadd(key, {str(current): current})
+            self.redis_client.expire(key, self.window_size)
+        except redis.ConnectionError:
+            pass
+
         return await call_next(request)
