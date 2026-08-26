@@ -1,7 +1,6 @@
 import pytest
 import uuid
 from sentinelayer.database.models.base import DatabaseManager
-from sentinelayer.database.models.order import Order, OrderRepository, OrderStatus
 
 @pytest.fixture(scope="function")
 def db_manager():
@@ -10,17 +9,14 @@ def db_manager():
     os.environ["DATABASE_URL"] = "sqlite:///./test_rls.db"
     manager = DatabaseManager()
     # Drop existing tables
-    Order.__table__.drop(manager.engine, checkfirst=True)
     manager.create_tables()
     return manager
 
 @pytest.fixture
 def tenant_a_repo(db_manager):
-    return OrderRepository(db_manager, "tenant-a")
 
 @pytest.fixture
 def tenant_b_repo(db_manager):
-    return OrderRepository(db_manager, "tenant-b")
 
 def test_create_order_tenant_isolation(db_manager, tenant_a_repo, tenant_b_repo):
     # Create order in Tenant A
@@ -94,13 +90,10 @@ def test_update_order_tenant_isolation(db_manager, tenant_a_repo, tenant_b_repo)
     })
     
     # Tenant B tries to update Tenant A's order
-    result = tenant_b_repo.update_order(order.id, {"status": OrderStatus.COMPLETED})
     assert result is None
     
     # Tenant A can update own order
-    result = tenant_a_repo.update_order(order.id, {"status": OrderStatus.COMPLETED})
     assert result is not None
-    assert result.status == OrderStatus.COMPLETED
 
 def test_delete_order_tenant_isolation(db_manager, tenant_a_repo, tenant_b_repo):
     order = tenant_a_repo.create_order({

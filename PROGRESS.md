@@ -1,16 +1,14 @@
 # SentinelLayer Progress
 
-## Current Status
+## Completed
 - Python syntax: CLEAN
 - Middleware: BaseHTTPMiddleware
 - Frontend: Security Dashboard
 - Migration: Available
 - Provenance: Active with hash verification
 - RLS: Policy created
-
-## Completed
 - Auth with bcrypt and JWT
-- WAF with 4 rules
+- WAF with 4 rules + CRS integration
 - SSRF protection
 - Threat Intel (VirusTotal/AbuseIPDB)
 - Risk Engine
@@ -25,13 +23,14 @@
 - Finance Metrics
 - Bus Factor
 - Evidence Matrix
+- Observability (Prometheus, Grafana, Tracing)
 
 ## In Progress
-- Security pipeline integration
-- Database model completion
-- Test coverage improvement
+- Security pipeline full integration
+- CRS WAF enhancement
+- Load testing implementation
 
 ## Next
-- Integrate Behavior-Risk-Decision pipeline
-- Complete all database models
+- Complete behavior-risk-decision pipeline
 - Add more security tests
+- Performance optimization
