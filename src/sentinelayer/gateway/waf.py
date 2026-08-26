@@ -1,53 +1,86 @@
-from coraza import Coraza
-from coraza.http import CorazaHttp
-from fastapi import Request, Response
+from fastapi import Request
 from fastapi.responses import JSONResponse
+import re
 import os
 
 class WAFMiddleware:
     def __init__(self):
-        self.waf = Coraza()
-        self.waf_http = CorazaHttp(self.waf)
-        self.rule_dir = "waf/rules"
+        self.rules = []
         self.load_rules()
     
     def load_rules(self):
-        if os.path.exists(self.rule_dir):
-            for rule_file in os.listdir(self.rule_dir):
-                if rule_file.endswith(".conf"):
-                    with open(os.path.join(self.rule_dir, rule_file), "r") as f:
-                        self.waf.load_rules(f.read())
+        # SQL Injection patterns
+        self.rules.append({
+            "id": "SQLI-001",
+            "pattern": r"(?i)(select|insert|update|delete|drop|union|exec|master|script|--|;|\b(OR|AND)\s+\d+\s*=\s*\d+)",
+            "description": "SQL Injection"
+        })
+        # XSS patterns
+        self.rules.append({
+            "id": "XSS-001",
+            "pattern": r"(?i)(<script|alert\(|onerror=|onclick=|onload=|javascript:|<iframe|document\.cookie)",
+            "description": "XSS Attack"
+        })
+        # Path traversal
+        self.rules.append({
+            "id": "PT-001",
+            "pattern": r"(\.\./|\.\.\\)",
+            "description": "Path Traversal"
+        })
+        # Command injection
+        self.rules.append({
+            "id": "CMD-001",
+            "pattern": r"(?i)(\||;|\&\&|`|\$\(|ping\s|wget\s|curl\s|nmap\s|python\s-c)",
+            "description": "Command Injection"
+        })
+    
+    def is_malicious(self, text: str) -> dict:
+        if not text:
+            return {"blocked": False}
+        
+        for rule in self.rules:
+            if re.search(rule["pattern"], text):
+                return {
+                    "blocked": True,
+                    "rule_id": rule["id"],
+                    "description": rule["description"]
+                }
+        return {"blocked": False}
     
     async def process(self, request: Request, call_next):
+        # Check query params
+        for key, value in request.query_params.items():
+            result = self.is_malicious(value)
+            if result["blocked"]:
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "error": "WAF Blocked",
+                        "rule": result["rule_id"],
+                        "description": result["description"],
+                        "parameter": key
+                    }
+                )
+        
+        # Check request body (only if JSON)
         try:
-            # Process request through WAF
-            tx = self.waf_http.new_transaction(request)
-            
-            # Check if blocked
-            if tx.interrupted:
-                return JSONResponse(
-                    status_code=403,
-                    content={"error": "Request blocked by WAF", "rule_id": tx.rule_id}
-                )
-            
-            # Continue to app
-            response = await call_next(request)
-            
-            # Process response through WAF
-            tx.process_response(response)
-            
-            if tx.interrupted:
-                return JSONResponse(
-                    status_code=403,
-                    content={"error": "Response blocked by WAF"}
-                )
-            
-            return response
-            
-        except Exception as e:
-            return JSONResponse(
-                status_code=500,
-                content={"error": f"WAF error: {str(e)}"}
-            )
+            body = await request.json()
+            self._check_dict(body)
+        except:
+            pass
+        
+        return await call_next(request)
+    
+    def _check_dict(self, obj):
+        if isinstance(obj, dict):
+            for value in obj.values():
+                self._check_dict(value)
+        elif isinstance(obj, list):
+            for item in obj:
+                self._check_dict(item)
+        elif isinstance(obj, str):
+            result = self.is_malicious(obj)
+            if result["blocked"]:
+                raise Exception(f"Malicious content detected: {result['description']}")
 
 waf_middleware = WAFMiddleware()
