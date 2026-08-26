@@ -1,30 +1,38 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Any
 import json
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/schemas", tags=["schemas"])
+
 
 class SchemaRegister(BaseModel):
     schema_id: str
     version: str
-    schema: dict
+    schema_body: dict[str, Any] = Field(default_factory=dict, alias="schema")
 
-SCHEMAS = {}
+    model_config = {"populate_by_name": True}
+
+
+SCHEMAS: dict[str, Any] = {}
+
 
 @router.post("/register")
 async def register_schema(data: SchemaRegister):
+    body = data.schema_body
     key = f"{data.schema_id}:{data.version}"
-    hash_val = hashlib.sha256(json.dumps(data.schema, sort_keys=True).encode()).hexdigest()
+    hash_val = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
     SCHEMAS[key] = {
         "schema_id": data.schema_id,
         "version": data.version,
-        "schema": data.schema,
+        "schema": body,
         "hash": hash_val,
-        "registered_at": datetime.utcnow().isoformat()
+        "registered_at": datetime.now(timezone.utc).isoformat(),
     }
     return {"status": "registered", "key": key, "hash": hash_val}
+
 
 @router.get("/{schema_id}/{version}")
 async def get_schema(schema_id: str, version: str):
@@ -32,6 +40,7 @@ async def get_schema(schema_id: str, version: str):
     if key not in SCHEMAS:
         return {"error": "Schema not found"}
     return SCHEMAS[key]
+
 
 @router.get("/{schema_id}")
 async def list_versions(schema_id: str):

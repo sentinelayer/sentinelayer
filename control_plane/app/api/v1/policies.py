@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.orm import Session
 from control_plane.app.infrastructure.db.session import get_db
 from control_plane.app.infrastructure.db.models import Policy, Application
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Any, Optional
 import uuid
 import json
 
@@ -11,8 +12,8 @@ router = APIRouter(prefix="/policies", tags=["policies"])
 
 class PolicyCreate(BaseModel):
     name: str
-    rules: dict | list = {}
-    application_id: str | None = None
+    rules: dict[str, Any] = Field(default_factory=dict)
+    application_id: Optional[str] = None
 
 
 def _tenant(request: Request) -> str:
@@ -28,7 +29,11 @@ async def create_policy(data: PolicyCreate, request: Request, db: Session = Depe
     tenant_id = _tenant(request)
     app_id = data.application_id
     if app_id:
-        app = db.query(Application).filter(Application.id == app_id, Application.tenant_id == tenant_id).first()
+        app = (
+            db.query(Application)
+            .filter(Application.id == app_id, Application.tenant_id == tenant_id)
+            .first()
+        )
         if not app:
             raise HTTPException(status_code=404, detail="Application not found for tenant")
     policy = Policy(
@@ -55,7 +60,11 @@ async def list_policies(request: Request, db: Session = Depends(get_db)):
 @router.get("/{policy_id}")
 async def get_policy(policy_id: str, request: Request, db: Session = Depends(get_db)):
     tenant_id = _tenant(request)
-    policy = db.query(Policy).filter(Policy.id == policy_id, Policy.tenant_id == tenant_id).first()
+    policy = (
+        db.query(Policy)
+        .filter(Policy.id == policy_id, Policy.tenant_id == tenant_id)
+        .first()
+    )
     if not policy:
         raise HTTPException(status_code=404, detail="Not found")
     rules = policy.rules
