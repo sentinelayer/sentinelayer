@@ -8,12 +8,10 @@ import (
 "net/url"
 "os"
 "regexp"
-"sync"
 "time"
 )
 
 type RateLimiter struct {
-mu       sync.Mutex
 requests map[string][]int64
 limit    int
 window   int64
@@ -28,8 +26,6 @@ window:   60,
 }
 
 func (r *RateLimiter) Allow(key string) bool {
-r.mu.Lock()
-defer r.mu.Unlock()
 now := time.Now().Unix()
 start := now - r.window
 valid := []int64{}
