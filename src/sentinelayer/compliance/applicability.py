@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Dict, List
 
 class ApplicabilityEngine:
@@ -17,26 +18,6 @@ class ApplicabilityEngine:
                 "applicable_to": ["any"],
                 "controls": ["data_classification", "retention", "deletion", "consent", "breach_notification"],
                 "priority": "HIGH"
-            },
-            "pci_dss": {
-                "applicable_to": ["fintech", "ecommerce"],
-                "controls": ["cardholder_data", "tokenization", "encryption", "access_control", "audit_log", "mfa"],
-                "priority": "CRITICAL"
-            },
-            "hipaa": {
-                "applicable_to": ["healthcare"],
-                "controls": ["access_control", "encryption", "audit_log", "breach_notification"],
-                "priority": "CRITICAL"
-            },
-            "owasp_top10": {
-                "applicable_to": ["any"],
-                "controls": ["waf", "auth", "injection", "xss", "ssrf", "rce"],
-                "priority": "HIGH"
-            },
-            "mitre_atlas": {
-                "applicable_to": ["ai", "ml"],
-                "controls": ["model_access", "data_poisoning", "output_manipulation", "execution_agency"],
-                "priority": "HIGH"
             }
         }
 
@@ -44,21 +25,22 @@ class ApplicabilityEngine:
         applicable = []
         for framework_id, config in self.frameworks.items():
             applicable_to = config.get("applicable_to", [])
-            if "any" in applicable_to:
-                applicable.append({"framework": framework_id, "reason": "Applies to all customers"})
-            elif customer_type in applicable_to:
-                applicable.append({"framework": framework_id, "reason": f"Applies to {customer_type} customers"})
-            elif industry in applicable_to:
-                applicable.append({"framework": framework_id, "reason": f"Applies to {industry} industry"})
-            elif data_type in applicable_to:
-                applicable.append({"framework": framework_id, "reason": f"Applies to {data_type} data"})
+            if "any" in applicable_to or customer_type in applicable_to or industry in applicable_to:
+                applicable.append({
+                    "framework": framework_id,
+                    "reason": f"Applies to {customer_type}",
+                    "controls": config.get("controls", []),
+                    "priority": config.get("priority", "MEDIUM"),
+                    "valid_until": (datetime.utcnow().replace(year=datetime.utcnow().year + 1)).isoformat()
+                })
         return {
             "customer_type": customer_type,
             "industry": industry,
             "data_type": data_type,
             "region": region,
             "applicable_frameworks": applicable,
-            "total_frameworks": len(applicable)
+            "total_frameworks": len(applicable),
+            "evaluated_at": datetime.utcnow().isoformat()
         }
 
 applicability = ApplicabilityEngine()

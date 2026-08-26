@@ -1,4 +1,4 @@
-.PHONY: help install dev test lint format migrate deploy
+.PHONY: help install dev test lint format migrate
 
 help:
 @echo "Available commands:"
@@ -8,13 +8,12 @@ help:
 @echo "  lint         Run linting"
 @echo "  format       Format code"
 @echo "  migrate      Run database migrations"
-@echo "  deploy       Deploy to Railway"
 
 install:
 pip install -e .
 
 dev:
-uvicorn src.sentinelayer.api.main_full:app --host 0.0.0.0 --port 8000 --reload
+uvicorn src.sentinelayer.api.main:app --host 0.0.0.0 --port 8000 --reload
 
 test:
 pytest tests/ -v
@@ -27,6 +26,3 @@ black src/ tests/
 
 migrate:
 alembic upgrade head
-
-deploy:
-railway deploy

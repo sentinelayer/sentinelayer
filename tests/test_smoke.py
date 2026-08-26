@@ -1,6 +1,6 @@
 import pytest
 from httpx import AsyncClient
-from src.sentinelayer.api.main_full import app
+from src.sentinelayer.api.main import app
 
 @pytest.mark.asyncio
 async def test_health():

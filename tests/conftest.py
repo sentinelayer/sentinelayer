@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from src.sentinelayer.api.main_full import app
+from src.sentinelayer.api.main import app
 
 @pytest.fixture
 def client():
