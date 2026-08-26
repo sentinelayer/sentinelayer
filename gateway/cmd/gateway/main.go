@@ -2,12 +2,8 @@ package main
 
 import (
 "encoding/json"
-"fmt"
 "log"
 "net/http"
-"net/http/httputil"
-"net/url"
-"os"
 "strings"
 "time"
 )
@@ -75,9 +71,6 @@ func main() {
 waf := NewWAFEngine()
 limiter := NewRateLimiter(60)
 
-target, _ := url.Parse(os.Getenv("UPSTREAM_URL"))
-proxy := httputil.NewSingleHostReverseProxy(target)
-
 mux := http.NewServeMux()
 
 mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +91,8 @@ json.NewEncoder(w).Encode(map[string]string{"error": "Rate limit exceeded"})
 return
 }
 
-proxy.ServeHTTP(w, r)
+w.WriteHeader(http.StatusOK)
+json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "SentinelLayer Gateway"})
 })
 
 mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
