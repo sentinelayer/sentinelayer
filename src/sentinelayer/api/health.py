@@ -1,36 +1,19 @@
-from fastapi import APIRouter, Depends
-import time
-import os
+from fastapi import APIRouter
+from sqlalchemy import text
+from src.sentinelayer.database import SessionLocal
 
-router = APIRouter()
+router = APIRouter(tags=["health"])
 
 @router.get("/health")
 async def health():
-    return {"status": "healthy", "timestamp": time.time()}
+    return {"status": "healthy"}
 
 @router.get("/health/readiness")
 async def readiness():
-    db_status = "healthy"
     try:
-        from sentinelayer.database.models.base import DatabaseManager
-        db = DatabaseManager()
-        with db.get_session() as session:
-            session.execute("SELECT 1")
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        return {"status": "ready"}
     except Exception as e:
-        db_status = f"unhealthy: {e}"
-        return {"status": "not_ready", "database": db_status}, 503
-    
-    redis_status = "healthy"
-    try:
-        import redis
-        r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
-        r.ping()
-    except Exception as e:
-        redis_status = f"unhealthy: {e}"
-        return {"status": "not_ready", "redis": redis_status}, 503
-    
-    return {"status": "ready", "database": db_status, "redis": redis_status}
-
-@router.get("/health/liveness")
-async def liveness():
-    return {"status": "alive", "timestamp": time.time()}
+        return {"status": "not_ready", "error": str(e)}
