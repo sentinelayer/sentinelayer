@@ -7,28 +7,16 @@ class WAFMiddleware:
     def __init__(self):
         self.rules = []
         self.load_rules()
-        self.load_crs()
     
     def load_rules(self):
+        # SQL Injection
         self.rules.append({"id": "SQLI-001", "pattern": r"(?i)(select|insert|update|delete|drop|union|exec|master|script|--|;|\b(OR|AND)\s+\d+\s*=\s*\d+)", "description": "SQL Injection"})
+        # XSS
         self.rules.append({"id": "XSS-001", "pattern": r"(?i)(<script|alert\(|onerror=|onclick=|onload=|javascript:|<iframe|document\.cookie)", "description": "XSS Attack"})
+        # Path Traversal
         self.rules.append({"id": "PT-001", "pattern": r"(\.\./|\.\.\\)", "description": "Path Traversal"})
+        # Command Injection
         self.rules.append({"id": "CMD-001", "pattern": r"(?i)(\||;|\&\&|`|\$\(|ping\s|wget\s|curl\s|nmap\s|python\s-c)", "description": "Command Injection"})
-    
-    def load_crs(self):
-        crs_dir = "waf/rules"
-        if os.path.exists(crs_dir):
-            for file in os.listdir(crs_dir):
-                if file.endswith(".conf"):
-                    with open(os.path.join(crs_dir, file), "r") as f:
-                        content = f.read()
-                        for line in content.split("\n"):
-                            if "SecRule" in line:
-                                self.rules.append({
-                                    "id": "CRS-" + file[:10],
-                                    "pattern": r".*",
-                                    "description": f"CRS Rule from {file}"
-                                })
     
     def is_malicious(self, text: str) -> dict:
         if not text:
@@ -51,16 +39,21 @@ class WAFMiddleware:
                 raise Exception(f"Malicious content: {result['description']}")
     
     async def process(self, request: Request, call_next):
+        # Check query params
         for key, value in request.query_params.items():
             result = self.is_malicious(value)
             if result["blocked"]:
                 return JSONResponse(status_code=403, content={"error": "WAF Blocked", "rule": result["rule_id"]})
         
+        # Check body - FIX: re-raise exception, jangan di-swallow
         if request.method in ["POST", "PUT", "PATCH"]:
             try:
                 body = await request.json()
                 self._check_dict(body)
-            except:
+            except Exception as e:
+                if "Malicious" in str(e):
+                    return JSONResponse(status_code=403, content={"error": str(e)})
+                # Kalo error parsing JSON, lanjut
                 pass
         
         return await call_next(request)

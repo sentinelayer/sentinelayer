@@ -14,7 +14,6 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     tenant_id = Column(UUID(as_uuid=True), index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Order(Base):
     __tablename__ = "orders"
@@ -25,4 +24,3 @@ class Order(Base):
     total = Column(Float, default=0.0)
     items = Column(JSON, default=[])
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
