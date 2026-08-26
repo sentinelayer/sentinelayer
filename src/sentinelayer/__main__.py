@@ -1,10 +1,11 @@
 import uvicorn
+import os
 
 if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8000))
     uvicorn.run(
-        "sentinelayer.api.main:app",
+        "src.sentinelayer.api.main_full:app",
         host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
+        port=port,
+        reload=os.getenv("ENVIRONMENT") == "development"
     )

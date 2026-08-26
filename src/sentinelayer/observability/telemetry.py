@@ -1,9 +1,9 @@
 import os
 import json
 import hashlib
+import logging
 from datetime import datetime
 from typing import Dict
-import logging
 
 logger = logging.getLogger("sentinelayer.telemetry")
 

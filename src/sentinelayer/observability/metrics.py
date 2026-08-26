@@ -1,24 +1,33 @@
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, REGISTRY
+from fastapi import Request, Response
+from starlette.middleware.base import BaseHTTPMiddleware
 import time
-from fastapi import Request
 
-requests_total = Counter('sentinelayer_requests_total', 'Total requests', ['method', 'endpoint', 'status'])
-request_duration = Histogram('sentinelayer_request_duration_seconds', 'Request duration', ['method', 'endpoint'])
-active_requests = Gauge('sentinelayer_active_requests', 'Active requests')
-waf_blocks = Counter('sentinelayer_waf_blocks_total', 'WAF blocked requests', ['rule_id'])
+REQUEST_COUNT = Counter('http_requests_total', 'Total HTTP requests', ['method', 'endpoint', 'status'])
+REQUEST_LATENCY = Histogram('http_request_duration_seconds', 'HTTP request latency', ['method', 'endpoint'])
+ACTIVE_REQUESTS = Gauge('http_requests_active', 'Active HTTP requests')
+WAF_BLOCKS = Counter('waf_blocks_total', 'Total WAF blocks')
+AUTH_FAILURES = Counter('auth_failures_total', 'Total authentication failures')
 
-def record_request(method: str, endpoint: str, status: int, duration: float):
-    requests_total.labels(method=method, endpoint=endpoint, status=str(status)).inc()
-    request_duration.labels(method=method, endpoint=endpoint).observe(duration)
+class MetricsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        method = request.method
+        endpoint = request.url.path
+
+        ACTIVE_REQUESTS.inc()
+        start_time = time.time()
+
+        try:
+            response = await call_next(request)
+            status = str(response.status_code)
+            REQUEST_COUNT.labels(method=method, endpoint=endpoint, status=status).inc()
+            REQUEST_LATENCY.labels(method=method, endpoint=endpoint).observe(time.time() - start_time)
+            return response
+        except Exception:
+            REQUEST_COUNT.labels(method=method, endpoint=endpoint, status="500").inc()
+            raise
+        finally:
+            ACTIVE_REQUESTS.dec()
 
 def get_metrics():
     return generate_latest(REGISTRY)
-
-async def metrics_middleware(request: Request, call_next):
-    active_requests.inc()
-    start = time.time()
-    response = await call_next(request)
-    duration = time.time() - start
-    record_request(request.method, request.url.path, response.status_code, duration)
-    active_requests.dec()
-    return response

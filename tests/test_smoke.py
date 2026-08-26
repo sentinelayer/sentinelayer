@@ -1,0 +1,21 @@
+import pytest
+from httpx import AsyncClient
+from src.sentinelayer.api.main_full import app
+
+@pytest.mark.asyncio
+async def test_health():
+    client = AsyncClient(app=app, base_url="http://test")
+    resp = await client.get("/health")
+    assert resp.status_code == 200
+
+@pytest.mark.asyncio
+async def test_root():
+    client = AsyncClient(app=app, base_url="http://test")
+    resp = await client.get("/")
+    assert resp.status_code == 200
+
+@pytest.mark.asyncio
+async def test_metrics():
+    client = AsyncClient(app=app, base_url="http://test")
+    resp = await client.get("/api/v1/metrics/security")
+    assert resp.status_code == 200
