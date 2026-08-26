@@ -1,17 +1,15 @@
-import os
 import jwt
+import os
+import bcrypt
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
-from passlib.context import CryptContext
 from src.sentinelayer.database import get_db
 from src.sentinelayer.database.models import User
-import uuid
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-JWT_SECRET = os.environ.get("JWT_SECRET", "change-me-in-production")
+JWT_SECRET = os.environ.get("JWT_SECRET", "super-secret-key-change-in-production")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_MINUTES = 15
 
@@ -35,11 +33,12 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == req.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
-
+    
+    hashed = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt())
+    
     user = User(
-        id=str(uuid.uuid4()),
         email=req.email,
-        hashed_password=pwd_context.hash(req.password),
+        hashed_password=hashed.decode('utf-8'),
         full_name=req.full_name,
         tenant_id=req.tenant_id
     )
@@ -53,25 +52,21 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == req.email).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    if not pwd_context.verify(req.password, user.hashed_password):
+    
+    if not bcrypt.checkpw(req.password.encode('utf-8'), user.hashed_password.encode('utf-8')):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="Account disabled")
-
+    
     expiry = datetime.utcnow() + timedelta(minutes=JWT_EXPIRY_MINUTES)
     token = jwt.encode(
         {
             "sub": user.id,
             "email": user.email,
             "tenant_id": user.tenant_id,
+            "full_name": user.full_name,
             "is_admin": user.is_admin,
             "exp": expiry
         },
         JWT_SECRET,
         algorithm=JWT_ALGORITHM
     )
-    return TokenResponse(
-        access_token=token,
-        token_type="bearer",
-        expires_in=JWT_EXPIRY_MINUTES * 60
-    )
+    return TokenResponse(access_token=token, token_type="bearer", expires_in=JWT_EXPIRY_MINUTES * 60)
