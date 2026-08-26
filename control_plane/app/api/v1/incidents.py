@@ -26,7 +26,7 @@ async def create_incident(data: IncidentCreate, db: Session = Depends(get_db)):
     db.add(incident)
     db.commit()
     db.refresh(incident)
-    return {"id": incident.id, "status": incident.status}
+    return {"id": incident.id, "severity": incident.severity, "status": incident.status}
 
 @router.get("/")
 async def list_incidents(db: Session = Depends(get_db)):

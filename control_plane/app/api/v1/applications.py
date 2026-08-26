@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from control_plane.app.infrastructure.db.session import get_db
-from control_plane.app.infrastructure.db.models import Application
+from control_plane/app/infrastructure/db/session import get_db
+from control_plane/app/infrastructure/db/models import Application
 from pydantic import BaseModel
 import uuid
 
@@ -13,7 +13,11 @@ class AppCreate(BaseModel):
 
 @router.post("/")
 async def create_application(data: AppCreate, db: Session = Depends(get_db)):
-    app = Application(id=str(uuid.uuid4()), name=data.name, tenant_id=data.tenant_id)
+    app = Application(
+        id=str(uuid.uuid4()),
+        name=data.name,
+        tenant_id=data.tenant_id
+    )
     db.add(app)
     db.commit()
     db.refresh(app)

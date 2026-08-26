@@ -26,9 +26,16 @@ async def create_evidence(data: EvidenceCreate, db: Session = Depends(get_db)):
     db.add(evidence)
     db.commit()
     db.refresh(evidence)
-    return {"id": evidence.id, "status": evidence.status}
+    return {"id": evidence.id, "artifact": evidence.artifact, "status": evidence.status}
 
 @router.get("/")
 async def list_evidence(db: Session = Depends(get_db)):
     evidences = db.query(Evidence).all()
     return [{"id": e.id, "artifact": e.artifact, "status": e.status} for e in evidences]
+
+@router.get("/{id}")
+async def get_evidence(id: str, db: Session = Depends(get_db)):
+    evidence = db.query(Evidence).filter_by(id=id).first()
+    if not evidence:
+        return {"error": "Evidence not found"}
+    return {"id": evidence.id, "artifact": evidence.artifact, "status": evidence.status}
