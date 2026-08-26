@@ -9,15 +9,17 @@ interface Metric {
 const SecurityDashboard: React.FC = () => {
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
         const res = await fetch('/api/v1/metrics/security');
+        if (!res.ok) throw new Error('Failed to fetch metrics');
         const data = await res.json();
         setMetrics(data);
       } catch (e) {
-        console.error('Failed to fetch metrics:', e);
+        setError(e instanceof Error ? e.message : 'Unknown error');
         setMetrics([
           { name: 'WAF Blocks', value: 0, status: 'good' },
           { name: 'Active Threats', value: 0, status: 'good' },
@@ -32,6 +34,7 @@ const SecurityDashboard: React.FC = () => {
   }, []);
 
   if (loading) return <div>Loading security metrics...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="security-dashboard">
