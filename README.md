@@ -85,11 +85,14 @@ Built for solo founders, startups, and enterprises who need **simple, affordable
 
 ## 👨‍💻 About Me
 
-**Ex-Security Analyst:**
-- 🏦 JPMorgan Chase
+**Ex-Security analyst engineer:**
+- 🏦 JPMorgan Chase Analyst security
 - 📊 Analyst Financial BEI
-- 🔒 Security Sinarmas
+- 🔒 Security Analyst Sinarmas
 - 📜 Certified ETF
+-Cyber security Analyst
+-Software Engineer
+-Web developer
 
 ---
 
