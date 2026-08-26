@@ -1,6 +1,7 @@
 package main
 
 import (
+"context"
 "encoding/json"
 "log"
 "net/http"
@@ -13,13 +14,13 @@ import (
 "github.com/sentinelayer/gateway/internal/authctx"
 "github.com/sentinelayer/gateway/internal/decision"
 "github.com/sentinelayer/gateway/internal/desync"
+"github.com/sentinelayer/gateway/internal/engine"
 "github.com/sentinelayer/gateway/internal/observability"
 "github.com/sentinelayer/gateway/internal/ratelimit"
 "github.com/sentinelayer/gateway/internal/ssrf"
 "github.com/sentinelayer/gateway/internal/waf"
 )
 
-// RequestContext carries application context required by Behavior Engine (Section 11.22).
 type RequestContext struct {
 TenantID          string `json:"tenant_id"`
 ApplicationID     string `json:"application_id"`
@@ -34,9 +35,8 @@ Sensitivity       string `json:"sensitivity"`
 Criticality       string `json:"criticality"`
 }
 
-// DecisionOutput matches Risk Engine + Decision Safety Layer contract.
 type DecisionOutput struct {
-Action     string         `json:"action"` // ALLOW | MONITOR | CHALLENGE | BLOCK
+Action     string         `json:"action"`
 Score      float64        `json:"score"`
 Confidence float64        `json:"confidence"`
 Signals    []string       `json:"signals"`
@@ -51,8 +51,7 @@ path := r.URL.Path
 if strings.HasPrefix(path, "/health") || strings.HasPrefix(path, "/ready") || path == "/" {
 return "public"
 }
-criticalPrefixes := []string{"/api/v1/payments", "/api/v1/checkout", "/api/v1/admin", "/api/v1/keys", "/api/v1/auth"}
-for _, p := range criticalPrefixes {
+for _, p := range []string{"/api/v1/payments", "/api/v1/checkout", "/api/v1/admin", "/api/v1/keys", "/api/v1/auth"} {
 if strings.HasPrefix(path, p) {
 return "critical"
 }
@@ -98,12 +97,11 @@ return string(b)
 }
 
 func main() {
-// Runtime provenance (Section 5.12)
 if os.Getenv("SL_ENFORCE_PROVENANCE") == "1" {
 expected := os.Getenv("SL_APPROVED_ARTIFACT_HASH")
 running := os.Getenv("SL_RUNNING_ARTIFACT_HASH")
 if expected == "" || running == "" || expected != running {
-log.Fatalf("RUNTIME PROVENANCE FAILED: expected=%s running=%s — refusing start (Section 5.12)", expected, running)
+log.Fatalf("RUNTIME PROVENANCE FAILED: expected=%s running=%s", expected, running)
 }
 log.Printf("Runtime provenance verified: %s", running)
 }
@@ -113,11 +111,13 @@ wafEngine, err := waf.NewEngine(crsDir)
 if err != nil {
 log.Fatalf("WAF init failed: %v", err)
 }
-log.Println("Coraza WAF initialized (real engine)")
+log.Println("Coraza WAF initialized")
 
 rateLimiter := ratelimit.NewRedisRateLimiter(os.Getenv("REDIS_ADDR"), 60)
 failMatrix := decision.NewFailMatrix()
 lkg := decision.NewLastKnownGood()
+riskClient := engine.NewClient(os.Getenv("RISK_ENGINE_URL"))
+
 jwtSecret := []byte(os.Getenv("JWT_SECRET"))
 if len(jwtSecret) == 0 {
 jwtSecret = []byte("dev-only-change-me-in-production")
@@ -134,8 +134,6 @@ log.Fatalf("invalid UPSTREAM_URL: %v", err)
 proxy := httputil.NewSingleHostReverseProxy(upstream)
 
 mux := http.NewServeMux()
-
-// Pipeline: desync → SSRF → auth → WAF → rate → risk×confidence → decision safety → upstream
 mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 start := time.Now()
 endpointClass := classifyEndpoint(r)
@@ -182,7 +180,7 @@ claims = c
 } else if endpointClass == "critical" {
 w.Header().Set("Content-Type", "application/json")
 w.WriteHeader(http.StatusUnauthorized)
-json.NewEncoder(w).Encode(map[string]string{"error": "auth required for critical endpoint", "code": "AUTH_REQUIRED"})
+json.NewEncoder(w).Encode(map[string]string{"error": "auth required", "code": "AUTH_REQUIRED"})
 observability.IncBlocked("auth")
 return
 }
@@ -194,9 +192,7 @@ if blocked {
 if failMatrix.ShouldFailClosed("waf", endpointClass) || endpointClass == "critical" {
 w.Header().Set("Content-Type", "application/json")
 w.WriteHeader(http.StatusForbidden)
-json.NewEncoder(w).Encode(map[string]interface{}{
-"error": "WAF Blocked", "rule_id": ruleID, "msg": msg, "code": "WAF",
-})
+json.NewEncoder(w).Encode(map[string]interface{}{"error": "WAF Blocked", "rule_id": ruleID, "msg": msg, "code": "WAF"})
 observability.IncBlocked("waf")
 return
 }
@@ -220,26 +216,53 @@ signals = append(signals, "rate_limit_exceeded")
 
 score := 0.0
 confidence := 0.85
-if len(signals) > 0 {
-score += float64(len(signals)) * 15
-confidence = 0.7
-}
-if reqCtx.Criticality == "critical" && claims == nil {
-score += 40
-}
-if score > 100 {
-score = 100
-}
-
-// Risk × Confidence matrix (Section 12.20)
 action := "ALLOW"
-switch {
-case score >= 80 && confidence >= 0.6:
+reason := "pipeline_v1"
+
+riskReq := engine.RiskRequest{
+TenantID:      reqCtx.TenantID,
+ApplicationID: reqCtx.ApplicationID,
+Endpoint:      reqCtx.Endpoint,
+UserID:        reqCtx.UserID,
+Signals:       signals,
+Context: map[string]interface{}{
+"criticality": reqCtx.Criticality,
+"sensitivity": reqCtx.Sensitivity,
+},
+}
+rctx, cancel := context.WithTimeout(r.Context(), 120*time.Millisecond)
+riskResp, riskErr := riskClient.Score(rctx, riskReq)
+cancel()
+
+if riskErr != nil {
+if failMatrix.ShouldFailClosed("risk_engine", endpointClass) {
 action = "BLOCK"
-case score >= 60 && confidence >= 0.5:
-action = "CHALLENGE"
-case score >= 30:
+score = 100
+confidence = 0.5
+reason = "risk_engine_unavailable_fail_closed"
+} else if v, ok := lkg.Get(reqCtx.TenantID + ":" + reqCtx.Endpoint); ok {
+if prev, ok2 := v.(DecisionOutput); ok2 {
+action = prev.Action
+score = prev.Score
+confidence = prev.Confidence
+reason = "last_known_good"
+} else {
 action = "MONITOR"
+reason = "risk_engine_unavailable_monitor"
+}
+} else {
+action = "MONITOR"
+reason = "risk_engine_unavailable_monitor"
+}
+signals = append(signals, "risk_engine_error")
+} else {
+score = riskResp.Score
+confidence = riskResp.Confidence
+action = riskResp.Action
+reason = riskResp.Explanation
+if reason == "" {
+reason = "risk_engine"
+}
 }
 
 if action == "BLOCK" && endpointClass == "public" {
@@ -247,14 +270,9 @@ action = "MONITOR"
 }
 
 out := DecisionOutput{
-Action:     action,
-Score:      score,
-Confidence: confidence,
-Signals:    signals,
-Reason:     "pipeline_v1",
-PolicyVer:  "v1.0.0",
-Context:    reqCtx,
-Timestamp:  time.Now().UTC(),
+Action: action, Score: score, Confidence: confidence,
+Signals: signals, Reason: reason, PolicyVer: "v1.0.0",
+Context: reqCtx, Timestamp: time.Now().UTC(),
 }
 lkg.Save(reqCtx.TenantID+":"+reqCtx.Endpoint, out)
 
@@ -272,7 +290,6 @@ r.Header.Set("X-SL-Decision", action)
 r.Header.Set("X-SL-Score", jsonFloat(score))
 r.Header.Set("X-SL-Tenant", reqCtx.TenantID)
 r.Header.Set("X-SL-Latency-Ms", jsonFloat(float64(time.Since(start).Milliseconds())))
-
 proxy.ServeHTTP(w, r)
 observability.IncAllowed()
 })
@@ -280,25 +297,17 @@ observability.IncAllowed()
 mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 w.Header().Set("Content-Type", "application/json")
 json.NewEncoder(w).Encode(map[string]interface{}{
-"status":     "healthy",
-"waf":        "coraza",
-"pipeline":   "waf->auth->rate->risk->decision->upstream",
+"status": "healthy", "waf": "coraza",
+"pipeline": "waf->auth->rate->risk_http->decision->upstream",
 "provenance": os.Getenv("SL_RUNNING_ARTIFACT_HASH"),
 })
 })
-
 mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
 w.Header().Set("Content-Type", "application/json")
 json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
 })
 
-server := &http.Server{
-Addr:         ":8080",
-Handler:      mux,
-ReadTimeout:  10 * time.Second,
-WriteTimeout: 15 * time.Second,
-IdleTimeout:  60 * time.Second,
-}
-log.Println("Gateway listening :8080 — full data-plane pipeline active (Section 5.2 / 10)")
+server := &http.Server{Addr: ":8080", Handler: mux, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+log.Println("Gateway :8080 — pipeline + risk HTTP client")
 log.Fatal(server.ListenAndServe())
 }
