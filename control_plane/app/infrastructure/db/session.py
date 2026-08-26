@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, text, event
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
@@ -22,9 +22,9 @@ def get_db():
 
 
 def set_tenant_context(db, tenant_id: str | None) -> None:
-    """Set PostgreSQL session variable for RLS."""
     if not tenant_id:
         return
-    # escape single quotes
-    safe = tenant_id.replace("'", "''")
-    db.execute(text(f"SET app.tenant_id = '{safe}'"))
+    safe = "".join(c for c in tenant_id if c.isalnum() or c in "-_")
+    if not safe:
+        return
+    db.execute(text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": safe})
