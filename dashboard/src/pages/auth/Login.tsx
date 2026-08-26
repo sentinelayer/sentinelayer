@@ -1,27 +1,28 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { api } from '../../api/client'
 
 export const Login: React.FC = () => {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
+    const [loading, setLoading] = useState(false)
     const navigate = useNavigate()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        setLoading(true)
+        setError('')
+
         try {
-            const res = await fetch('/api/v1/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            })
-            if (!res.ok) throw new Error('Login failed')
-            const data = await res.json()
+            const data = await api.post('/auth/login', { email, password })
             localStorage.setItem('token', data.access_token)
             localStorage.setItem('tenant_id', data.tenant_id || '')
             navigate('/')
-        } catch (e) {
+        } catch (err) {
             setError('Invalid credentials')
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -30,9 +31,23 @@ export const Login: React.FC = () => {
             <h1>SentinelLayer</h1>
             <form onSubmit={handleSubmit}>
                 {error && <div className="error">{error}</div>}
-                <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                <button type="submit">Login</button>
+                <input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                />
+                <input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                />
+                <button type="submit" disabled={loading}>
+                    {loading ? 'Loading...' : 'Login'}
+                </button>
             </form>
         </div>
     )

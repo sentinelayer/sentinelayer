@@ -1,6 +1,8 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Login } from '../pages/auth/Login'
+import { Guards } from './guards'
+import { Layout } from '../components/Layout'
 import { OverviewPage } from '../pages/overview/OverviewPage'
 import { EventsPage } from '../pages/events/EventsPage'
 import { AlertsPage } from '../pages/alerts/AlertsPage'
@@ -18,30 +20,37 @@ import { ExplainabilityPage } from '../pages/explainability/ExplainabilityPage'
 import { BreakGlassPage } from '../pages/admin/break-glass/BreakGlassPage'
 import { HighRiskActionsPage } from '../pages/admin/high-risk/HighRiskActionsPage'
 import { SLAPage } from '../pages/sla/SLAPage'
-import { Guards } from './guards'
 
 function App() {
     return (
         <BrowserRouter>
             <Routes>
                 <Route path="/login" element={<Login />} />
-                <Route path="/" element={<Guards><OverviewPage /></Guards>} />
-                <Route path="/events" element={<Guards><EventsPage /></Guards>} />
-                <Route path="/alerts" element={<Guards><AlertsPage /></Guards>} />
-                <Route path="/incidents" element={<Guards><IncidentList /></Guards>} />
-                <Route path="/evidence" element={<Guards><EvidenceList /></Guards>} />
-                <Route path="/risk" element={<Guards><RiskPage /></Guards>} />
-                <Route path="/attack-graph" element={<Guards><AttackGraphPage /></Guards>} />
-                <Route path="/heatmap" element={<Guards><HeatmapPage /></Guards>} />
-                <Route path="/user-risk" element={<Guards><UserRiskPage /></Guards>} />
-                <Route path="/policies" element={<Guards><PolicyList /></Guards>} />
-                <Route path="/policies/:id/edit" element={<Guards><PolicyEditor /></Guards>} />
-                <Route path="/policies/:id/diff" element={<Guards><PolicyDiff /></Guards>} />
-                <Route path="/configuration" element={<Guards><ConfigurationPage /></Guards>} />
-                <Route path="/explainability" element={<Guards><ExplainabilityPage /></Guards>} />
-                <Route path="/admin/break-glass" element={<Guards><BreakGlassPage /></Guards>} />
-                <Route path="/admin/high-risk-actions" element={<Guards><HighRiskActionsPage /></Guards>} />
-                <Route path="/sla" element={<Guards><SLAPage /></Guards>} />
+                <Route path="/*" element={
+                    <Guards>
+                        <Layout>
+                            <Routes>
+                                <Route path="/" element={<OverviewPage />} />
+                                <Route path="/events" element={<EventsPage />} />
+                                <Route path="/alerts" element={<AlertsPage />} />
+                                <Route path="/incidents" element={<IncidentList />} />
+                                <Route path="/evidence" element={<EvidenceList />} />
+                                <Route path="/risk" element={<RiskPage />} />
+                                <Route path="/attack-graph" element={<AttackGraphPage />} />
+                                <Route path="/heatmap" element={<HeatmapPage />} />
+                                <Route path="/user-risk" element={<UserRiskPage />} />
+                                <Route path="/policies" element={<PolicyList />} />
+                                <Route path="/policies/:id/edit" element={<PolicyEditor />} />
+                                <Route path="/policies/:id/diff" element={<PolicyDiff />} />
+                                <Route path="/configuration" element={<ConfigurationPage />} />
+                                <Route path="/explainability" element={<ExplainabilityPage />} />
+                                <Route path="/admin/break-glass" element={<BreakGlassPage />} />
+                                <Route path="/admin/high-risk-actions" element={<HighRiskActionsPage />} />
+                                <Route path="/sla" element={<SLAPage />} />
+                            </Routes>
+                        </Layout>
+                    </Guards>
+                } />
             </Routes>
         </BrowserRouter>
     )
