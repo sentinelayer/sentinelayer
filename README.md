@@ -1,7 +1,7 @@
 # 🛡️ SentinelLayer
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=3000&pause=500&color=00FF9D&center=true&vCenter=true&width=500&lines=Zero-Trust+Security+Platform;Trust+Nothing%2C+Verify+Everything;Built+by+Ex-JPMorgan+Engineer" alt="Typing SVG" />
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=3000&pause=500&color=00FF9D&center=true&vCenter=true&width=500&lines=Trust+Nothing%2C+Verify+Everything;Zero-Trust+Security+Platform;Built+by+Ex-JPMorgan+Engineer" alt="Typing SVG" />
 </p>
 
 ---
