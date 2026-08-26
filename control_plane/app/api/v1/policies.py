@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from control_plane.app.infrastructure.db.session import get_db
-from control_plane.app.domain.policy.entity import Policy
+from control_plane.app.infrastructure.db.models import Policy
 from pydantic import BaseModel
 import uuid
 import json

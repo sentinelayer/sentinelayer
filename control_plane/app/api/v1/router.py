@@ -1,8 +1,7 @@
 from fastapi import APIRouter
 from control_plane.app.api.v1 import (
     auth, tenants, applications, users, policies,
-    incidents, evidence, metrics, health,
-    admin
+    incidents, evidence, metrics, health
 )
 
 router = APIRouter()
@@ -16,6 +15,3 @@ router.include_router(incidents.router)
 router.include_router(evidence.router)
 router.include_router(metrics.router)
 router.include_router(health.router)
-
-# Admin
-router.include_router(admin.breakglass.router)

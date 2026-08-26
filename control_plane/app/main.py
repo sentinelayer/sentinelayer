@@ -1,11 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from control_plane.app.api.v1 import auth, metrics, health
-from control_plane.app.middleware.tenant import TenantMiddleware
-from control_plane.app.middleware.security_headers import SecurityHeadersMiddleware
-from control_plane.app.middleware.ratelimit import RateLimitMiddleware
+from control_plane.app.api.v1.router import router
+from control_plane.app.lifespan import lifespan
 
-app = FastAPI(title="SentinelLayer Control Plane", version="0.1.0")
+app = FastAPI(title="SentinelLayer Control Plane", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -15,13 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(TenantMiddleware)
-app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(RateLimitMiddleware)
-
-app.include_router(auth.router)
-app.include_router(metrics.router)
-app.include_router(health.router)
+app.include_router(router, prefix="/api/v1")
 
 @app.get("/")
 async def root():

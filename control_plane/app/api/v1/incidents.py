@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from control_plane.app.infrastructure.db.session import get_db
-from control_plane.app.domain.incident.entity import Incident
+from control_plane.app.infrastructure.db.models import Incident
 from pydantic import BaseModel
 import uuid
 from datetime import datetime
@@ -21,7 +21,7 @@ async def create_incident(data: IncidentCreate, db: Session = Depends(get_db)):
         description=data.description,
         tenant_id=data.tenant_id,
         status="open",
-        created_at=datetime.utcnow().isoformat()
+        created_at=datetime.utcnow()
     )
     db.add(incident)
     db.commit()

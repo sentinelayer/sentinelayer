@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from control_plane.app.infrastructure.db.session import get_db
-from control_plane.app.domain.evidence.entity import Evidence
+from control_plane.app.infrastructure.db.models import Evidence
 from pydantic import BaseModel
 import uuid
 from datetime import datetime
@@ -21,7 +21,7 @@ async def create_evidence(data: EvidenceCreate, db: Session = Depends(get_db)):
         requirement_id=data.requirement_id,
         control_id=data.control_id,
         status="CREATED",
-        created_at=datetime.utcnow().isoformat()
+        created_at=datetime.utcnow()
     )
     db.add(evidence)
     db.commit()
