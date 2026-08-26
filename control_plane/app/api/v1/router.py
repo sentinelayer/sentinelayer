@@ -4,8 +4,9 @@ from control_plane.app.api.v1 import (
     incidents, evidence, metrics, health, sla,
     schema, webhooks, audit, alerts, attack_graph,
     heatmap, user_risk, configuration, explainability,
-    high_risk_actions, residency
-, events, events_ws)
+    high_risk_actions, residency, events, events_ws,
+    gates,
+)
 from control_plane.app.api.v1.admin import breakglass
 
 router = APIRouter()
@@ -17,6 +18,7 @@ router.include_router(users.router)
 router.include_router(policies.router)
 router.include_router(incidents.router)
 router.include_router(evidence.router)
+router.include_router(gates.router)
 router.include_router(metrics.router)
 router.include_router(health.router)
 router.include_router(sla.router)
