@@ -1,104 +1,81 @@
 package main
 
 import (
-"bytes"
 "encoding/json"
-"io"
 "log"
 "net/http"
 "net/http/httputil"
 "net/url"
 "os"
-"regexp"
 "time"
-"gateway/internal/ratelimit"
-"gateway/internal/desync"
+
+"github.com/sentinelayer/gateway/internal/desync"
+"github.com/sentinelayer/gateway/internal/ratelimit"
+"github.com/sentinelayer/gateway/internal/waf"
 )
 
-func scanBody(body []byte, rules []*regexp.Regexp) bool {
-for _, rule := range rules {
-if rule.Match(body) {
-return true
-}
-}
-return false
-}
-
 func main() {
-wafRules := []*regexp.Regexp{
-regexp.MustCompile(`(?i)(select|insert|update|delete|drop|union|exec|master|script|--|;|\b(OR|AND)\s+\d+\s*=\s*\d+)`),
-regexp.MustCompile(`(?i)(<script|alert\(|onerror=|onclick=|onload=|javascript:|<iframe|document\.cookie)`),
-regexp.MustCompile(`(\.\./|\.\.\\)`),
-regexp.MustCompile(`(?i)(\||;|&&|` + "`" + `|\$\(|ping\s|wget\s|curl\s|nmap\s|python\s-c)`),
+crsDir := os.Getenv("CRS_RULES_DIR") // optional path to OWASP CRS .conf files
+wafEngine, err := waf.NewEngine(crsDir)
+if err != nil {
+log.Fatalf("WAF init failed: %v", err)
 }
+log.Println("Coraza WAF initialized")
 
 rateLimiter := ratelimit.NewRedisRateLimiter(os.Getenv("REDIS_ADDR"), 60)
-upstream, _ := url.Parse(os.Getenv("UPSTREAM_URL"))
+upstreamURL := os.Getenv("UPSTREAM_URL")
+if upstreamURL == "" {
+upstreamURL = "http://127.0.0.1:8000"
+}
+upstream, err := url.Parse(upstreamURL)
+if err != nil {
+log.Fatalf("invalid UPSTREAM_URL: %v", err)
+}
 proxy := httputil.NewSingleHostReverseProxy(upstream)
 
 mux := http.NewServeMux()
 
 mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-// HTTP Desync Guard
 if desync.GuardDesync(r) {
+w.Header().Set("Content-Type", "application/json")
 w.WriteHeader(http.StatusBadRequest)
 json.NewEncoder(w).Encode(map[string]string{"error": "HTTP desync detected"})
 return
 }
 
-for _, value := range r.URL.Query() {
-for _, rule := range wafRules {
-if rule.MatchString(value[0]) {
+blocked, ruleID, msg := wafEngine.ProcessRequest(r)
+if blocked {
+w.Header().Set("Content-Type", "application/json")
 w.WriteHeader(http.StatusForbidden)
-json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked"})
+json.NewEncoder(w).Encode(map[string]interface{}{
+"error":   "WAF Blocked",
+"rule_id": ruleID,
+"msg":     msg,
+})
 return
-}
-}
-}
-
-if r.Body != nil {
-body, _ := io.ReadAll(r.Body)
-r.Body = io.NopCloser(bytes.NewBuffer(body))
-if scanBody(body, wafRules) {
-w.WriteHeader(http.StatusForbidden)
-json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked (body)"})
-return
-}
-}
-
-for _, rule := range wafRules {
-if rule.MatchString(r.URL.Path) {
-w.WriteHeader(http.StatusForbidden)
-json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked (path)"})
-return
-}
-}
-
-for key, values := range r.Header {
-for _, value := range values {
-for _, rule := range wafRules {
-if rule.MatchString(key) || rule.MatchString(value) {
-w.WriteHeader(http.StatusForbidden)
-json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked (header)"})
-return
-}
-}
-}
 }
 
 if !rateLimiter.Allow(r.RemoteAddr) {
+w.Header().Set("Content-Type", "application/json")
 w.WriteHeader(http.StatusTooManyRequests)
 json.NewEncoder(w).Encode(map[string]string{"error": "Rate limit exceeded"})
 return
 }
+
 proxy.ServeHTTP(w, r)
 })
 
 mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
+w.Header().Set("Content-Type", "application/json")
+json.NewEncoder(w).Encode(map[string]string{"status": "healthy", "waf": "coraza"})
 })
 
-server := &http.Server{Addr: ":8080", Handler: mux, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second}
-log.Println("Gateway on :8080")
+server := &http.Server{
+Addr:         ":8080",
+Handler:      mux,
+ReadTimeout:  10 * time.Second,
+WriteTimeout: 10 * time.Second,
+}
+log.Println("Gateway on :8080 (Coraza WAF)")
 log.Fatal(server.ListenAndServe())
 }

@@ -1,85 +1,82 @@
 package waf
 
 import (
-"bufio"
-"os"
-"path/filepath"
-"strings"
+"fmt"
+"net/http"
+
+"github.com/corazawaf/coraza/v3"
+"github.com/corazawaf/coraza/v3/types"
 )
 
-type CorazaRule struct {
-ID      string
-Phase   int
-Action  string
-Pattern string
+// Engine wraps real Coraza WAF (not regex).
+type Engine struct {
+waf coraza.WAF
 }
 
-type CorazaEngine struct {
-Rules []CorazaRule
+// NewEngine creates Coraza with recommended directives.
+// CRS rules dir optional; if empty, uses built-in baseline.
+func NewEngine(crsRulesDir string) (*Engine, error) {
+directives := `
+SecRuleEngine On
+SecRequestBodyAccess On
+SecResponseBodyAccess Off
+SecDefaultAction "phase:1,log,auditlog,pass"
+SecDefaultAction "phase:2,log,auditlog,pass"
+`
+if crsRulesDir != "" {
+directives += fmt.Sprintf("\nInclude %s/*.conf\n", crsRulesDir)
 }
 
-func NewCorazaEngine() *CorazaEngine {
-return &CorazaEngine{
-Rules: []CorazaRule{},
-}
-}
+// Baseline rules always on (SQLi / XSS via libinjection when available)
+directives += `
+SecRule ARGS "@detectSQLi" "id:1001,phase:2,block,msg:'SQL Injection',logdata:'%{MATCHED_VAR}'"
+SecRule ARGS "@detectXSS" "id:1002,phase:2,block,msg:'XSS',logdata:'%{MATCHED_VAR}'"
+SecRule REQUEST_URI "@contains ../" "id:1003,phase:1,block,msg:'Path Traversal'"
+SecRule REQUEST_HEADERS:Content-Type "@contains multipart/form-data" "id:1004,phase:1,pass"
+`
 
-func (c *CorazaEngine) LoadCRS(rulesDir string) error {
-return filepath.Walk(rulesDir, func(path string, info os.FileInfo, err error) error {
+cfg := coraza.NewWAFConfig().WithDirectives(directives)
+waf, err := coraza.NewWAF(cfg)
 if err != nil {
-return err
+return nil, fmt.Errorf("coraza new waf: %w", err)
 }
-if !info.IsDir() && strings.HasSuffix(path, ".conf") {
-file, err := os.Open(path)
-if err != nil {
-return err
-}
-defer file.Close()
-scanner := bufio.NewScanner(file)
-for scanner.Scan() {
-line := scanner.Text()
-if strings.Contains(line, "SecRule") {
-rule := c.parseRule(line)
-c.Rules = append(c.Rules, rule)
-}
-}
-}
-return nil
-})
+return &Engine{waf: waf}, nil
 }
 
-func (c *CorazaEngine) parseRule(line string) CorazaRule {
-rule := CorazaRule{
-ID:    "CRS-001",
-Phase: 1,
-}
-if strings.Contains(line, "phase:1") {
-rule.Phase = 1
-} else if strings.Contains(line, "phase:2") {
-rule.Phase = 2
-}
-if strings.Contains(line, "block") {
-rule.Action = "block"
-} else {
-rule.Action = "allow"
-}
-// Extract pattern from @rx
-if strings.Contains(line, "@rx") {
-parts := strings.Split(line, "@rx")
-if len(parts) > 1 {
-pattern := strings.TrimSpace(parts[1])
-pattern = strings.Split(pattern, "\"")[0]
-rule.Pattern = pattern
+// ProcessRequest runs Coraza on the incoming request.
+// Returns true if request should be BLOCKED.
+func (e *Engine) ProcessRequest(r *http.Request) (blocked bool, ruleID int, msg string) {
+tx := e.waf.NewTransaction()
+defer func() {
+tx.ProcessLogging()
+tx.Close()
+}()
+
+tx.ProcessConnection(r.RemoteAddr, 0, "", 0)
+tx.ProcessURI(r.URL.String(), r.Method, r.Proto)
+for k, vv := range r.Header {
+for _, v := range vv {
+tx.AddRequestHeader(k, v)
 }
 }
-return rule
+tx.ProcessRequestHeaders()
+
+it := tx.Interruption()
+if it != nil {
+return true, it.RuleID, it.Data
 }
 
-func (c *CorazaEngine) Match(input string) bool {
-for _, rule := range c.Rules {
-if rule.Pattern != "" && strings.Contains(input, rule.Pattern) {
-return true
+// Body: caller may have already read; we process URI/headers/args primarily here.
+tx.ProcessRequestBody()
+it = tx.Interruption()
+if it != nil {
+return true, it.RuleID, it.Data
 }
+return false, 0, ""
 }
-return false
+
+// Allowed is inverse of blocked for middleware clarity.
+func (e *Engine) Allowed(r *http.Request) bool {
+blocked, _, _ := e.ProcessRequest(r)
+return !blocked
 }
