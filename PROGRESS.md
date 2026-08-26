@@ -1,36 +1,27 @@
 # SentinelLayer Progress
 
-## Completed
-- Python syntax: CLEAN
-- Middleware: BaseHTTPMiddleware
-- Frontend: Security Dashboard
-- Migration: Available
-- Provenance: Active with hash verification
-- RLS: Policy created
-- Auth with bcrypt and JWT
-- WAF with 4 rules + CRS integration
-- SSRF protection
-- Threat Intel (VirusTotal/AbuseIPDB)
-- Risk Engine
-- Behavior Engine
-- Decision Safety
-- Control Plane
-- MFA
-- Break Glass
-- Offboarding
-- BCP/DRP
-- SLA Metrics
-- Finance Metrics
-- Bus Factor
-- Evidence Matrix
-- Observability (Prometheus, Grafana, Tracing)
+## Current Status: MVP Scaffolding
 
-## In Progress
-- Security pipeline full integration
-- CRS WAF enhancement
-- Load testing implementation
+### Completed (Scaffolded)
+- [x] Repository structure (gateway/, control_plane/, engine/, dashboard/)
+- [x] Auth JWT + bcrypt (basic)
+- [x] Database models + migration
+- [x] Dashboard pages (18 pages, placeholder data)
+- [x] API endpoints (auth, tenants, policies, incidents, evidence, metrics, health)
+- [x] Gateway (Go) with regex WAF, rate limit, SSRF
+- [x] Risk/Behavior/Decision engines (basic in-memory)
+- [x] Documentation (architecture, security, compliance, runbooks)
 
-## Next
-- Complete behavior-risk-decision pipeline
-- Add more security tests
-- Performance optimization
+### In Progress
+- [ ] WAF Coraza integration (currently regex)
+- [ ] Pipeline: Gateway → Engine → Decision
+- [ ] Evidence lifecycle (CREATED → VERIFIED → VALID → EXPIRED)
+- [ ] Tenant isolation adversarial matrix
+- [ ] Runtime provenance
+- [ ] CI/CD real (Semgrep, Gitleaks, Trivy)
+
+### Next
+- [ ] Integrate Coraza WAF
+- [ ] Wire pipeline to engine
+- [ ] Real test coverage
+- [ ] Production hardening
