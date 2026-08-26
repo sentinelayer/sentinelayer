@@ -5,7 +5,7 @@ from control_plane.app.api.v1 import (
     schema, webhooks, audit, alerts, attack_graph,
     heatmap, user_risk, configuration, explainability,
     high_risk_actions
-)
+, residency
 from control_plane.app.api.v1.admin import breakglass
 
 router = APIRouter()
