@@ -1,128 +1,131 @@
+# 🛡️ SentinelLayer
+
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Orbitron&weight=700&size=36&duration=2000&pause=500&color=00FF88&center=true&vCenter=true&width=600&height=70&lines=SENTINELAYER;API+SECURITY+PLATFORM;WAF+%2B+AI+%2B+OBSERVABILITY" alt="Typing SVG" />
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=28&duration=3000&pause=500&color=00FF9D&center=true&vCenter=true&width=600&lines=%F0%9F%9B%A1%EF%B8%8F+SENTINELLAYER;Zero-Trust+Security+Platform;Trust+Nothing%2C+Verify+Everything;Built+by+Ex-JPMorgan+Engineer" alt="Typing SVG" />
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-production-00ff88?style=for-the-badge&logo=vercel&logoColor=white&labelColor=0a0a0a" />
-  <img src="https://img.shields.io/badge/version-1.0.0-00ff88?style=for-the-badge&logo=semanticweb&logoColor=white&labelColor=0a0a0a" />
-  <img src="https://img.shields.io/badge/license-MIT-00ff88?style=for-the-badge&logo=opensource&logoColor=white&labelColor=0a0a0a" />
-  <img src="https://img.shields.io/badge/security-A%2B-00ff88?style=for-the-badge&logo=shield&logoColor=white&labelColor=0a0a0a" />
+  <img src="https://img.shields.io/badge/🚀_Solo_Founder-2026-00FF9D?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/✅_GRC_Automation-Done-brightgreen?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/⚠️_Retainer-Pending-yellow?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/🔒_Acceptance_Gate-0.8-red?style=for-the-badge" />
 </p>
-
-<p align="center">
-  <img src="https://img.shields.io/github/actions/workflow/status/sentinelayer/sentinelayer/ci.yml?style=for-the-badge&label=build&color=00ff88&labelColor=0a0a0a" />
-  <img src="https://img.shields.io/badge/coverage-92%25-00ff88?style=for-the-badge&logo=codecov&logoColor=white&labelColor=0a0a0a" />
-  <img src="https://img.shields.io/github/stars/sentinelayer/sentinelayer?style=for-the-badge&color=00ff88&labelColor=0a0a0a" />
-  <img src="https://img.shields.io/github/forks/sentinelayer/sentinelayer?style=for-the-badge&color=00ff88&labelColor=0a0a0a" />
-</p>
-
-<br>
-
-## 🚀 What is SentinelLayer?
-
-**SentinelLayer** is an all-in-one API security platform designed to protect modern applications from cyber attacks, business logic abuse, and data leaks.
-
-Built for solo founders, startups, and enterprises who need **simple, affordable, and effective** security.
 
 ---
 
-## ⚡ Features
+## 📋 Overview
 
-| Feature | Status |
-|---------|--------|
-| 🔐 JWT Authentication + bcrypt hashing | ✅ |
-| 🛡️ WAF with OWASP-style rules | ✅ |
-| 📊 Rate Limiting & Tenant Isolation | ✅ |
-| 🧠 Risk Scoring Engine | ✅ |
-| 🔄 Circuit Breaker & Safe Mode | ✅ |
-| 🌐 Threat Intelligence (VirusTotal/AbuseIPDB) | ✅ |
-| 📈 Observability (Prometheus, Grafana, Tracing) | ✅ |
-| 📋 Compliance Reporting (SOC2, ISO27001, GDPR) | ✅ |
-| ⚡ Incident Response Automation | ✅ |
-| 📦 GRC Evidence Collection | ✅ |
-| 🖥️ Security Dashboard | ✅ |
-| 🔑 MFA | ✅ |
-| 👤 RBAC | ✅ |
-| 🚨 Break Glass Access | ✅ |
-| 🛡️ SSRF Protection | ✅ |
-| 🔒 BOLA/IDOR Protection | ✅ |
-| 🤖 AI Analysis (off-path) | ✅ |
+**SentinelLayer** is an enterprise-grade security platform built for **zero-trust architectures**. From WAF and threat intelligence to GRC automation and incident response — everything is designed to make security proactive, not reactive.
+
+> *"Zero-trust isn't a buzzword — it's the baseline."*
 
 ---
 
-## 🛠️ Tech Stack
+## 🚀 Features
+
+| Category | Features |
+|----------|----------|
+| 🛡️ **Core Security** | WAF (OWASP), Rate Limiting, Tenant Isolation, Risk Scoring, Circuit Breaker, SSRF, BOLA/IDOR |
+| 🔐 **IAM** | MFA, RBAC, Break Glass Access |
+| 🧠 **Intelligence** | Threat Intel (VirusTotal/AbuseIPDB), AI Analysis (off-path), Incident Automation |
+| 📊 **Observability** | Prometheus, Grafana, Tracing, Compliance (SOC2/ISO27001/GDPR), GRC Evidence, Dashboard |
+
+---
+
+## 🧰 Tech Stack
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
-  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" />
-  <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
-  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
-  <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" />
+  <img src="https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
+  <br />
+  <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
   <img src="https://img.shields.io/badge/Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white" />
   <img src="https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" />
+  <br />
   <img src="https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=prometheus&logoColor=white" />
   <img src="https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white" />
 </p>
 
 ---
 
+## 👨‍💻 About Me
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Ex--Security%20Analyst%20Engineer-4%2B%20years-blue?style=for-the-badge" />
+</p>
+
+> Ex-Security Analyst Engineer with **4+ years** of experience securing enterprise systems across **JPMorgan Chase**, **BEI**, and **Sinarmas**. Bridging red team tactics and blue team defense — from IAM (RBAC/MFA) and API Security (SSRF/BOLA) to security automation. Certified **ETF Cyber Security Analyst**, **Software Engineer**, and **Web Developer**. Currently building **SentinelLayer** — because zero-trust shouldn't be a buzzword, it should be the baseline.
+
+### 🏢 Experience
+- 🏦 **JPMorgan Chase** — Security Analyst
+- 📊 **BEI (Bursa Efek Indonesia)** — Financial Security Analyst  
+- 🛡️ **Sinarmas** — Security Analyst
+
+### 🎓 Certifications
+- 🔐 ETF Cyber Security Analyst
+- 💻 ETF Software Engineer
+- 🌐 ETF Web Developer
+
+---
+
 ## 📊 GitHub Stats
 
 <p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=sentinelayer&show_icons=true&theme=radical&hide_border=true&bg_color=0a0a0a&title_color=00ff88&icon_color=00ff88&text_color=ffffff" width="49%" />
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=sentinelayer&layout=compact&theme=radical&hide_border=true&bg_color=0a0a0a&title_color=00ff88&text_color=ffffff" width="49%" />
+  <img src="https://github-readme-stats.vercel.app/api?username=sentinelayer&show_icons=true&theme=radical&hide_border=true&bg_color=0D1117&icon_color=00FF9D&title_color=00FF9D" width="49%" />
+  <img src="https://github-readme-streak-stats.herokuapp.com/?user=sentinelayer&theme=radical&hide_border=true&background=0D1117&stroke=00FF9D&ring=00FF9D&fire=00FF9D" width="49%" />
 </p>
 
 <p align="center">
-  <img src="https://github-readme-streak-stats.herokuapp.com/?user=sentinelayer&theme=radical&hide_border=true&background=0a0a0a&stroke=00ff88&ring=00ff88&fire=00ff88" width="49%" />
-  <img src="https://github-readme-activity-graph.vercel.app/graph?username=sentinelayer&theme=react-dark&bg_color=0a0a0a&color=00ff88&line=00ff88&point=ffffff&hide_border=true" width="49%" />
+  <img src="https://github-profile-trophy.vercel.app/?username=sentinelayer&theme=radical&no-frame=true&row=2&column=4&margin-w=15&margin-h=15" />
+</p>
+
+<p align="center">
+  <img src="https://komarev.com/ghpvc/?username=sentinelayer&color=00FF9D&style=flat-square" alt="Profile Views" />
 </p>
 
 ---
 
-## 👨‍💻 About Me
+## 📈 Project Status
 
-**Ex-Security analyst engineer:**
-- 🏦 JPMorgan Chase Analyst security
-- 📊 Analyst Financial BEI
-- 🔒 Security Analyst Sinarmas
-- 📜 Certified ETF
--Cyber security Analyst
--Software Engineer
--Web developer
+| Status | Item |
+|--------|------|
+| ✅ | Solo Founder (Blueprint 10/10) |
+| ✅ | GRC Automation |
+| 🚫 | External Retainer Contract (Manual Review Pending) |
+| 🚫 | Machine-Enforced Acceptance Gate (0.8) |
 
 ---
 
-## 📫 Contact
+## 📬 Contact
 
 <p align="center">
-  <a href="https://github.com/sentinelayer">
-    <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white&labelColor=0a0a0a" />
-  </a>
-  <a href="mailto:muhamadivan969@gmail.com">
-    <img src="https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white&labelColor=0a0a0a" />
-  </a>
-  <a href="https://linkedin.com/in/sentinelayer">
-    <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white&labelColor=0a0a0a" />
-  </a>
-  <a href="https://twitter.com/sentinelayer">
-    <img src="https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white&labelColor=0a0a0a" />
-  </a>
+  <a href="https://github.com/sentinelayer"><img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" /></a>
+  <a href="mailto:sentinelayer@email.com"><img src="https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white" /></a>
 </p>
 
 ---
 
 ## 📄 License
 
-MIT © 2026 SentinelLayer
+**MIT © 2026 SentinelLayer**
+
+---
 
 <p align="center">
-  <img src="https://komarev.com/ghpvc/?username=sentinelayer&color=00ff88&style=flat-square" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/sentinelayer/sentinelayer/output/github-contribution-grid-snake-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/sentinelayer/sentinelayer/output/github-contribution-grid-snake.svg" />
+    <img alt="github-snake" src="https://raw.githubusercontent.com/sentinelayer/sentinelayer/output/github-contribution-grid-snake-dark.svg" />
+  </picture>
 </p>
-## 2026 Solo Founder Status (per blueprint 10/10)
-- GRC Automated: ✅
-- External Retainer contract: 🚧 (manual review pending)
-- Machine-Enforced Acceptance Gate (0.8): 🚧
+
+<p align="center">
+  <i>Built with ❤️ by a security engineer who believes in proactive defense.</i>
+</p>
