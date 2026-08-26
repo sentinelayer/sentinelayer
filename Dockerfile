@@ -6,10 +6,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY src ./src
-COPY waf ./waf
-COPY private ./private
-COPY frontend ./frontend
+COPY control_plane ./control_plane
+COPY engine ./engine
 
 RUN chown -R sentinel:sentinel /app
 USER sentinel
@@ -17,9 +15,6 @@ USER sentinel
 ENV PYTHONPATH=/app
 ENV ENVIRONMENT=production
 
-EXPOSE 8000
+EXPOSE 8005
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
-
-CMD ["uvicorn", "src.sentinelayer.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "control_plane.app.main:app", "--host", "0.0.0.0", "--port", "8005"]

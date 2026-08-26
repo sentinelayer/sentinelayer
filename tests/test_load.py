@@ -1,7 +1,7 @@
 import pytest
 import asyncio
 from httpx import AsyncClient
-from src.sentinelayer.api.main import app
+from control_plane.app.main import app
 import time
 
 @pytest.mark.asyncio

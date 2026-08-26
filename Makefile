@@ -13,7 +13,7 @@ install:
 pip install -e .
 
 dev:
-uvicorn src.sentinelayer.api.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn control_plane.app.main:app --host 0.0.0.0 --port 8000 --reload
 
 test:
 pytest tests/ -v

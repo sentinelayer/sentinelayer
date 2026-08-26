@@ -1,30 +1,118 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"net/http"
-	"time"
+"encoding/json"
+"fmt"
+"log"
+"net/http"
+"net/http/httputil"
+"net/url"
+"os"
+"strings"
+"time"
 )
 
+type WAFEngine struct {
+Rules []string
+}
+
+func NewWAFEngine() *WAFEngine {
+return &WAFEngine{
+Rules: []string{
+"(?i)(select|insert|update|delete|drop|union|exec|master|script|--|;|\\b(OR|AND)\\s+\\d+\\s*=\\s*\\d+)",
+"(?i)(<script|alert\\(|onerror=|onclick=|onload=|javascript:|<iframe|document\\.cookie)",
+"(\\.\\./|\\.\\.\\\\)",
+"(?i)(\\||;|\\&\\&|`|\\$\\(|ping\\s|wget\\s|curl\\s|nmap\\s|python\\s-c)",
+},
+}
+}
+
+func (w *WAFEngine) Process(input string) bool {
+for _, rule := range w.Rules {
+if strings.Contains(input, rule) {
+return true
+}
+}
+return false
+}
+
+type RateLimiter struct {
+requests map[string][]int64
+limit    int
+window   int64
+}
+
+func NewRateLimiter(limit int) *RateLimiter {
+return &RateLimiter{
+requests: make(map[string][]int64),
+limit:    limit,
+window:   60,
+}
+}
+
+func (r *RateLimiter) Allow(key string) bool {
+now := time.Now().Unix()
+windowStart := now - r.window
+
+reqs := r.requests[key]
+valid := []int64{}
+for _, ts := range reqs {
+if ts > windowStart {
+valid = append(valid, ts)
+}
+}
+
+if len(valid) >= r.limit {
+return false
+}
+
+valid = append(valid, now)
+r.requests[key] = valid
+return true
+}
+
 func main() {
-	fmt.Println("SentinelLayer Gateway - Data Plane")
+waf := NewWAFEngine()
+limiter := NewRateLimiter(60)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, `{"status":"ok","service":"SentinelLayer Gateway"}`)
-	})
+target, _ := url.Parse(os.Getenv("UPSTREAM_URL"))
+proxy := httputil.NewSingleHostReverseProxy(target)
 
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, `{"status":"healthy"}`)
-	})
+mux := http.NewServeMux()
 
-	server := &http.Server{
-		Addr:         ":8080",
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
-	}
+mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+// WAF
+for key, value := range r.URL.Query() {
+if waf.Process(value[0]) {
+w.WriteHeader(http.StatusForbidden)
+json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked"})
+return
+}
+}
 
-	log.Println("Gateway running on :8080")
-	log.Fatal(server.ListenAndServe())
+// Rate Limit
+clientIP := r.RemoteAddr
+if !limiter.Allow(clientIP) {
+w.WriteHeader(http.StatusTooManyRequests)
+json.NewEncoder(w).Encode(map[string]string{"error": "Rate limit exceeded"})
+return
+}
+
+proxy.ServeHTTP(w, r)
+})
+
+mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
+})
+
+server := &http.Server{
+Addr:         ":8080",
+Handler:      mux,
+ReadTimeout:  10 * time.Second,
+WriteTimeout: 10 * time.Second,
+IdleTimeout:  120 * time.Second,
+}
+
+log.Println("Gateway running on :8080")
+log.Fatal(server.ListenAndServe())
 }
