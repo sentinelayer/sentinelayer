@@ -3,8 +3,8 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
-from src.sentinelayer.database import Base
-from src.sentinelayer.database.models import User
+from control_plane.database import Base
+from control_plane.database.models import User
 
 config = context.config
 if config.config_file_name is not None:

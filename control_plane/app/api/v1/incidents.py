@@ -29,9 +29,6 @@ async def create_incident(data: IncidentCreate, db: Session = Depends(get_db)):
     return {"id": incident.id, "status": incident.status}
 
 @router.get("/")
-async def list_incidents(tenant_id: str = None, db: Session = Depends(get_db)):
-    query = db.query(Incident)
-    if tenant_id:
-        query = query.filter_by(tenant_id=tenant_id)
-    incidents = query.all()
+async def list_incidents(db: Session = Depends(get_db)):
+    incidents = db.query(Incident).all()
     return [{"id": i.id, "severity": i.severity, "status": i.status} for i in incidents]

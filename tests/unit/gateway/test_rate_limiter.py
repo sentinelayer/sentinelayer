@@ -1,6 +1,6 @@
 import pytest
 import time
-from sentinelayer.gateway.ratelimit.sliding_window import SimpleRateLimiter
+from control_plane.gateway.ratelimit.sliding_window import SimpleRateLimiter
 
 @pytest.fixture
 def limiter():

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 import time
 
-router = APIRouter(prefix="/api/v1/metrics", tags=["metrics"])
+router = APIRouter(prefix="/metrics", tags=["metrics"])
 
 start_time = time.time()
 

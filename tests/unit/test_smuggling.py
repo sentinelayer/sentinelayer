@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from sentinelayer.api.main import app
+from control_plane.app.main import app
 
 client = TestClient(app)
 

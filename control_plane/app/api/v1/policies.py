@@ -27,9 +27,6 @@ async def create_policy(data: PolicyCreate, db: Session = Depends(get_db)):
     return {"id": policy.id, "name": policy.name}
 
 @router.get("/")
-async def list_policies(application_id: str = None, db: Session = Depends(get_db)):
-    query = db.query(Policy)
-    if application_id:
-        query = query.filter_by(application_id=application_id)
-    policies = query.all()
+async def list_policies(db: Session = Depends(get_db)):
+    policies = db.query(Policy).all()
     return [{"id": p.id, "name": p.name} for p in policies]

@@ -29,9 +29,6 @@ async def create_evidence(data: EvidenceCreate, db: Session = Depends(get_db)):
     return {"id": evidence.id, "status": evidence.status}
 
 @router.get("/")
-async def list_evidence(requirement_id: str = None, db: Session = Depends(get_db)):
-    query = db.query(Evidence)
-    if requirement_id:
-        query = query.filter_by(requirement_id=requirement_id)
-    evidences = query.all()
+async def list_evidence(db: Session = Depends(get_db)):
+    evidences = db.query(Evidence).all()
     return [{"id": e.id, "artifact": e.artifact, "status": e.status} for e in evidences]
