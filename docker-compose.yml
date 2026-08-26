@@ -53,6 +53,7 @@ services:
       PYTHONPATH: /app
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sentinelayer
       REDIS_URL: redis://redis:6379/0
+      REDIS_ADDR: redis:6379
       JWT_SECRET: change-me-in-production-min-32-chars-xx
       SL_ENV: development
     ports:
@@ -73,6 +74,7 @@ services:
       UPSTREAM_URL: http://control-plane:8005
       RISK_ENGINE_URL: http://risk-engine:8090
       REDIS_URL: redis://redis:6379/0
+      REDIS_ADDR: redis:6379
       SL_ENV: development
       SL_ENFORCE_PROVENANCE: "false"
     depends_on:

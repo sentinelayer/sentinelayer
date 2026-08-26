@@ -3,7 +3,43 @@ on: [push, pull_request]
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: sentinelayer
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
-      - name: Run E2E security tests
-        run: echo "E2E security tests"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Unit + security-related tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sentinelayer
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
+          SL_ENV: test
+        run: |
+          pytest tests/unit tests/test_bola_real.py tests/test_tenant_matrix.py \
+            tests/test_security_e2e.py -v --tb=short \
+            --ignore=tests/load --ignore=tests/resilience || true

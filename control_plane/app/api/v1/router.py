@@ -23,6 +23,7 @@ from control_plane.app.api.v1 import (
     high_risk_actions,
     residency,
     events,
+    events_ws,
     gates,
 )
 from control_plane.app.api.v1.admin import breakglass
@@ -53,4 +54,5 @@ router.include_router(high_risk_actions.router)
 router.include_router(breakglass.router)
 router.include_router(residency.router)
 router.include_router(events.router)
+router.include_router(events_ws.router)
 router.include_router(offboarding.router)
