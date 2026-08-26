@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { api } from '../../api/client'
 
 interface Metric {
     name: string
@@ -13,8 +14,8 @@ export const OverviewPage: React.FC = () => {
 
     useEffect(() => {
         Promise.all([
-            fetch('/api/v1/metrics/security').then(res => res.json()),
-            fetch('/api/v1/incidents').then(res => res.json())
+            api.get('/metrics/security'),
+            api.get('/incidents')
         ]).then(([metricsData, incidentsData]) => {
             setMetrics(metricsData)
             setIncidents(incidentsData)
@@ -37,11 +38,15 @@ export const OverviewPage: React.FC = () => {
             </div>
             <div className="incidents-section">
                 <h2>Recent Incidents</h2>
-                <ul>
-                    {incidents.slice(0, 5).map((i: any) => (
-                        <li key={i.id}>{i.severity} - {i.description}</li>
-                    ))}
-                </ul>
+                {incidents.length === 0 ? (
+                    <p>No incidents</p>
+                ) : (
+                    <ul>
+                        {incidents.slice(0, 5).map((i: any) => (
+                            <li key={i.id}>{i.severity} - {i.description}</li>
+                        ))}
+                    </ul>
+                )}
             </div>
         </div>
     )
