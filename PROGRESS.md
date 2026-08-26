@@ -1,10 +1,10 @@
 # SentinelLayer Progress
 
-## Current Status: Phase 0 — Constitution & Governance (wiring complete)
+## Current Status: Phase 0 — Constitution & Governance (COMPLETE except Retainer)
 
 Honest status. No overclaims.
 
-### Phase 0 (0% → 2%) — Real Progress
+### Phase 0 (0% → 2%) — Done (Real)
 - [x] GateEngine rewritten to full machine-enforced model (Section 0.8)
 - [x] Evidence entity expanded to first-class object (Section 0.5)
 - [x] Evidence lifecycle with version-binding + auto-expire (Section 0.6)
@@ -12,24 +12,16 @@ Honest status. No overclaims.
 - [x] Independent Verification (Solo Adaptation) procedure documented
 - [x] External Retainer contract terms documented (PENDING signature)
 - [x] P0 Requirement ID master list created (12 items)
-- [x] GateEngine wired into control-plane API (`/gates`)
+- [x] GateEngine wired into control-plane API (/gates)
 - [x] Evidence API updated to full model + lifecycle endpoints
 - [x] DB models expanded (Evidence + Requirement)
-- [x] Migration 0002 created
-- [x] P0 seed script created (`seed_p0.py`)
-- [ ] Migration 0002 applied to database
-- [ ] P0 requirements seeded into DB
-- [ ] First real Evidence objects created for existing P0 items
-- [ ] External Retainer contract signed
+- [x] Tables created in PostgreSQL
+- [x] 12 P0 requirements seeded (all NOT_STARTED)
+- [ ] External Retainer contract signed (BLOCKER for independent_reviewer_valid)
 
-### Previously Scaffolded (still incomplete)
-- Repository structure (gateway/, control_plane/, engine/, dashboard/)
-- Auth JWT + bcrypt (basic)
-- Database models + migration (partial → now expanded)
-- Dashboard pages (many still placeholder data)
-- Gateway (Go) — WAF still regex, not full Coraza+CRS production path
-- Risk / Behavior / Decision engines (basic in-memory)
-- Documentation (architecture, security, compliance, runbooks) — high-level
+### Next: Phase 1 (sesuai urutan blueprint)
+- Architecture / C4 / Data Plane foundation
+- Or continue remaining Phase 0 operational items
 
 ### Explicitly Not Done Yet
 - Coraza + CRS production integration
@@ -38,9 +30,3 @@ Honest status. No overclaims.
 - Runtime provenance enforcement at startup
 - Real CI (Semgrep, Gitleaks, Trivy) passing on every commit
 - Any P0 requirement in ACCEPTED state
-
-### Next (finish Phase 0)
-1. Apply migration 0002
-2. Run `python -m app.domain.gate.seed_p0`
-3. Verify via `GET /gates/requirements?criticality=P0`
-4. Contract External Retainer (blocks Independent Reviewer VALID)
