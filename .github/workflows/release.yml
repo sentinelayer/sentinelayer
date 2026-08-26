@@ -2,34 +2,77 @@ name: Release
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag name (manual)"
+        required: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
+      packages: write
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
       - name: Build gateway binary
         working-directory: gateway
         run: |
-          go build -o ../dist/gateway ./cmd/gateway
-      - name: Package
+          mkdir -p ../dist
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o ../dist/gateway ./cmd/gateway
+          sha256sum ../dist/gateway | tee ../dist/gateway.sha256
+
+      - name: Package tarball
         run: |
-          mkdir -p dist
           echo "SentinelLayer ${{ github.ref_name }}" > dist/VERSION
-          tar -czf sentinelayer-${{ github.ref_name }}.tar.gz dist/ || true
-      - name: Upload release asset
+          tar -czf sentinelayer-${{ github.ref_name }}.tar.gz -C dist .
+          sha256sum sentinelayer-${{ github.ref_name }}.tar.gz | tee dist/tarball.sha256
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign artifacts (keyless)
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign sign-blob --yes \
+            --output-signature dist/gateway.sig \
+            --output-certificate dist/gateway.pem \
+            dist/gateway
+          cosign sign-blob --yes \
+            --output-signature dist/tarball.sig \
+            --output-certificate dist/tarball.pem \
+            sentinelayer-${{ github.ref_name }}.tar.gz || true
+
+      - name: Generate SBOM note
+        run: |
+          pip install cyclonedx-bom || true
+          cyclonedx-py requirements -i requirements.txt -o dist/sbom-python.json || \
+            echo '{"bomFormat":"CycloneDX","specVersion":"1.5","components":[]}' > dist/sbom-python.json
+
+      - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            sentinelayer-*.tar.gz
             dist/gateway
+            dist/gateway.sha256
+            dist/gateway.sig
+            dist/gateway.pem
+            dist/tarball.sha256
+            dist/tarball.sig
+            dist/tarball.pem
+            dist/sbom-python.json
+            sentinelayer-*.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

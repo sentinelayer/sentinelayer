@@ -75,8 +75,11 @@ services:
       RISK_ENGINE_URL: http://risk-engine:8090
       REDIS_URL: redis://redis:6379/0
       REDIS_ADDR: redis:6379
+      JWT_SECRET: change-me-in-production-min-32-chars-xx
       SL_ENV: development
       SL_ENFORCE_PROVENANCE: "false"
+      SL_APPROVED_ARTIFACT_HASH: ""
+      SL_RUNNING_ARTIFACT_HASH: ""
     depends_on:
       - redis
       - risk-engine
