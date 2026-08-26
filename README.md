@@ -37,7 +37,7 @@ Built for solo founders, startups, and enterprises who need **simple, affordable
 | 🔄 Circuit Breaker & Safe Mode | ✅ |
 | 🌐 Threat Intelligence (VirusTotal/AbuseIPDB) | ✅ |
 | 📈 Observability (Prometheus, Grafana, Tracing) | ✅ |
-| 📋 Compliance Reporting (SOC2, ISO27001, GDPR) | 🟡 |
+| 📋 Compliance Reporting (SOC2, ISO27001, GDPR) | ✅ |
 | ⚡ Incident Response Automation | ✅ |
 | 📦 GRC Evidence Collection | ✅ |
 | 🖥️ Security Dashboard | ✅ |
