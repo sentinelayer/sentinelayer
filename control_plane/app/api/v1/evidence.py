@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 import uuid
 import hashlib
 import json
@@ -26,7 +26,7 @@ class EvidenceCreate(BaseModel):
     related_id: Optional[str] = None
     runtime_artifact_hash: Optional[str] = None
     approved_manifest_hash: Optional[str] = None
-    data: Optional[dict] = None
+    data: Optional[Dict[str, Any]] = None
 
 
 class EvidenceVerify(BaseModel):
