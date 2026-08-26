@@ -1,6 +1,6 @@
 # SentinelLayer Progress
 
-## Current Status: Phase 0 — Constitution & Governance (COMPLETE except Retainer)
+## Current Status: Phase 0 complete (except retainer) + Data Plane pipeline wired
 
 Honest status. No overclaims.
 
@@ -19,14 +19,21 @@ Honest status. No overclaims.
 - [x] 12 P0 requirements seeded (all NOT_STARTED)
 - [ ] External Retainer contract signed (BLOCKER for independent_reviewer_valid)
 
-### Next: Phase 1 (sesuai urutan blueprint)
-- Architecture / C4 / Data Plane foundation
-- Or continue remaining Phase 0 operational items
+### Data Plane (Section 5.2 / 10) — In progress, real code
+- [x] Coraza WAF real engine (not regex stub) with CRS include path
+- [x] Fail-Open / Fail-Closed matrix implemented exactly as Section 10.23 (capability × endpoint class)
+- [x] Full request pipeline in gateway: desync → SSRF → auth context → WAF → rate limit → risk×confidence → decision safety → upstream
+- [x] Application Context contract fields propagated (Section 11.22)
+- [x] Runtime provenance gate at startup when SL_ENFORCE_PROVENANCE=1 (Section 5.12)
+- [x] Decision headers propagated to upstream; Prometheus blocked/allowed counters
+- [ ] Behavior Engine full baseline + sequence (still lightweight in-process)
+- [ ] Risk Engine HTTP call-out to Python engine (currently in-process scoring)
+- [ ] Tenant isolation adversarial matrix tests passing against live API
+- [ ] Real CI (Semgrep, Gitleaks, Trivy) green on every commit
+- [ ] Any P0 requirement in ACCEPTED state
 
-### Explicitly Not Done Yet
-- Coraza + CRS production integration
-- Full pipeline Gateway → Behavior → Risk → Decision Safety
-- Tenant isolation adversarial matrix tests (real)
-- Runtime provenance enforcement at startup
-- Real CI (Semgrep, Gitleaks, Trivy) passing on every commit
-- Any P0 requirement in ACCEPTED state
+### Next concrete work
+1. Wire gateway → Python Risk Engine over HTTP with circuit breaker + LKG
+2. Implement real BOLA/IDOR + tenant isolation tests against control_plane
+3. Sign External Retainer so independent_reviewer_valid can flip
+4. Canary deploy path (Section 28) for policy changes

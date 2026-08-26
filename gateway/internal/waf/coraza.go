@@ -5,7 +5,6 @@ import (
 "net/http"
 
 "github.com/corazawaf/coraza/v3"
-"github.com/corazawaf/coraza/v3/types"
 )
 
 // Engine wraps real Coraza WAF (not regex).
