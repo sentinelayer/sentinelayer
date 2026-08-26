@@ -1,6 +1,6 @@
 import pytest
-from src.sentinelayer.risk.engine import risk_engine
-from src.sentinelayer.behavior.engine import behavior_engine
+from control_plane.risk.engine import risk_engine
+from control_plane.behavior.engine import behavior_engine
 
 def test_risk_engine():
     context = {"failed_attempts": 5}

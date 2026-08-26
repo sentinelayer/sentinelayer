@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy import text
-from src.sentinelayer.database import engine
+from control_plane.database import engine
 
 @pytest.mark.skip(reason="Requires database running")
 def test_rls_enabled():

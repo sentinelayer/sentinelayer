@@ -1,6 +1,6 @@
 import pytest
 import os
-from src.sentinelayer.backup.backup import backup_manager
+from control_plane.backup.backup import backup_manager
 
 @pytest.mark.skip(reason="Requires database running")
 def test_backup_and_restore():
