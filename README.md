@@ -6,9 +6,8 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/🚀_Solo_Founder-2026-00FF9D?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/✅_GRC_Automation-Done-brightgreen?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/⚠️_Retainer-Pending-yellow?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/🔒_Acceptance_Gate-0.8-red?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/🟢_All_Systems-OPERATIONAL-brightgreen?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/📊_Uptime-100%25-brightgreen?style=for-the-badge" />
 </p>
 
 ---
@@ -45,9 +44,6 @@
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
   <img src="https://img.shields.io/badge/Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white" />
   <img src="https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" />
-  <br />
-  <img src="https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=prometheus&logoColor=white" />
-  <img src="https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white" />
 </p>
 
 ---
@@ -93,6 +89,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/🟢_All_Systems-OPERATIONAL-brightgreen?style=for-the-badge&logo=statuspage" />
+  <img src="https://img.shields.io/badge/📊_Uptime-100%25-brightgreen?style=for-the-badge" />
 </p>
 
 | Component | Status | Uptime |
