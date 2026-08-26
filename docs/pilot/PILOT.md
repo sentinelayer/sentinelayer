@@ -1,25 +1,10 @@
-# SentinelLayer Pilot Program
+SentinelLayer Pilot Program
 
-## Target Customer
-- 100-1000 employees
-- API-heavy, cloud-native
-- Security-conscious
+Success Criteria:
+- Detection rate > 95%
+- False positive rate < 5%
+- Latency p95 < 20ms
+- CSAT > 8/10
 
-## Pilot Duration
-4-6 weeks
-
-## What We Offer
-- Full API security platform
-- WAF, rate limiting, auth, tenant isolation
-- Free during pilot
-
-## Success Metrics
-- Zero false positives
-- 100% attack blocking
-- <5ms latency overhead
-
-## Next Steps
-1. Contact: support@sentinelayer.com
-2. Schedule kickoff call
-3. Setup integration
-4. Go-live
+Duration: 30 days
+Support: 24/7 during pilot
