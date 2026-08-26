@@ -1,22 +1,35 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
-interface SecurityMetric {
+interface Metric {
   name: string;
   value: number;
   status: 'good' | 'warning' | 'critical';
 }
 
 const SecurityDashboard: React.FC = () => {
-  const metrics: SecurityMetric[] = [
-    { name: 'WAF Blocks', value: 156, status: 'good' },
-    { name: 'Active Threats', value: 3, status: 'warning' },
-    { name: 'Auth Failures', value: 45, status: 'critical' },
-    { name: 'Risk Score', value: 12, status: 'good' },
-  ];
+  const [metrics, setMetrics] = useState<Metric[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const res = await fetch('/api/v1/metrics/security');
+        const data = await res.json();
+        setMetrics(data);
+      } catch (e) {
+        console.error('Failed to fetch metrics:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMetrics();
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
 
   return (
     <div className="security-dashboard">
-      <h1>SentinelLayer Security Dashboard</h1>
+      <h1>Security Dashboard</h1>
       <div className="metrics-grid">
         {metrics.map((metric) => (
           <div key={metric.name} className={`metric-card ${metric.status}`}>

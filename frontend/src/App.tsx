@@ -4,8 +4,8 @@ import { login } from './api/client'
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '')
-  const [email, setEmail] = useState('test@example.com')
-  const [password, setPassword] = useState('password123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleLogin = async () => {
@@ -52,7 +52,7 @@ function App() {
           {loading ? 'Loading...' : 'Login'}
         </button>
         <p style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: '#999' }}>
-          Default: test@example.com / password123
+          Default:  / 
         </p>
       </div>
     )
