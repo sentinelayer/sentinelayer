@@ -1,12 +1,12 @@
-FROM golang:1.21-alpine AS builder
-WORKDIR /app
-COPY go.mod .
+FROM golang:1.22-alpine AS builder
+WORKDIR /src
+COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -o gateway ./cmd/gateway
+RUN CGO_ENABLED=0 GOOS=linux go build -o /gateway ./cmd/gateway
 
-FROM alpine:latest
-WORKDIR /root/
-COPY --from=builder /app/gateway .
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates
+COPY --from=builder /gateway /usr/local/bin/gateway
 EXPOSE 8080
-CMD ["./gateway"]
+ENTRYPOINT ["/usr/local/bin/gateway"]
