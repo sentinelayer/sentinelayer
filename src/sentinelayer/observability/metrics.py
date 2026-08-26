@@ -6,6 +6,8 @@ import time
 REQUEST_COUNT = Counter('http_requests_total', 'Total HTTP requests', ['method', 'endpoint', 'status'])
 REQUEST_LATENCY = Histogram('http_request_duration_seconds', 'HTTP request latency', ['method', 'endpoint'])
 ACTIVE_REQUESTS = Gauge('http_requests_active', 'Active HTTP requests')
+WAF_BLOCKS = Counter('waf_blocks_total', 'Total WAF blocks')
+AUTH_FAILURES = Counter('auth_failures_total', 'Total authentication failures')
 
 class MetricsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):

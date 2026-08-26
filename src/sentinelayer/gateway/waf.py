@@ -1,19 +1,13 @@
 import re
 import os
+import json
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
 class WAFMiddleware:
     def __init__(self):
         self.rules = []
-        self.load_rules()
         self.load_crs()
-
-    def load_rules(self):
-        self.rules.append({"id": "SQLI-001", "pattern": r"(?i)(select|insert|update|delete|drop|union|exec|master|script|--|;|\b(OR|AND)\s+\d+\s*=\s*\d+)", "description": "SQL Injection"})
-        self.rules.append({"id": "XSS-001", "pattern": r"(?i)(<script|alert\(|onerror=|onclick=|onload=|javascript:|<iframe|document\.cookie)", "description": "XSS Attack"})
-        self.rules.append({"id": "PT-001", "pattern": r"(\.\./|\.\.\\)", "description": "Path Traversal"})
-        self.rules.append({"id": "CMD-001", "pattern": r"(?i)(\||;|\&\&|`|\$\(|ping\s|wget\s|curl\s|nmap\s|python\s-c)", "description": "Command Injection"})
 
     def load_crs(self):
         crs_dir = "waf/rules"
@@ -21,7 +15,8 @@ class WAFMiddleware:
             for rule_file in os.listdir(crs_dir):
                 if rule_file.endswith(".conf"):
                     with open(os.path.join(crs_dir, rule_file), "r") as f:
-                        for line in f:
+                        content = f.read()
+                        for line in content.split("\n"):
                             if "SecRule" in line and "@rx" in line:
                                 match = re.search(r'@rx\s+([^ ]+)', line)
                                 if match:
@@ -30,6 +25,11 @@ class WAFMiddleware:
                                         "pattern": match.group(1),
                                         "description": f"CRS rule from {rule_file}"
                                     })
+
+        self.rules.append({"id": "SQLI-001", "pattern": r"(?i)(select|insert|update|delete|drop|union|exec|master|script|--|;|\b(OR|AND)\s+\d+\s*=\s*\d+)", "description": "SQL Injection"})
+        self.rules.append({"id": "XSS-001", "pattern": r"(?i)(<script|alert\(|onerror=|onclick=|onload=|javascript:|<iframe|document\.cookie)", "description": "XSS Attack"})
+        self.rules.append({"id": "PT-001", "pattern": r"(\.\./|\.\.\\)", "description": "Path Traversal"})
+        self.rules.append({"id": "CMD-001", "pattern": r"(?i)(\||;|\&\&|`|\$\(|ping\s|wget\s|curl\s|nmap\s|python\s-c)", "description": "Command Injection"})
 
     def is_malicious(self, text: str) -> dict:
         if not text:

@@ -14,6 +14,7 @@ class OffboardingManager:
         customer = self.db.query(Customer).filter_by(id=customer_id).first()
         if not customer:
             return {"error": "Customer not found"}
+
         request = OffboardingRequest(
             id=str(uuid.uuid4()),
             customer_id=customer_id,
@@ -25,12 +26,19 @@ class OffboardingManager:
         )
         self.db.add(request)
         self.db.commit()
-        return {"id": request.id, "status": request.status, "soft_delete_at": request.soft_delete_at, "hard_delete_at": request.hard_delete_at}
+
+        return {
+            "id": request.id,
+            "status": request.status,
+            "soft_delete_at": request.soft_delete_at,
+            "hard_delete_at": request.hard_delete_at
+        }
 
     def execute_soft_delete(self, customer_id: str) -> Dict:
         customer = self.db.query(Customer).filter_by(id=customer_id).first()
         if not customer:
             return {"error": "Customer not found"}
+
         customer.status = "SOFT_DELETED"
         self.db.commit()
         return {"customer_id": customer_id, "status": "SOFT_DELETED"}
@@ -39,6 +47,8 @@ class OffboardingManager:
         customer = self.db.query(Customer).filter_by(id=customer_id).first()
         if not customer:
             return {"error": "Customer not found"}
+
+        self.db.query(OffboardingRequest).filter_by(customer_id=customer_id).delete()
         self.db.delete(customer)
         self.db.commit()
         return {"customer_id": customer_id, "status": "HARD_DELETED"}
@@ -47,8 +57,15 @@ class OffboardingManager:
         customer = self.db.query(Customer).filter_by(id=customer_id).first()
         if not customer:
             return {"error": "Customer not found"}
+
         customer.status = "ACTIVE"
         self.db.commit()
         return {"customer_id": customer_id, "status": "RESTORED"}
+
+    def get_offboarding_status(self, customer_id: str) -> Dict:
+        request = self.db.query(OffboardingRequest).filter_by(customer_id=customer_id).first()
+        if not request:
+            return {"status": "ACTIVE"}
+        return {"status": request.status, "soft_delete_at": request.soft_delete_at, "hard_delete_at": request.hard_delete_at}
 
 offboarding = OffboardingManager()

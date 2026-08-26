@@ -1,17 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
+import Login from './components/Login';
 import SecurityDashboard from './components/SecurityDashboard';
-import './App.css';
 
 function App() {
+  const [token, setToken] = useState<string | null>(null);
+  const [tenantId, setTenantId] = useState<string | null>(null);
+
+  const handleLogin = (token: string, tenantId: string) => {
+    setToken(token);
+    setTenantId(tenantId);
+  };
+
+  if (!token) {
+    return <Login onLogin={handleLogin} />;
+  }
+
   return (
     <div className="App">
-      <header className="App-header">
+      <header>
         <h1>SentinelLayer</h1>
-        <p>API Security Platform</p>
+        <span>Tenant: {tenantId}</span>
       </header>
-      <main>
-        <SecurityDashboard />
-      </main>
+      <SecurityDashboard />
     </div>
   );
 }
