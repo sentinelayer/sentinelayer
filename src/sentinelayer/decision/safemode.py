@@ -42,4 +42,8 @@ class SafeMode:
         if self.circuit_breaker["failures"] >= self.circuit_breaker["threshold"]:
             self.circuit_breaker["state"] = "OPEN"
 
+    def reset_circuit(self):
+        self.circuit_breaker["state"] = "CLOSED"
+        self.circuit_breaker["failures"] = 0
+
 safe_mode = SafeMode()

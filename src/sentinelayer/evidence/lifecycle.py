@@ -1,28 +1,21 @@
-import time
-import threading
-import logging
-from src.sentinelayer.evidence.matrix import get_evidence_matrix
+from datetime import datetime, timedelta
+from typing import Dict, List
+from src.sentinelayer.evidence.matrix import evidence_matrix
 
-logger = logging.getLogger(__name__)
+class EvidenceLifecycle:
+    def __init__(self):
+        self.matrix = evidence_matrix
 
-def enforce_retention():
-    matrix = get_evidence_matrix()
-    expired = []
-    for evidence in matrix.list_evidence():
-        age = time.time() - evidence.timestamp
-        if age > evidence.retention * 86400:
-            expired.append(evidence.evidence_id)
-            evidence.status = "EXPIRED"
-            matrix.save_evidence(evidence)
-    if expired:
-        logger.info(f"Evidence expired: {expired}")
-    return expired
+    def list_evidence(self, requirement_id: str = None) -> List[Dict]:
+        return self.matrix.get_matrix(requirement_id)
 
-def start_retention_enforcer(interval_hours=24):
-    def loop():
-        while True:
-            time.sleep(interval_hours * 3600)
-            enforce_retention()
-    thread = threading.Thread(target=loop, daemon=True)
-    thread.start()
-    logger.info(f"Retention enforcer started (interval: {interval_hours}h)")
+    def save_evidence(self, requirement_id: str, control_id: str, artifact: str, status: str) -> Dict:
+        return self.matrix.add_evidence(requirement_id, control_id, artifact, status)
+
+    def verify_evidence(self, evidence_id: str) -> Dict:
+        return self.matrix.verify_evidence(evidence_id)
+
+    def get_compliance_summary(self) -> Dict:
+        return self.matrix.get_compliance_summary()
+
+evidence_lifecycle = EvidenceLifecycle()
