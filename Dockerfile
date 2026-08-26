@@ -15,4 +15,5 @@ ENV PYTHONPATH=/app/src
 
 EXPOSE 8000
 
-CMD uvicorn sentinelayer.api.main_full:app --host 0.0.0.0 --port $PORT
+ENTRYPOINT ["/bin/sh", "-c"]
+CMD ["uvicorn sentinelayer.api.main_full:app --host 0.0.0.0 --port $PORT"]
