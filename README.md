@@ -68,7 +68,7 @@
 
 ---
 
-## 📊 GitHub Stats
+# 📊 GitHub Stats
 
 ![GitHub Stats](https://github-readme-stats.vercel.app/api?username=sentinelaver&show_icons=true&theme=dark)
 
