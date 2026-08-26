@@ -11,8 +11,8 @@ import (
 "os"
 "regexp"
 "time"
-"gateway/internal/ratelimit"
-"gateway/internal/desync"
+"github.com/sentinelayer/gateway/internal/ratelimit"
+"github.com/sentinelayer/gateway/internal/desync"
 )
 
 func scanBody(body []byte, rules []*regexp.Regexp) bool {
