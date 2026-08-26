@@ -1,13 +1,7 @@
 # 🛡️ SentinelLayer
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=28&duration=3000&pause=500&color=00FF9D&center=true&vCenter=true&width=600&lines=%F0%9F%9B%A1%EF%B8%8F+SENTINELLAYER;Zero-Trust+Security+Platform;Trust+Nothing%2C+Verify+Everything;Built+by+Ex-JPMorgan+Engineer" alt="Typing SVG" />
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/🚀_Solo_Founder-2026-00FF9D?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/🟢_All_Systems-OPERATIONAL-brightgreen?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/📊_Uptime-100%25-brightgreen?style=for-the-badge" />
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=3000&pause=500&color=00FF9D&center=true&vCenter=true&width=500&lines=Zero-Trust+Security+Platform;Trust+Nothing%2C+Verify+Everything;Built+by+Ex-JPMorgan+Engineer" alt="Typing SVG" />
 </p>
 
 ---
@@ -50,53 +44,56 @@
 
 ## 👨‍💻 About Me
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Ex--Security%20Analyst%20Engineer-4%2B%20years-blue?style=for-the-badge" />
-</p>
+**EX-SECURITY ANALYST ENGINEER — 4+ YEARS**
 
-> Ex-Security Analyst Engineer with **4+ years** of experience securing enterprise systems across **JPMorgan Chase**, **BEI**, and **Sinarmas**. Bridging red team tactics and blue team defense — from IAM (RBAC/MFA) and API Security (SSRF/BOLA) to security automation. Certified **ETF Cyber Security Analyst**, **Software Engineer**, and **Web Developer**. Currently building **SentinelLayer** — because zero-trust shouldn't be a buzzword, it should be the baseline.
+Ex-Security Analyst Engineer with **4+ years** of experience securing enterprise systems across **JPMorgan Chase**, **BEI**, and **Sinarmas**. Bridging red team tactics and blue team defense — from IAM (RBAC/MFA) and API Security (SSRF/BOLA) to security automation. Certified **ETF Cyber Security Analyst**, **Software Engineer**, and **Web Developer**. Currently building **SentinelLayer** — because zero-trust shouldn't be a buzzword, it should be the baseline.
 
-### 🏢 Experience
+---
+
+## 🏢 Experience
+
 - 🏦 **JPMorgan Chase** — Security Analyst
 - 📊 **BEI (Bursa Efek Indonesia)** — Financial Security Analyst
 - 🛡️ **Sinarmas** — Security Analyst
 
-### 🎓 Certifications
+---
+
+## 🎓 Certifications
+
 - 🔐 ETF Cyber Security Analyst
 - 💻 ETF Software Engineer
 - 🌐 ETF Web Developer
 
 ---
 
-# 📊 GitHub Stats
+## 📊 GitHub Stats
 
-![GitHub Stats](https://github-readme-stats.vercel.app/api?username=sentinelaver&show_icons=true&theme=dark)
+<p align="center">
+  <img src="https://komarev.com/ghpvc/?username=sentinelaver&color=00FF9D&style=flat-square" alt="Profile Views" />
+</p>
 
-![GitHub Streak](https://github-readme-streak-stats.herokuapp.com/?user=sentinelaver&theme=dark)
-
-![Profile Views](https://komarev.com/ghpvc/?username=sentinelaver&color=blue)
+<p align="center">
+  <img src="https://github-readme-stats.vercel.app/api?username=sentinelaver&show_icons=true&theme=radical&hide_border=true&bg_color=0D1117&icon_color=00FF9D&title_color=00FF9D" width="49%" />
+  <img src="https://github-readme-streak-stats.herokuapp.com/?user=sentinelaver&theme=radical&hide_border=true&background=0D1117&stroke=00FF9D&ring=00FF9D&fire=00FF9D" width="49%" />
+</p>
 
 ---
 
 ## 📈 System Status
 
 <p align="center">
-  <img src="https://img.shields.io/badge/🟢_All_Systems-OPERATIONAL-brightgreen?style=for-the-badge&logo=statuspage" />
+  <img src="https://img.shields.io/badge/🟢_All_Systems-OPERATIONAL-brightgreen?style=for-the-badge" />
   <img src="https://img.shields.io/badge/📊_Uptime-100%25-brightgreen?style=for-the-badge" />
 </p>
 
-| Component | Status | Uptime |
-|-----------|--------|--------|
-| 🚀 Solo Founder | <img src="https://img.shields.io/badge/✅-ONLINE-brightgreen?style=flat-square" /> | 100% |
-| ✅ GRC Automation | <img src="https://img.shields.io/badge/✅-ONLINE-brightgreen?style=flat-square" /> | 100% |
-| 🔄 External Retainer | <img src="https://img.shields.io/badge/✅-ONLINE-brightgreen?style=flat-square" /> | 100% |
-| ⛔ Acceptance Gate | <img src="https://img.shields.io/badge/✅-ONLINE-brightgreen?style=flat-square" /> | 100% |
-| 🛡️ WAF | <img src="https://img.shields.io/badge/✅-ONLINE-brightgreen?style=flat-square" /> | 100% |
-| 📊 Monitoring | <img src="https://img.shields.io/badge/✅-ONLINE-brightgreen?style=flat-square" /> | 100% |
-
-<p align="center">
-  <sub>🟢 All systems operational · 100% uptime</sub>
-</p>
+| Component | Status |
+|-----------|--------|
+| 🚀 Solo Founder | ✅ ONLINE |
+| ✅ GRC Automation | ✅ ONLINE |
+| 🔄 External Retainer | ✅ ONLINE |
+| ⛔ Acceptance Gate | ✅ ONLINE |
+| 🛡️ WAF | ✅ ONLINE |
+| 📊 Monitoring | ✅ ONLINE |
 
 ---
 
