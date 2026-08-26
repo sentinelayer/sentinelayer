@@ -1,3 +1,3 @@
-from . import auth, health
+from . import controlplane
 
-__all__ = ["auth", "health"]
+__all__ = ["controlplane"]

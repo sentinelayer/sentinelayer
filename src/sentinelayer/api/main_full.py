@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from src.sentinelayer.api import auth, health, metrics
 from src.sentinelayer.api.routes import controlplane
