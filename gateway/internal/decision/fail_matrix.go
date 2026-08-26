@@ -15,6 +15,7 @@ func NewFailMatrix() *FailMatrix {
             "ssrf":       "fail-closed",
             "normalize":  "fail-open",
             "proxy":      "fail-open",
+            "engine":     "fail-open",
         },
     }
 }
