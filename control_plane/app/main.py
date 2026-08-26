@@ -23,6 +23,12 @@ app.add_middleware(TenantMiddleware)
 
 app.include_router(router, prefix="/api/v1")
 
+
 @app.get("/")
 async def root():
     return {"status": "ok", "service": "SentinelLayer Control Plane"}
+
+
+@app.get("/health")
+async def root_health():
+    return {"status": "healthy", "service": "control-plane"}

@@ -4,10 +4,24 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+PUBLIC_PATHS = {
+    "/",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+    "/health",
+    "/health/readiness",
+    "/api/v1/health",
+    "/api/v1/health/readiness",
+    "/api/v1/auth/login",
+    "/api/v1/auth/register",
+}
+
+
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        public_paths = ["/", "/docs", "/openapi.json", "/health", "/health/readiness", "/api/v1/auth/login", "/api/v1/auth/register"]
-        if request.url.path in public_paths:
+        path = request.url.path
+        if path in PUBLIC_PATHS or path.startswith("/docs") or path.startswith("/openapi"):
             return await call_next(request)
 
         auth_header = request.headers.get("Authorization")
@@ -15,8 +29,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
             return JSONResponse(status_code=401, content={"error": "Missing or invalid token"})
 
         token = auth_header.split(" ")[1]
+        secret = os.environ.get("JWT_SECRET")
+        if not secret:
+            return JSONResponse(status_code=500, content={"error": "JWT_SECRET not configured"})
         try:
-            payload = jwt.decode(token, os.environ.get("JWT_SECRET", "secret"), algorithms=["HS256"])
+            payload = jwt.decode(token, secret, algorithms=["HS256"])
             request.state.user_id = payload.get("sub")
             request.state.tenant_id = payload.get("tenant_id")
             request.state.is_admin = payload.get("is_admin", False)

@@ -1,13 +1,13 @@
 # SentinelLayer Progress
 
-## Done this batch
-- Policy.tenant_id model + alembic 0003 + API filter by tenant_id
-- Register creates Tenant row if missing; password min 12
-- Live integration test tenant isolation (skip if CP down)
-- Unit blast-radius tests
-- Dashboard Overview + API client real fetch / real errors
-- docker-compose runs alembic upgrade head before CP
+## Verified
+- Live tenant isolation PASSED (integration test against real CP + Postgres)
+- Risk engine healthy
+- Root cause of CP crash: configuration.py used `value: any` (builtin) → fixed to Any
+- Full API router restored
+- Dummy explainability seed removed
+- Incidents tenant-scoped
+- Health at /health and /api/v1/health
 
-## Still external
-- External Retainer signed (legal)
-- Full dashboard polish (all pages still thin)
+## External only
+- External Retainer contract signature (legal, not code)
