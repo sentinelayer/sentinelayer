@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends, status
-from pydantic import BaseModel, EmailStr
-from datetime import datetime, timedelta
-import jwt
 import os
+import jwt
+from datetime import datetime, timedelta
+from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
 from src.sentinelayer.database import get_db
 from src.sentinelayer.database.models import User
@@ -34,33 +34,28 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == req.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
-    hashed = pwd_context.hash(req.password)
-    
+
     user = User(
         email=req.email,
-        hashed_password=hashed,
+        hashed_password=pwd_context.hash(req.password),
         full_name=req.full_name,
         tenant_id=req.tenant_id
     )
     db.add(user)
     db.commit()
     db.refresh(user)
-    
-    return {"id": str(user.id), "email": user.email, "full_name": user.full_name}
+    return {"id": str(user.id), "email": user.email}
 
 @router.post("/login", response_model=TokenResponse)
 async def login(req: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == req.email).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
     if not pwd_context.verify(req.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
-    
+
     expiry = datetime.utcnow() + timedelta(minutes=JWT_EXPIRY_MINUTES)
     token = jwt.encode(
         {
@@ -73,7 +68,6 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
         JWT_SECRET,
         algorithm=JWT_ALGORITHM
     )
-    
     return TokenResponse(
         access_token=token,
         token_type="bearer",

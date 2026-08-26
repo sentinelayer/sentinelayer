@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src ./src
 COPY waf ./waf
 COPY private ./private
+COPY frontend ./frontend
 
 ENV PYTHONPATH=/app
 ENV ENVIRONMENT=production

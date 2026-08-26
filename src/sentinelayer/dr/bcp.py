@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
-import json
 import os
+import subprocess
+import json
+from datetime import datetime
 from typing import Dict, List
 from src.sentinelayer.database import SessionLocal
 from src.sentinelayer.database.models import DRPlan, DRTest
@@ -25,7 +26,7 @@ class BCPManager:
         )
         self.db.add(plan)
         self.db.commit()
-        return {"id": plan.id, "name": plan.name}
+        return {"id": str(plan.id), "name": plan.name}
 
     def execute_dr_test(self, plan_id: str) -> Dict:
         test = DRTest(
@@ -35,27 +36,49 @@ class BCPManager:
         )
         self.db.add(test)
         self.db.commit()
-        result = self._run_dr_test()
-        test.status = "COMPLETED"
-        test.completed_at = datetime.utcnow().isoformat()
-        test.result = json.dumps(result)
-        self.db.commit()
-        return {"id": test.id, "status": test.status, "result": result}
+
+        try:
+            result = self._run_dr_test()
+            test.status = "COMPLETED"
+            test.completed_at = datetime.utcnow().isoformat()
+            test.result = json.dumps(result)
+            self.db.commit()
+            return {"id": str(test.id), "status": test.status, "result": result}
+        except Exception as e:
+            test.status = "FAILED"
+            test.result = json.dumps({"error": str(e)})
+            self.db.commit()
+            return {"id": str(test.id), "status": "FAILED", "error": str(e)}
 
     def _run_dr_test(self) -> Dict:
-        steps = [
-            {"step": "backup_creation", "status": "PASS", "duration_ms": 500},
-            {"step": "backup_encryption", "status": "PASS", "duration_ms": 200},
-            {"step": "backup_transfer", "status": "PASS", "duration_ms": 1000},
-            {"step": "restore_start", "status": "PASS", "duration_ms": 300},
-            {"step": "restore_complete", "status": "PASS", "duration_ms": 2000},
-            {"step": "validation", "status": "PASS", "duration_ms": 500}
-        ]
-        all_pass = all(s["status"] == "PASS" for s in steps)
-        return {"success": all_pass, "steps": steps, "total_duration_ms": sum(s["duration_ms"] for s in steps)}
+        steps = []
+        try:
+            subprocess.run(["pg_dump", "--version"], capture_output=True, check=True)
+            steps.append({"step": "pg_dump_available", "status": "PASS"})
+        except:
+            steps.append({"step": "pg_dump_available", "status": "FAIL"})
+            return {"success": False, "steps": steps}
+
+        try:
+            backup_path = f"backups/dr_test_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.sql"
+            os.makedirs("backups", exist_ok=True)
+            result = subprocess.run([
+                "pg_dump",
+                "-h", os.getenv("DB_HOST", "localhost"),
+                "-U", os.getenv("DB_USER", "postgres"),
+                "-d", os.getenv("DB_NAME", "sentinelayer"),
+                "-F", "c",
+                "-f", backup_path
+            ], capture_output=True, check=True)
+            steps.append({"step": "backup_creation", "status": "PASS"})
+        except:
+            steps.append({"step": "backup_creation", "status": "FAIL"})
+            return {"success": False, "steps": steps}
+
+        return {"success": True, "steps": steps}
 
     def get_active_plans(self) -> List[Dict]:
         plans = self.db.query(DRPlan).filter_by(status="ACTIVE").all()
-        return [{"id": p.id, "name": p.name, "rto": p.rto, "rpo": p.rpo} for p in plans]
+        return [{"id": str(p.id), "name": p.name, "rto": p.rto, "rpo": p.rpo} for p in plans]
 
 bcp = BCPManager()
