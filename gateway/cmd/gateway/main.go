@@ -9,38 +9,8 @@ import (
 "os"
 "regexp"
 "time"
+"gateway/internal/ratelimit"
 )
-
-type RateLimiter struct {
-requests map[string][]int64
-limit    int
-window   int64
-}
-
-func NewRateLimiter(limit int) *RateLimiter {
-return &RateLimiter{
-requests: make(map[string][]int64),
-limit:    limit,
-window:   60,
-}
-}
-
-func (r *RateLimiter) Allow(key string) bool {
-now := time.Now().Unix()
-start := now - r.window
-valid := []int64{}
-for _, ts := range r.requests[key] {
-if ts > start {
-valid = append(valid, ts)
-}
-}
-if len(valid) >= r.limit {
-return false
-}
-valid = append(valid, now)
-r.requests[key] = valid
-return true
-}
 
 func main() {
 wafRules := []*regexp.Regexp{
@@ -50,7 +20,7 @@ regexp.MustCompile(`(\.\./|\.\.\\)`),
 regexp.MustCompile(`(?i)(\||;|&&|` + "`" + `|\$\(|ping\s|wget\s|curl\s|nmap\s|python\s-c)`),
 }
 
-rateLimiter := NewRateLimiter(60)
+rateLimiter := ratelimit.NewRedisRateLimiter(os.Getenv("REDIS_ADDR"), 60)
 
 upstream, _ := url.Parse(os.Getenv("UPSTREAM_URL"))
 proxy := httputil.NewSingleHostReverseProxy(upstream)
