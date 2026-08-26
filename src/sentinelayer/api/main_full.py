@@ -82,5 +82,6 @@ async def calculate_risk(request: Request):
     }
     behavior_engine.track(context)
     score = risk_engine.calculate(context)
-    decision = safe_mode.process_decision({"action": "ALLOW" if score < 30 else "BLOCK" if score > 80 else "CHALLENGE"})
+    action = risk_engine.get_action(score)
+    decision = safe_mode.process_decision({"action": action})
     return {"risk_score": score, "decision": decision}

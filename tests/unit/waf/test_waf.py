@@ -1,5 +1,5 @@
 import pytest
-from sentinelayer.gateway.waf.regex_waf import get_waf_engine
+from sentinelayer.gateway.waf import get_waf_engine
 
 @pytest.fixture
 def waf():
