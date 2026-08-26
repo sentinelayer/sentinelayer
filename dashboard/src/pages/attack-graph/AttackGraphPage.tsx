@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { api } from '../../api/client'
 
 export const AttackGraphPage: React.FC = () => {
     const [nodes, setNodes] = useState([])
@@ -6,8 +7,7 @@ export const AttackGraphPage: React.FC = () => {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch('/api/v1/attack-graph')
-            .then(res => res.json())
+        api.get('/attack-graph')
             .then(data => { setNodes(data.nodes || []); setEdges(data.edges || []); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])

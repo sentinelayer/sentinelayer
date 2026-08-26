@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
+import { api } from '../../api/client'
 
 export const HeatmapPage: React.FC = () => {
     const [data, setData] = useState([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch('/api/v1/heatmap')
-            .then(res => res.json())
+        api.get('/heatmap')
             .then(data => { setData(data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])
@@ -16,21 +16,18 @@ export const HeatmapPage: React.FC = () => {
     return (
         <div className="heatmap-page">
             <h1>Risk Heatmap</h1>
-            <div className="heatmap-container">
+            {data.length === 0 ? (
+                <p>No risk data available</p>
+            ) : (
                 <div className="heatmap-grid">
-                    {data.length === 0 ? (
-                        <p>No risk data available</p>
-                    ) : (
-                        <div className="heatmap-cells">
-                            {data.map((cell: any, i: number) => (
-                                <div key={i} className={`heatmap-cell risk-${cell.risk || 0}`}>
-                                    {cell.endpoint || 'Unknown'}
-                                </div>
-                            ))}
+                    {data.map((cell: any, i: number) => (
+                        <div key={i} className={`heatmap-cell risk-${cell.risk || 0}`}>
+                            {cell.endpoint || 'Unknown'}
+                            <span className="heatmap-value">{cell.risk || 0}</span>
                         </div>
-                    )}
+                    ))}
                 </div>
-            </div>
+            )}
         </div>
     )
 }

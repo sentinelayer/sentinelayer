@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react'
+import { api } from '../../api/client'
 
 export const ExplainabilityPage: React.FC = () => {
     const [decision, setDecision] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState('')
 
     useEffect(() => {
-        fetch('/api/v1/explainability/latest')
-            .then(res => res.json())
+        api.get('/explainability/latest')
             .then(data => { setDecision(data); setLoading(false) })
-            .catch(() => setLoading(false))
+            .catch(() => { setError('Failed to load explainability'); setLoading(false) })
     }, [])
 
     if (loading) return <div>Loading...</div>
+    if (error) return <div className="error">{error}</div>
 
     return (
         <div className="explainability-page">

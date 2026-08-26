@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
+import { api } from '../../api/client'
 
 export const RiskPage: React.FC = () => {
     const [risk, setRisk] = useState<any>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch('/api/v1/risk/calculate')
-            .then(res => res.json())
+        api.get('/risk/calculate')
             .then(data => { setRisk(data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])
@@ -16,11 +16,11 @@ export const RiskPage: React.FC = () => {
     return (
         <div className="risk-page">
             <h1>Risk Score</h1>
-            {risk && (
+            {risk ? (
                 <div className="risk-detail">
-                    <p>Score: {risk.score}</p>
-                    <p>Confidence: {risk.confidence}</p>
-                    <p>Action: {risk.action}</p>
+                    <p><strong>Score:</strong> {risk.score}</p>
+                    <p><strong>Confidence:</strong> {risk.confidence}</p>
+                    <p><strong>Action:</strong> {risk.action}</p>
                     <div className="risk-factors">
                         <h3>Factors</h3>
                         {Object.entries(risk.factors || {}).map(([k, v]) => (
@@ -28,6 +28,8 @@ export const RiskPage: React.FC = () => {
                         ))}
                     </div>
                 </div>
+            ) : (
+                <p>No risk data available</p>
             )}
         </div>
     )
