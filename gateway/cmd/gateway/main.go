@@ -10,39 +10,9 @@ import (
 "net/url"
 "os"
 "regexp"
-"sync"
 "time"
+"gateway/internal/ratelimit"
 )
-
-type RateLimiter struct {
-mu       sync.Mutex
-requests map[string][]int64
-limit    int
-window   int64
-}
-
-func NewRateLimiter(limit int) *RateLimiter {
-return &RateLimiter{requests: make(map[string][]int64), limit: limit, window: 60}
-}
-
-func (r *RateLimiter) Allow(key string) bool {
-r.mu.Lock()
-defer r.mu.Unlock()
-now := time.Now().Unix()
-start := now - r.window
-valid := []int64{}
-for _, ts := range r.requests[key] {
-if ts > start {
-valid = append(valid, ts)
-}
-}
-if len(valid) >= r.limit {
-return false
-}
-valid = append(valid, now)
-r.requests[key] = valid
-return true
-}
 
 func scanBody(body []byte, rules []*regexp.Regexp) bool {
 for _, rule := range rules {
@@ -61,14 +31,13 @@ regexp.MustCompile(`(\.\./|\.\.\\)`),
 regexp.MustCompile(`(?i)(\||;|&&|` + "`" + `|\$\(|ping\s|wget\s|curl\s|nmap\s|python\s-c)`),
 }
 
-rateLimiter := NewRateLimiter(60)
+rateLimiter := ratelimit.NewRedisRateLimiter(os.Getenv("REDIS_ADDR"), 60)
 upstream, _ := url.Parse(os.Getenv("UPSTREAM_URL"))
 proxy := httputil.NewSingleHostReverseProxy(upstream)
 
 mux := http.NewServeMux()
 
 mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-// Query
 for _, value := range r.URL.Query() {
 for _, rule := range wafRules {
 if rule.MatchString(value[0]) {
@@ -79,7 +48,6 @@ return
 }
 }
 
-// Body
 if r.Body != nil {
 body, _ := io.ReadAll(r.Body)
 r.Body = io.NopCloser(bytes.NewBuffer(body))
@@ -90,7 +58,6 @@ return
 }
 }
 
-// Path
 for _, rule := range wafRules {
 if rule.MatchString(r.URL.Path) {
 w.WriteHeader(http.StatusForbidden)
@@ -99,7 +66,6 @@ return
 }
 }
 
-// Headers
 for key, values := range r.Header {
 for _, value := range values {
 for _, rule := range wafRules {

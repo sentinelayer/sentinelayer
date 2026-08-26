@@ -13,16 +13,16 @@ install:
 pip install -e .
 
 dev:
-uvicorn control_plane.app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn control_plane.app.main:app --host 0.0.0.0 --port 8005 --reload
 
 test:
 pytest tests/ -v
 
 lint:
-flake8 src/ tests/
+flake8 control_plane/ engine/ --max-line-length=120
 
 format:
-black src/ tests/
+black control_plane/ engine/
 
 migrate:
 alembic upgrade head
