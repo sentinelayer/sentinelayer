@@ -1,7 +1,5 @@
 package waf
 
-import "fmt"
-
 type WAFEngine struct {
 Rules []string
 }
@@ -24,8 +22,4 @@ return true
 }
 }
 return false
-}
-
-func (w *WAFEngine) GetRules() []string {
-return w.Rules
 }
