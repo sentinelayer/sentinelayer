@@ -1,7 +1,13 @@
 # 🛡️ SentinelLayer
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=3000&pause=500&color=00FF9D&center=true&vCenter=true&width=500&lines=Trust+Nothing%2C+Verify+Everything;Zero-Trust+Security+Platform;Built+by+Ex-JPMorgan+Engineer" alt="Typing SVG" />
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=28&duration=3000&pause=500&color=00FF9D&center=true&vCenter=true&width=700&lines=%F0%9F%9B%A1%EF%B8%8F+SENTINELLAYER;Zero-Trust+Security+Platform;Trust+Nothing.+Verify+Everything.;Security+That+Proactively+Defends.;Built+for+Modern+Enterprises." alt="Typing SVG" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/🚀_Solo_Founder-2026-00FF9D?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/🟢_All_Systems-OPERATIONAL-brightgreen?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/📊_Uptime-100%25-brightgreen?style=for-the-badge" />
 </p>
 
 ---
@@ -38,6 +44,9 @@
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
   <img src="https://img.shields.io/badge/Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white" />
   <img src="https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" />
+  <br />
+  <img src="https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=prometheus&logoColor=white" />
+  <img src="https://img.shields.io/badge/Grafana-F46800?style=for-the-badge&logo=grafana&logoColor=white" />
 </p>
 
 ---
