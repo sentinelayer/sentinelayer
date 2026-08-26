@@ -1,7 +1,7 @@
 ![Header Animation](header.svg)
 
 # SentinelLayer
-
+Software 
 API Security Platform — WAF + Behavioral Analysis + Risk Decision + Observability
 
 ---
@@ -11,6 +11,7 @@ API Security Platform — WAF + Behavioral Analysis + Risk Decision + Observabil
 SentinelLayer is an all-in-one API security solution designed to protect modern applications from cyber attacks, business logic abuse, and data leaks.
 
 Built for solo founders, startups, and enterprises who need simple, affordable, and effective security.
+ex security analyst jpmorgan chase, analisyt financial bei, security sinarmas, sertifikat etf 
 
 ---
 
