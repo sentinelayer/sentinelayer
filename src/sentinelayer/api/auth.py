@@ -1,29 +1,81 @@
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Depends, status
+from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
 import jwt
 import os
 from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 from src.sentinelayer.database import get_db
 from src.sentinelayer.database.models import User
-from passlib.context import CryptContext
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRY_MINUTES = 15
+
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: str
+    tenant_id: str
 
 class LoginRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
-@router.post("/login")
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    expires_in: int
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+async def register(req: RegisterRequest, db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.email == req.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed = pwd_context.hash(req.password)
+    
+    user = User(
+        email=req.email,
+        hashed_password=hashed,
+        full_name=req.full_name,
+        tenant_id=req.tenant_id
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    return {"id": str(user.id), "email": user.email, "full_name": user.full_name}
+
+@router.post("/login", response_model=TokenResponse)
 async def login(req: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == req.email).first()
-    if not user or not pwd_context.verify(req.password, user.hashed_password):
+    if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
+    if not pwd_context.verify(req.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account disabled")
+    
+    expiry = datetime.utcnow() + timedelta(minutes=JWT_EXPIRY_MINUTES)
     token = jwt.encode(
-        {"sub": str(user.id), "email": user.email, "exp": datetime.utcnow() + timedelta(minutes=15)},
-        os.getenv("JWT_SECRET", "secret"),
-        algorithm="HS256"
+        {
+            "sub": str(user.id),
+            "email": user.email,
+            "tenant_id": str(user.tenant_id),
+            "is_admin": user.is_admin,
+            "exp": expiry
+        },
+        JWT_SECRET,
+        algorithm=JWT_ALGORITHM
     )
-    return {"access_token": token, "token_type": "bearer"}
+    
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        expires_in=JWT_EXPIRY_MINUTES * 60
+    )

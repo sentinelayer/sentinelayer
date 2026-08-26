@@ -1,71 +1,49 @@
-import hashlib
-import os
 import json
-import time
-import logging
-
-logger = logging.getLogger(__name__)
+import os
+from pathlib import Path
 
 class RuntimeProvenance:
     def __init__(self):
-        self.manifest_file = "private/manifest.json"
-        self.manifest = self.load_manifest()
+        self.manifest_path = "private/manifest.json"
         self.verified = False
-        self.verify_on_startup()
+        self.verify_manifest()
     
-    def load_manifest(self) -> dict:
-        try:
-            with open(self.manifest_file, "r") as f:
-                return json.load(f)
-        except:
-            return {"artifacts": {}, "timestamp": 0}
-    
-    def calculate_hash(self, filepath: str) -> str:
-        if not os.path.exists(filepath):
-            return ""
-        with open(filepath, "rb") as f:
-            return hashlib.sha256(f.read()).hexdigest()
-    
-    def verify_on_startup(self):
-        logger.info("Verifying runtime provenance...")
-        artifacts = self.manifest.get("artifacts", {})
-        if not artifacts:
-            logger.warning("No artifacts in manifest, skipping verification")
-            self.verified = True
-            return
+    def verify_manifest(self):
+        if not os.path.exists(self.manifest_path):
+            self.verified = False
+            raise RuntimeError("Manifest not found - runtime provenance failed")
         
-        all_verified = True
-        for artifact_id, data in artifacts.items():
-            artifact_path = data.get("path", "")
-            stored_hash = data.get("hash", "")
-            if not os.path.exists(artifact_path):
-                logger.error(f"Artifact {artifact_id} not found: {artifact_path}")
-                all_verified = False
-                continue
-            current_hash = self.calculate_hash(artifact_path)
-            if current_hash != stored_hash:
-                logger.error(f"Artifact {artifact_id} hash mismatch!")
-                all_verified = False
-            else:
-                logger.info(f"Artifact {artifact_id} verified")
+        with open(self.manifest_path, "r") as f:
+            manifest = json.load(f)
         
-        self.verified = all_verified
+        if not manifest.get("artifacts"):
+            self.verified = False
+            raise RuntimeError("Empty manifest - runtime provenance failed")
+        
+        # Verify artifact signatures
+        for artifact, data in manifest["artifacts"].items():
+            if not data.get("verified", False):
+                self.verified = False
+                raise RuntimeError(f"Artifact {artifact} not verified")
+        
+        self.verified = True
+    
+    def verify_current_artifact(self, artifact_path: str):
         if not self.verified:
-            logger.critical("Runtime provenance verification FAILED!")
-        else:
-            logger.info("All artifacts verified")
-    
-    def get_status(self) -> dict:
-        return {
-            "verified": self.verified,
-            "artifacts_count": len(self.manifest.get("artifacts", {})),
-            "timestamp": self.manifest.get("timestamp", 0)
-        }
+            raise RuntimeError("Runtime provenance not verified")
+        
+        # Compare hash
+        import hashlib
+        with open(artifact_path, "rb") as f:
+            current_hash = hashlib.sha256(f.read()).hexdigest()
+        
+        with open(self.manifest_path, "r") as f:
+            manifest = json.load(f)
+        
+        expected_hash = manifest["artifacts"].get(artifact_path, {}).get("hash")
+        if not expected_hash or current_hash != expected_hash:
+            raise RuntimeError(f"Artifact {artifact_path} does not match manifest")
+        
+        return True
 
-_provenance = None
-
-def get_provenance():
-    global _provenance
-    if _provenance is None:
-        _provenance = RuntimeProvenance()
-    return _provenance
+provenance = RuntimeProvenance()

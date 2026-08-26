@@ -1,32 +1,39 @@
-from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
-from alembic import context
-import sys
 import os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-from src.sentinelayer.database.models.base import Base
-from src.sentinelayer.database.models.order import Order
+from logging.config import fileConfig
+from sqlalchemy import engine_from_config
+from sqlalchemy import pool
+from alembic import context
+from src.sentinelayer.database import Base
+from src.sentinelayer.database.models import User
 
 config = context.config
-fileConfig(config.config_file_name)
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
 target_metadata = Base.metadata
 
-def run_migrations_offline():
+def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(url=url, target_metadata=target_metadata, literal_binds=True)
+    context.configure(
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+    )
     with context.begin_transaction():
         context.run_migrations()
 
-def run_migrations_online():
+def run_migrations_online() -> None:
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata
+        )
         with context.begin_transaction():
             context.run_migrations()
 
