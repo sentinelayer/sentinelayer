@@ -4,25 +4,25 @@ API Security Platform - WAF + Behavioral Analysis + Risk Decision + Observabilit
 
 ## Features
 
-| Feature | Status |
-|---------|--------|
-| JWT Authentication + bcrypt | YES |
-| WAF with OWASP-style rules | YES |
-| Rate Limiting & Tenant Isolation | YES |
-| Risk Scoring Engine | YES |
-| Circuit Breaker & Safe Mode | YES |
-| Threat Intelligence | YES |
-| Observability | YES |
-| Compliance Reporting | YES |
-| Incident Response | YES |
-| GRC Evidence Collection | YES |
-| Security Dashboard | YES |
+| Feature | Status | Note |
+|---------|--------|------|
+| JWT Authentication + bcrypt | YES | Production ready |
+| WAF with OWASP-style rules | YES | 4+ rules active |
+| Rate Limiting & Tenant Isolation | YES | Redis sliding window |
+| Risk Scoring Engine | YES | Active |
+| Circuit Breaker & Safe Mode | YES | Active |
+| Threat Intelligence | YES | VirusTotal/AbuseIPDB |
+| Observability | YES | Prometheus metrics |
+| Compliance Reporting | PARTIAL | Partially implemented |
+| Incident Response | PARTIAL | Partially implemented |
+| GRC Evidence Collection | PARTIAL | Partially implemented |
+| Security Dashboard | PARTIAL | Basic dashboard |
 
 ## Installation
 
 pip install -r requirements.txt
 alembic upgrade head
-uvicorn src.sentinelayer.api.main_full:app --host 0.0.0.0 --port 8000
+uvicorn src.sentinelayer.api.main:app --host 0.0.0.0 --port 8000
 
 ## License
 
