@@ -1,0 +1,12 @@
+name: Security Gate (Machine-Enforced + Omar)
+on: [push, pull_request]
+jobs:
+  security-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mrrCarter/sentinelayer-v1-action@v1
+        with:
+          sentinelayer_token: ${{ secrets.SENTINELAYER_TOKEN }}
+          scan_mode: deep
+          severity_gate: P1
