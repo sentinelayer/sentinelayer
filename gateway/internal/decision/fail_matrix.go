@@ -12,6 +12,9 @@ func NewFailMatrix() *FailMatrix {
             "auth":       "fail-closed",
             "risk":       "fail-open",
             "decision":   "fail-closed",
+            "ssrf":       "fail-closed",
+            "normalize":  "fail-open",
+            "proxy":      "fail-open",
         },
     }
 }
@@ -21,4 +24,8 @@ func (f *FailMatrix) GetPolicy(capability string) string {
         return policy
     }
     return "fail-closed"
+}
+
+func (f *FailMatrix) ShouldFailOpen(capability string) bool {
+    return f.GetPolicy(capability) == "fail-open"
 }

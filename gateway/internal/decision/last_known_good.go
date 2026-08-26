@@ -25,3 +25,15 @@ func (l *LastKnownGood) Get(key string) (interface{}, bool) {
     val, ok := l.state[key]
     return val, ok
 }
+
+func (l *LastKnownGood) GetLastGood() interface{} {
+    l.mu.RLock()
+    defer l.mu.RUnlock()
+    if len(l.state) == 0 {
+        return map[string]string{"action": "ALLOW"}
+    }
+    for _, v := range l.state {
+        return v
+    }
+    return map[string]string{"action": "ALLOW"}
+}

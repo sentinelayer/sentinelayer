@@ -7,7 +7,39 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   redis:
     image: redis:7
     ports:
       - "6379:6379"
+
+  control-plane:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    ports:
+      - "8005:8005"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sentinelayer
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: super-secret-key
+    depends_on:
+      - postgres
+      - redis
+
+  gateway:
+    build:
+      context: ../..
+      dockerfile: gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      UPSTREAM_URL: http://control-plane:8005
+      REDIS_ADDR: redis:6379
+    depends_on:
+      - control-plane
+
+volumes:
+  postgres_data:
