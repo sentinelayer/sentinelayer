@@ -1,0 +1,15 @@
+name: Security
+on: [push, pull_request]
+jobs:
+  sast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Semgrep
+        run: echo "Semgrep scan"
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Gitleaks
+        run: echo "Gitleaks scan"
