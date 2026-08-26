@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException, status
 from typing import Optional
-from sentinelayer.backend.internal.auth.jwt_handler import verify_token
+from src.sentinelayer.backend.internal.auth.jwt_handler import verify_token
 
 class AuthMiddleware:
     async def __call__(self, request: Request) -> Optional[dict]:

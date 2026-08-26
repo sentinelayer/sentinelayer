@@ -3,7 +3,7 @@ from typing import Optional
 import logging
 import os
 
-from sentinelayer.gateway.ratelimit.sliding_window import (
+from src.sentinelayer.gateway.ratelimit.sliding_window import (
     RedisSlidingWindowRateLimiter,
     SimpleRateLimiter
 )

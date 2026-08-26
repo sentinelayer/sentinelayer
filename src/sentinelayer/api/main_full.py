@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from src.sentinelayer.api import auth
+from src.sentinelayer.api.schema_registry import register_schemas
 from src.sentinelayer.gateway.waf import waf_middleware
 from src.sentinelayer.gateway.ssrf import ssrf_middleware
 from src.sentinelayer.gateway.threatintel import threat_intel
@@ -22,6 +23,8 @@ app.add_middleware(
 Base.metadata.create_all(bind=engine)
 
 app.include_router(auth.router)
+app.include_router(metrics.router)
+register_schemas(app)
 
 @app.middleware("http")
 async def security_pipeline(request: Request, call_next):

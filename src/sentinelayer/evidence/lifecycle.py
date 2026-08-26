@@ -1,7 +1,7 @@
 import time
 import threading
 import logging
-from sentinelayer.evidence.matrix import get_evidence_matrix
+from src.sentinelayer.evidence.matrix import get_evidence_matrix
 
 logger = logging.getLogger(__name__)
 

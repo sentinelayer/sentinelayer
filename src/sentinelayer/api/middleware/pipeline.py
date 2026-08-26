@@ -1,10 +1,10 @@
 import time
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from sentinelayer.gateway.waf.regex_waf import get_waf_engine
-from sentinelayer.behavior.baseline import get_baseline_manager
-from sentinelayer.risk.engine import get_risk_engine, RiskSignal
-from sentinelayer.decision.safety import get_decision_safety
+from src.sentinelayer.gateway.waf.regex_waf import get_waf_engine
+from src.sentinelayer.behavior.baseline import get_baseline_manager
+from src.sentinelayer.risk.engine import get_risk_engine, RiskSignal
+from src.sentinelayer.decision.safety import get_decision_safety
 
 waf = get_waf_engine()
 behavior = get_baseline_manager()
