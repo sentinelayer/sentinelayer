@@ -164,8 +164,8 @@ return
 var claims *authctx.Claims
 authHeader := r.Header.Get("Authorization")
 if authHeader != "" {
-c, err := authctx.ValidateJWT(authHeader, jwtSecret)
-if err != nil {
+c, aerr := authctx.ValidateJWT(authHeader, jwtSecret)
+if aerr != nil {
 if failMatrix.ShouldFailClosed("auth", endpointClass) {
 w.Header().Set("Content-Type", "application/json")
 w.WriteHeader(http.StatusUnauthorized)
@@ -307,7 +307,13 @@ w.Header().Set("Content-Type", "application/json")
 json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
 })
 
-server := &http.Server{Addr: ":8080", Handler: mux, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+server := &http.Server{
+Addr:         ":8080",
+Handler:      mux,
+ReadTimeout:  10 * time.Second,
+WriteTimeout: 15 * time.Second,
+IdleTimeout:  60 * time.Second,
+}
 log.Println("Gateway :8080 — pipeline + risk HTTP client")
 log.Fatal(server.ListenAndServe())
 }

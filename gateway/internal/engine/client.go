@@ -48,7 +48,10 @@ return &CircuitBreaker{threshold: threshold, cooldown: cooldown}
 func (c *CircuitBreaker) Allow() bool {
 c.mu.Lock()
 defer c.mu.Unlock()
-return !time.Now().Before(c.openUntil)
+if time.Now().Before(c.openUntil) {
+return false
+}
+return true
 }
 
 func (c *CircuitBreaker) RecordSuccess() {
