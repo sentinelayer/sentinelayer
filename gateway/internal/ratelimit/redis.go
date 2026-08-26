@@ -2,7 +2,10 @@ package ratelimit
 
 import (
 "context"
+"fmt"
+"strconv"
 "time"
+
 "github.com/redis/go-redis/v9"
 )
 
@@ -13,36 +16,37 @@ window time.Duration
 }
 
 func NewRedisRateLimiter(addr string, limit int) *RedisRateLimiter {
-rdb := redis.NewClient(&redis.Options{
-Addr: addr,
-})
-return &RedisRateLimiter{
-client: rdb,
-limit:  limit,
-window: time.Minute,
+if addr == "" {
+addr = "127.0.0.1:6379"
 }
+rdb := redis.NewClient(&redis.Options{Addr: addr})
+return &RedisRateLimiter{client: rdb, limit: limit, window: time.Minute}
 }
 
 func (r *RedisRateLimiter) Allow(key string) bool {
-ctx := context.Background()
-now := time.Now().Unix()
-windowStart := now - int64(r.window.Seconds())
-
-pipe := r.client.Pipeline()
-pipe.ZRemRangeByScore(ctx, key, "0", string(windowStart))
-pipe.ZCard(ctx, key)
-cmds, err := pipe.Exec(ctx)
-if err != nil {
+if r == nil || r.client == nil {
 return true
 }
+ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+defer cancel()
+now := time.Now().Unix()
+windowStart := now - int64(r.window.Seconds())
+member := strconv.FormatInt(now, 10) + ":" + strconv.FormatInt(time.Now().UnixNano(), 10)
 
-count := cmds[1].(*redis.IntCmd).Val()
-if count >= int64(r.limit) {
+pipe := r.client.Pipeline()
+pipe.ZRemRangeByScore(ctx, key, "0", fmt.Sprintf("%d", windowStart))
+card := pipe.ZCard(ctx, key)
+_, err := pipe.Exec(ctx)
+if err != nil {
+// fail-open on redis error (Section 10.23 redis)
+return true
+}
+if card.Val() >= int64(r.limit) {
 return false
 }
-
-pipe.ZAdd(ctx, key, redis.Z{Score: float64(now), Member: now})
-pipe.Expire(ctx, key, r.window)
-_, err = pipe.Exec(ctx)
+pipe2 := r.client.Pipeline()
+pipe2.ZAdd(ctx, key, redis.Z{Score: float64(now), Member: member})
+pipe2.Expire(ctx, key, r.window)
+_, err = pipe2.Exec(ctx)
 return err == nil
 }

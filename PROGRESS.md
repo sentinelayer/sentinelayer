@@ -1,18 +1,15 @@
 # SentinelLayer Progress
 
-## Status: behavior baseline + CI unit path + retainer template
+## Audit fix batch
+- P0: applications/tenants/policies **tenant-scoped** (BOLA path closed in API)
+- Removed dummy tests (test_dr_real assert True, weak bola/tenant stubs)
+- Redis rate limiter score/member fix + fail-open on error
+- Behavior EmitSignal logs + optional HTTP ingest
+- docker-compose.yml valid (postgres, redis, risk, control-plane)
+- KMS refuses missing key in production
 
-Honest. No overclaims.
-
-### Done in code
-- Phase 0 structures (retainer still unsigned)
-- Gateway pipeline + Coraza + fail matrix + risk HTTP client/server + LKG
-- Blast Radius Section 28
-- BOLA / tenant isolation tests (integration; need CP up)
-- Behavior Engine: frequency, sequence abuse, baseline lifecycle, Application Context
-- CI: unit job (behavior/risk) + gateway go build; security workflow
-
-### Blocked / not done
-- External Retainer **signed** (legal) — template at docs/operations/external-retainer-contract.md
-- Integration tests green against live control plane
-- Any P0 requirement ACCEPTED
+## Still real gaps
+- Policy model may lack tenant_id column → isolation via application join
+- Integration tests need CP + DB up
+- External Retainer unsigned
+- Dashboard still thin UI over APIs
