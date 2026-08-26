@@ -25,7 +25,6 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-# Pasang middleware
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(TenantMiddleware)
 app.add_middleware(AuthMiddleware)
@@ -41,11 +40,11 @@ async def security_pipeline(request: Request, call_next):
     waf_result = await waf_middleware.process(request, call_next)
     if hasattr(waf_result, "status_code") and waf_result.status_code == 403:
         return waf_result
-    
+
     ssrf_result = await ssrf_middleware.process(request, call_next)
     if hasattr(ssrf_result, "status_code") and ssrf_result.status_code == 403:
         return ssrf_result
-    
+
     client_ip = request.client.host if request.client else "unknown"
     if client_ip != "unknown":
         threat_result = await threat_intel.check_ip(client_ip)
@@ -54,7 +53,7 @@ async def security_pipeline(request: Request, call_next):
                 status_code=403,
                 content={"error": "Blocked by Threat Intelligence", "source": threat_result.get("source")}
             )
-    
+
     return await call_next(request)
 
 @app.get("/")

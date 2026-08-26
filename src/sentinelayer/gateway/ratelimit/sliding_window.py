@@ -54,9 +54,9 @@ class SimpleRateLimiter:
 try:
     _limiter = RedisSlidingWindowRateLimiter()
     _limiter.redis.ping()
-    print("✅ Using Redis rate limiter")
+    print(" Using Redis rate limiter")
     get_rate_limiter = lambda: _limiter
 except Exception as e:
-    print("⚠️ Redis not available, using simple rate limiter")
+    print(" Redis not available, using simple rate limiter")
     _limiter = SimpleRateLimiter()
     get_rate_limiter = lambda: _limiter
