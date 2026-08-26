@@ -12,6 +12,7 @@ import (
 "regexp"
 "time"
 "gateway/internal/ratelimit"
+"gateway/internal/desync"
 )
 
 func scanBody(body []byte, rules []*regexp.Regexp) bool {
@@ -38,6 +39,13 @@ proxy := httputil.NewSingleHostReverseProxy(upstream)
 mux := http.NewServeMux()
 
 mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+// HTTP Desync Guard
+if desync.GuardDesync(r) {
+w.WriteHeader(http.StatusBadRequest)
+json.NewEncoder(w).Encode(map[string]string{"error": "HTTP desync detected"})
+return
+}
+
 for _, value := range r.URL.Query() {
 for _, rule := range wafRules {
 if rule.MatchString(value[0]) {
