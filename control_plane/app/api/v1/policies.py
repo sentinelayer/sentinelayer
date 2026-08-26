@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
-from sqlalchemy.orm import Session
-from control_plane.app.api.deps import db_with_tenant, tenant_id
-from control_plane.app.infrastructure.db.models import Policy, Application
-from pydantic import BaseModel, Field
-from typing import Any, Optional
-import uuid
 import json
+import uuid
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from control_plane.app.api.deps import db_with_tenant, tenant_id
+from control_plane.app.infrastructure.db.models import Application, Policy
 
 router = APIRouter(prefix="/policies", tags=["policies"])
 
@@ -13,7 +15,7 @@ router = APIRouter(prefix="/policies", tags=["policies"])
 class PolicyCreate(BaseModel):
     name: str
     rules: dict[str, Any] = Field(default_factory=dict)
-    application_id: Optional[str] = None
+    application_id: str | None = None
 
 
 @router.post("/")

@@ -1,5 +1,7 @@
 from sqlalchemy import text
+
 from control_plane.app.infrastructure.db.session import engine
+
 
 def enable_rls():
     with engine.connect() as conn:

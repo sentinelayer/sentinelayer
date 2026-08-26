@@ -1,6 +1,7 @@
-from fastapi import APIRouter
-from datetime import datetime
 import random
+from datetime import datetime
+
+from fastapi import APIRouter
 
 router = APIRouter(prefix="/user-risk", tags=["user-risk"])
 

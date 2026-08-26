@@ -1,4 +1,3 @@
-from typing import Dict, List
 
 class ApplicabilityEngine:
     def __init__(self):
@@ -9,7 +8,7 @@ class ApplicabilityEngine:
             "pci_dss": {"applicable_to": ["fintech", "ecommerce"], "controls": ["cardholder_data", "tokenization", "encryption", "access_control", "audit_log", "mfa"]}
         }
 
-    def determine_applicability(self, customer_type: str, industry: str, data_type: str, region: str) -> Dict:
+    def determine_applicability(self, customer_type: str, industry: str, data_type: str, region: str) -> dict:
         applicable = []
         for framework_id, config in self.frameworks.items():
             if "any" in config.get("applicable_to", []) or customer_type in config.get("applicable_to", []) or industry in config.get("applicable_to", []):

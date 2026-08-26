@@ -1,7 +1,7 @@
 """Baseline lifecycle: COLLECT → FILTER → VALIDATE → ESTABLISH → MONITOR → UPDATE → ROLLBACK (Section 11.14)."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from math import sqrt
 from typing import Any
 
@@ -18,7 +18,7 @@ class BaselineLifecycle:
 
     def collect(self, endpoint: str, value: float) -> None:
         self.state.setdefault(endpoint, []).append(
-            {"value": float(value), "timestamp": datetime.now(timezone.utc).isoformat()}
+            {"value": float(value), "timestamp": datetime.now(UTC).isoformat()}
         )
 
     def filter(self, endpoint: str, abs_max: float = 1e6) -> None:
@@ -41,7 +41,7 @@ class BaselineLifecycle:
             "std": std,
             "sample_count": len(values),
             "version": self.version[endpoint],
-            "established_at": datetime.now(timezone.utc).isoformat(),
+            "established_at": datetime.now(UTC).isoformat(),
         }
         return self.baseline[endpoint]
 

@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
+import uuid
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
+
 from control_plane.app.api.deps import db_with_tenant, tenant_id
 from control_plane.app.infrastructure.db.models import Application
-from pydantic import BaseModel
-import uuid
-from datetime import datetime, timezone
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
@@ -26,7 +28,7 @@ async def create_application(
         id=str(uuid.uuid4()),
         name=data.name,
         tenant_id=tid,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     db.add(app)
     db.commit()

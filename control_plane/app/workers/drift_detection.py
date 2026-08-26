@@ -1,8 +1,8 @@
-import json
 import hashlib
+import json
 import os
 from datetime import datetime
-from typing import Dict
+
 
 class DriftDetection:
     def __init__(self):
@@ -13,10 +13,10 @@ class DriftDetection:
             with open(path, "r") as f:
                 self.expected_config = json.load(f)
 
-    def detect_drift(self, actual_config: Dict) -> Dict:
+    def detect_drift(self, actual_config: dict) -> dict:
         expected_hash = hashlib.sha256(json.dumps(self.expected_config, sort_keys=True).encode()).hexdigest()
         actual_hash = hashlib.sha256(json.dumps(actual_config, sort_keys=True).encode()).hexdigest()
-        
+
         if expected_hash != actual_hash:
             return {
                 "drift_detected": True,

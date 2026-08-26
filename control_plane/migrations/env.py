@@ -5,11 +5,11 @@ import sys
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool, text
+from sqlalchemy import engine_from_config, pool
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from control_plane.app.infrastructure.db.models import Base  # noqa: E402
+from control_plane.app.infrastructure.db.models import Base
 
 config = context.config
 if config.config_file_name is not None:

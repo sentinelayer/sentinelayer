@@ -1,13 +1,13 @@
-import json
 import hashlib
+import json
 from datetime import datetime
-from typing import Dict, Optional
+
 
 class SchemaRegistry:
     def __init__(self):
         self.schemas = {}
 
-    def register(self, schema_id: str, version: str, schema: Dict) -> Dict:
+    def register(self, schema_id: str, version: str, schema: dict) -> dict:
         key = f"{schema_id}:{version}"
         schema_hash = hashlib.sha256(json.dumps(schema, sort_keys=True).encode()).hexdigest()
         self.schemas[key] = {
@@ -19,7 +19,7 @@ class SchemaRegistry:
         }
         return self.schemas[key]
 
-    def get(self, schema_id: str, version: str) -> Optional[Dict]:
+    def get(self, schema_id: str, version: str) -> dict | None:
         key = f"{schema_id}:{version}"
         return self.schemas.get(key)
 

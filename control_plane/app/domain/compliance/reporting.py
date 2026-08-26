@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List
+
 
 class ComplianceReporting:
     def __init__(self):
@@ -18,10 +18,10 @@ class ComplianceReporting:
             }
         }
 
-    def get_status(self, framework: str) -> Dict:
+    def get_status(self, framework: str) -> dict:
         return self.frameworks.get(framework, {"error": "Framework not found"})
 
-    def generate_report(self, framework: str) -> Dict:
+    def generate_report(self, framework: str) -> dict:
         framework_data = self.get_status(framework)
         if "error" in framework_data:
             return framework_data
@@ -34,5 +34,5 @@ class ComplianceReporting:
             "generated_at": datetime.utcnow().isoformat()
         }
 
-    def list_frameworks(self) -> List[str]:
+    def list_frameworks(self) -> list[str]:
         return list(self.frameworks.keys())

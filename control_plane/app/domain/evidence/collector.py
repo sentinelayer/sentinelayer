@@ -1,12 +1,12 @@
 import hashlib
-import json
 from datetime import datetime
-from typing import Dict, Optional
-from control_plane.app.infrastructure.db.session import SessionLocal
+
 from control_plane.app.infrastructure.db.models import Evidence
+from control_plane.app.infrastructure.db.session import SessionLocal
+
 
 class EvidenceCollector:
-    def collect(self, artifact: str, requirement_id: str, control_id: str) -> Dict:
+    def collect(self, artifact: str, requirement_id: str, control_id: str) -> dict:
         db = SessionLocal()
         try:
             hash_value = hashlib.sha256(artifact.encode()).hexdigest()

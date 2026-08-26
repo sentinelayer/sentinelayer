@@ -1,15 +1,16 @@
 """Evidence API — full model (Blueprint Section 0.5 + 0.6)"""
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import Optional, List, Any, Dict
-import uuid
 import hashlib
 import json
-from datetime import datetime, timezone
+import uuid
+from datetime import UTC, datetime
+from typing import Any
 
-from control_plane.app.infrastructure.db.session import get_db
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from control_plane.app.infrastructure.db.models import Evidence
+from control_plane.app.infrastructure.db.session import get_db
 
 router = APIRouter(prefix="/evidence", tags=["evidence"])
 
@@ -21,12 +22,12 @@ class EvidenceCreate(BaseModel):
     owner: str
     implementation_version: str
     artifact_type: str = "file"
-    reviewer: Optional[str] = None
-    relationship: Optional[str] = None
-    related_id: Optional[str] = None
-    runtime_artifact_hash: Optional[str] = None
-    approved_manifest_hash: Optional[str] = None
-    data: Optional[Dict[str, Any]] = None
+    reviewer: str | None = None
+    relationship: str | None = None
+    related_id: str | None = None
+    runtime_artifact_hash: str | None = None
+    approved_manifest_hash: str | None = None
+    data: dict[str, Any] | None = None
 
 
 class EvidenceVerify(BaseModel):
@@ -64,10 +65,10 @@ async def create_evidence(data: EvidenceCreate, db: Session = Depends(get_db)):
             {
                 "action": "CREATED",
                 "actor": data.owner,
-                "at": datetime.now(timezone.utc).isoformat(),
+                "at": datetime.now(UTC).isoformat(),
             }
         ]),
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     db.add(evidence)
     db.commit()
@@ -82,8 +83,8 @@ async def create_evidence(data: EvidenceCreate, db: Session = Depends(get_db)):
 
 @router.get("/")
 async def list_evidence(
-    requirement_id: Optional[str] = None,
-    status: Optional[str] = None,
+    requirement_id: str | None = None,
+    status: str | None = None,
     db: Session = Depends(get_db),
 ):
     q = db.query(Evidence)
@@ -153,10 +154,10 @@ async def verify_evidence(id: str, data: EvidenceVerify, db: Session = Depends(g
     chain.append({
         "action": "VERIFIED",
         "actor": data.actor,
-        "at": datetime.now(timezone.utc).isoformat(),
+        "at": datetime.now(UTC).isoformat(),
     })
     e.status = "VERIFIED"
-    e.verified_at = datetime.now(timezone.utc)
+    e.verified_at = datetime.now(UTC)
     e.chain_of_custody = json.dumps(chain)
     db.commit()
     return {"id": e.id, "status": "VERIFIED"}
@@ -177,11 +178,11 @@ async def validate_evidence(id: str, data: EvidenceValidate, db: Session = Depen
         chain.append({
             "action": "EXPIRED",
             "actor": "system",
-            "at": datetime.now(timezone.utc).isoformat(),
+            "at": datetime.now(UTC).isoformat(),
             "reason": f"Version drift: evidence={e.implementation_version} current={data.current_system_version}",
         })
         e.status = "EXPIRED"
-        e.expired_at = datetime.now(timezone.utc)
+        e.expired_at = datetime.now(UTC)
         e.chain_of_custody = json.dumps(chain)
         db.commit()
         return {"id": e.id, "status": "EXPIRED", "reason": "version drift"}
@@ -192,11 +193,11 @@ async def validate_evidence(id: str, data: EvidenceValidate, db: Session = Depen
             chain.append({
                 "action": "REVOKED",
                 "actor": "system",
-                "at": datetime.now(timezone.utc).isoformat(),
+                "at": datetime.now(UTC).isoformat(),
                 "reason": "Runtime provenance mismatch",
             })
             e.status = "REVOKED"
-            e.revoked_at = datetime.now(timezone.utc)
+            e.revoked_at = datetime.now(UTC)
             e.revoked_reason = "Runtime provenance mismatch"
             e.chain_of_custody = json.dumps(chain)
             db.commit()
@@ -205,10 +206,10 @@ async def validate_evidence(id: str, data: EvidenceValidate, db: Session = Depen
     chain.append({
         "action": "VALID",
         "actor": data.actor,
-        "at": datetime.now(timezone.utc).isoformat(),
+        "at": datetime.now(UTC).isoformat(),
     })
     e.status = "VALID"
-    e.validated_at = datetime.now(timezone.utc)
+    e.validated_at = datetime.now(UTC)
     e.current_system_version = data.current_system_version
     e.chain_of_custody = json.dumps(chain)
     db.commit()
@@ -227,11 +228,11 @@ async def revoke_evidence(id: str, actor: str, reason: str, db: Session = Depend
     chain.append({
         "action": "REVOKED",
         "actor": actor,
-        "at": datetime.now(timezone.utc).isoformat(),
+        "at": datetime.now(UTC).isoformat(),
         "reason": reason,
     })
     e.status = "REVOKED"
-    e.revoked_at = datetime.now(timezone.utc)
+    e.revoked_at = datetime.now(UTC)
     e.revoked_reason = reason
     e.chain_of_custody = json.dumps(chain)
     db.commit()

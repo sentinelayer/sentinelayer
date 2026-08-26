@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Dict
+
 
 class DeletionSemantics:
     def __init__(self):
@@ -7,7 +7,7 @@ class DeletionSemantics:
         self.hard_delete_delay_days = 7
         self.evidence_retention_years = 7
 
-    def soft_delete(self, customer_id: str) -> Dict:
+    def soft_delete(self, customer_id: str) -> dict:
         return {
             "customer_id": customer_id,
             "status": "SOFT_DELETED",
@@ -15,7 +15,7 @@ class DeletionSemantics:
             "hard_delete_at": (datetime.utcnow() + timedelta(days=self.hard_delete_delay_days)).isoformat()
         }
 
-    def hard_delete(self, customer_id: str) -> Dict:
+    def hard_delete(self, customer_id: str) -> dict:
         return {
             "customer_id": customer_id,
             "status": "HARD_DELETED",
@@ -23,7 +23,7 @@ class DeletionSemantics:
             "evidence_retention_until": (datetime.utcnow() + timedelta(days=self.evidence_retention_years * 365)).isoformat()
         }
 
-    def purge_delete(self, customer_id: str) -> Dict:
+    def purge_delete(self, customer_id: str) -> dict:
         return {
             "customer_id": customer_id,
             "status": "PURGED",

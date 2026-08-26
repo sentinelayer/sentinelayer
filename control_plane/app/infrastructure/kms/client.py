@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+
 from cryptography.fernet import Fernet
 
 log = logging.getLogger(__name__)

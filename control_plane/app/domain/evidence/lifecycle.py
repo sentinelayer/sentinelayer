@@ -11,11 +11,10 @@ Rules:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List
 import hashlib
 import json
-
+from datetime import UTC, datetime
+from typing import Any
 
 ALLOWED_TRANSITIONS = {
     "CREATED": {"VERIFIED", "REVOKED"},
@@ -29,7 +28,7 @@ ALLOWED_TRANSITIONS = {
 
 class EvidenceLifecycle:
     def __init__(self, retention_days: int = 2555) -> None:
-        self._store: Dict[str, Dict[str, Any]] = {}
+        self._store: dict[str, dict[str, Any]] = {}
         self.retention_days = retention_days
 
     def create(
@@ -40,13 +39,13 @@ class EvidenceLifecycle:
         artifact: str,
         owner: str,
         implementation_version: str,
-        data: Optional[Dict] = None,
-        reviewer: Optional[str] = None,
-        relationship: Optional[str] = None,
-        related_id: Optional[str] = None,
-        runtime_artifact_hash: Optional[str] = None,
-        approved_manifest_hash: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        data: dict | None = None,
+        reviewer: str | None = None,
+        relationship: str | None = None,
+        related_id: str | None = None,
+        runtime_artifact_hash: str | None = None,
+        approved_manifest_hash: str | None = None,
+    ) -> dict[str, Any]:
         payload = data or {}
         hash_value = hashlib.sha256(
             json.dumps({"artifact": artifact, **payload}, sort_keys=True).encode()
@@ -66,12 +65,12 @@ class EvidenceLifecycle:
             "approved_manifest_hash": approved_manifest_hash,
             "relationship": relationship,
             "related_id": related_id,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "chain_of_custody": [
                 {
                     "action": "CREATED",
                     "actor": owner,
-                    "at": datetime.now(timezone.utc).isoformat(),
+                    "at": datetime.now(UTC).isoformat(),
                 }
             ],
             "data": payload,
@@ -79,7 +78,7 @@ class EvidenceLifecycle:
         self._store[evidence_id] = entry
         return entry
 
-    def _transition(self, evidence_id: str, new_status: str, actor: str, reason: str = "") -> Dict[str, Any]:
+    def _transition(self, evidence_id: str, new_status: str, actor: str, reason: str = "") -> dict[str, Any]:
         if evidence_id not in self._store:
             return {"error": "Evidence not found"}
 
@@ -92,7 +91,7 @@ class EvidenceLifecycle:
             }
 
         entry["status"] = new_status
-        ts = datetime.now(timezone.utc).isoformat()
+        ts = datetime.now(UTC).isoformat()
         entry["chain_of_custody"].append(
             {"action": new_status, "actor": actor, "at": ts, "reason": reason}
         )
@@ -109,7 +108,7 @@ class EvidenceLifecycle:
 
         return entry
 
-    def verify(self, evidence_id: str, actor: str) -> Dict[str, Any]:
+    def verify(self, evidence_id: str, actor: str) -> dict[str, Any]:
         entry = self._store.get(evidence_id)
         if not entry:
             return {"error": "Evidence not found"}
@@ -130,7 +129,7 @@ class EvidenceLifecycle:
         evidence_id: str,
         actor: str,
         current_system_version: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         entry = self._store.get(evidence_id)
         if not entry:
             return {"error": "Evidence not found"}
@@ -155,13 +154,13 @@ class EvidenceLifecycle:
         entry["current_system_version"] = current_system_version
         return self._transition(evidence_id, "VALID", actor)
 
-    def expire(self, evidence_id: str, reason: str = "Retention or version change") -> Dict[str, Any]:
+    def expire(self, evidence_id: str, reason: str = "Retention or version change") -> dict[str, Any]:
         return self._transition(evidence_id, "EXPIRED", actor="system", reason=reason)
 
-    def revoke(self, evidence_id: str, actor: str, reason: str) -> Dict[str, Any]:
+    def revoke(self, evidence_id: str, actor: str, reason: str) -> dict[str, Any]:
         return self._transition(evidence_id, "REVOKED", actor=actor, reason=reason)
 
-    def supersede(self, evidence_id: str, actor: str, new_evidence_id: str) -> Dict[str, Any]:
+    def supersede(self, evidence_id: str, actor: str, new_evidence_id: str) -> dict[str, Any]:
         return self._transition(
             evidence_id,
             "SUPERSEDED",
@@ -169,7 +168,7 @@ class EvidenceLifecycle:
             reason=f"Superseded by {new_evidence_id}",
         )
 
-    def is_valid(self, evidence_id: str, current_system_version: Optional[str] = None) -> bool:
+    def is_valid(self, evidence_id: str, current_system_version: str | None = None) -> bool:
         entry = self._store.get(evidence_id)
         if not entry:
             return False
@@ -179,7 +178,7 @@ class EvidenceLifecycle:
             return False
         return True
 
-    def expire_on_version_change(self, old_version: str, new_version: str) -> List[str]:
+    def expire_on_version_change(self, old_version: str, new_version: str) -> list[str]:
         expired = []
         for eid, entry in self._store.items():
             if entry["implementation_version"] == old_version and entry["status"] in (
@@ -190,10 +189,10 @@ class EvidenceLifecycle:
                 expired.append(eid)
         return expired
 
-    def get(self, evidence_id: str) -> Optional[Dict[str, Any]]:
+    def get(self, evidence_id: str) -> dict[str, Any] | None:
         return self._store.get(evidence_id)
 
-    def get_status(self, evidence_id: str) -> Dict[str, Any]:
+    def get_status(self, evidence_id: str) -> dict[str, Any]:
         entry = self._store.get(evidence_id)
         if not entry:
             return {"status": "NOT_FOUND"}

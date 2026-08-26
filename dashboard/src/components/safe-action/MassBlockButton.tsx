@@ -11,17 +11,17 @@ export const MassBlockButton: React.FC<MassBlockButtonProps> = ({ tenantId, onBl
         fetch('/api/v1/admin/high-risk-actions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                action: 'mass_block', 
-                reason: `Mass block for tenant ${tenantId}` 
+            body: JSON.stringify({
+                action: 'mass_block',
+                reason: `Mass block for tenant ${tenantId}`
             })
         }).then(() => onBlock())
     }
 
     return (
-        <SafeActionButton 
-            action="block all traffic" 
-            onConfirm={handleBlock} 
+        <SafeActionButton
+            action="block all traffic"
+            onConfirm={handleBlock}
             danger={true}
         >
             Block All Traffic

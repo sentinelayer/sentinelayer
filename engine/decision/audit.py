@@ -1,5 +1,6 @@
 from datetime import datetime
 
+
 class AuditTrail:
     def __init__(self):
         self.entries = []

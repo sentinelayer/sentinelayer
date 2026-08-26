@@ -11,5 +11,5 @@ type ReadinessResponse struct {
 
 func ReadinessHandler(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(ReadinessResponse{Status: "ready"})
+    _ = json.NewEncoder(w).Encode(ReadinessResponse{Status: "ready"})
 }

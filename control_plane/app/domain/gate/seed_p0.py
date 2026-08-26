@@ -8,10 +8,10 @@ Usage (from control_plane root):
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from control_plane.app.infrastructure.db.session import SessionLocal
 from control_plane.app.infrastructure.db.models import Requirement
+from control_plane.app.infrastructure.db.session import SessionLocal
 
 P0_REQUIREMENTS = [
     {
@@ -251,8 +251,8 @@ def seed():
                 criticality=item["criticality"],
                 gate=item["gate"],
                 status="NOT_STARTED",
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             )
             db.add(row)
             print(f"SEED {item['id']}")

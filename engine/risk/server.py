@@ -6,9 +6,9 @@ from typing import Any
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
-from engine.risk.engine import RiskEngine
-from engine.risk.decision_matrix import DecisionMatrix
 from engine.risk.correlation import RiskCorrelation
+from engine.risk.decision_matrix import DecisionMatrix
+from engine.risk.engine import RiskEngine
 
 app = FastAPI(title="SentinelLayer Risk Engine", version="1.0.0")
 engine = RiskEngine()

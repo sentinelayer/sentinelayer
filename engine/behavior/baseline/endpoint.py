@@ -1,5 +1,6 @@
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
+
 
 class EndpointBaseline:
     def __init__(self):

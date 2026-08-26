@@ -1,7 +1,10 @@
-from sqlalchemy import Column, String, DateTime
-from control_plane.app.infrastructure.db.session import Base
-from datetime import datetime
 import uuid
+from datetime import datetime
+
+from sqlalchemy import Column, DateTime, String
+
+from control_plane.app.infrastructure.db.session import Base
+
 
 class Tenant(Base):
     __tablename__ = "tenants"

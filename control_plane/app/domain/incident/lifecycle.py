@@ -1,5 +1,6 @@
 from datetime import datetime
 
+
 class IncidentLifecycle:
     def __init__(self):
         self.incidents = {}

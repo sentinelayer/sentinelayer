@@ -1,8 +1,11 @@
-import pytest
 import asyncio
-from httpx import AsyncClient
-from control_plane.app.main import app
 import time
+
+import pytest
+from httpx import AsyncClient
+
+from control_plane.app.main import app
+
 
 @pytest.mark.asyncio
 async def test_load_1000_requests():

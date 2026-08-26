@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
 
+
 class UserBaseline:
     def __init__(self):
         self.user_data = defaultdict(list)

@@ -1,7 +1,8 @@
+import uuid
+from datetime import datetime
+
 from fastapi import APIRouter
 from pydantic import BaseModel
-from datetime import datetime
-import uuid
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 

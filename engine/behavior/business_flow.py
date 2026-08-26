@@ -1,5 +1,6 @@
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
+
 
 class BusinessFlowAbuseDetector:
     def __init__(self):

@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
-from control_plane.app.infrastructure.db.session import SessionLocal
+
 from control_plane.app.domain.offboarding.entity import OffboardingRequest
+
+from control_plane.app.infrastructure.db.session import SessionLocal
+
 
 def purge_offboarded():
     db = SessionLocal()

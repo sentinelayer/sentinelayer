@@ -1,5 +1,6 @@
 import re
 
+
 class OutputValidation:
     def __init__(self):
         self.allowed_patterns = [

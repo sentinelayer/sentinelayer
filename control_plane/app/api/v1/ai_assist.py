@@ -1,8 +1,8 @@
 """AI assist — off-path only. Never blocks request path."""
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime, timezone
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -17,7 +17,7 @@ class ExplainRequest(BaseModel):
 @router.post("/explain")
 async def explain_decision(
     req: ExplainRequest,
-    x_tenant_id: Optional[str] = Header(None),
+    x_tenant_id: str | None = Header(None),
 ):
     if not x_tenant_id:
         raise HTTPException(status_code=400, detail="Missing tenant ID")
@@ -36,5 +36,5 @@ async def explain_decision(
         "decision": req.decision,
         "score": req.score,
         "mode": "off-path-local",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }

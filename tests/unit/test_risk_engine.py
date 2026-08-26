@@ -1,5 +1,5 @@
-from engine.risk.engine import RiskEngine
 from engine.risk.decision_matrix import DecisionMatrix
+from engine.risk.engine import RiskEngine
 
 
 def test_risk_calculate_block_path():

@@ -1,17 +1,18 @@
-import os
-import jwt
-import bcrypt
-import uuid
-import pyotp
 import json
+import os
 import secrets
-from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, HTTPException, Depends, Header
-from sqlalchemy.orm import Session
+import uuid
+from datetime import UTC, datetime, timedelta
+
+import bcrypt
+import jwt
+import pyotp
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from sqlalchemy.orm import Session
+
+from control_plane.app.infrastructure.db.models import Tenant, User
 from control_plane.app.infrastructure.db.session import get_db
-from control_plane.app.infrastructure.db.models import User, Tenant
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -33,7 +34,7 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
-    mfa_code: Optional[str] = None
+    mfa_code: str | None = None
 
 
 class TokenResponse(BaseModel):
@@ -54,7 +55,7 @@ class MFAVerifyRequest(BaseModel):
 
 
 def _make_token(user: User) -> TokenResponse:
-    expiry = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRY_MINUTES)
+    expiry = datetime.now(UTC) + timedelta(minutes=JWT_EXPIRY_MINUTES)
     token = jwt.encode(
         {
             "sub": user.id,
@@ -76,7 +77,7 @@ def _make_token(user: User) -> TokenResponse:
     )
 
 
-def _user_from_bearer(authorization: Optional[str], db: Session) -> User:
+def _user_from_bearer(authorization: str | None, db: Session) -> User:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing bearer token")
     token = authorization.split(" ", 1)[1]
@@ -149,7 +150,7 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/mfa/setup", response_model=MFASetupResponse)
 async def mfa_setup(
-    authorization: Optional[str] = Header(None),
+    authorization: str | None = Header(None),
     db: Session = Depends(get_db),
 ):
     user = _user_from_bearer(authorization, db)
@@ -167,7 +168,7 @@ async def mfa_setup(
 @router.post("/mfa/verify")
 async def mfa_verify(
     req: MFAVerifyRequest,
-    authorization: Optional[str] = Header(None),
+    authorization: str | None = Header(None),
     db: Session = Depends(get_db),
 ):
     user = _user_from_bearer(authorization, db)
@@ -184,7 +185,7 @@ async def mfa_verify(
 @router.post("/mfa/disable")
 async def mfa_disable(
     req: MFAVerifyRequest,
-    authorization: Optional[str] = Header(None),
+    authorization: str | None = Header(None),
     db: Session = Depends(get_db),
 ):
     user = _user_from_bearer(authorization, db)
@@ -202,7 +203,7 @@ async def mfa_disable(
 
 @router.get("/me")
 async def me(
-    authorization: Optional[str] = Header(None),
+    authorization: str | None = Header(None),
     db: Session = Depends(get_db),
 ):
     user = _user_from_bearer(authorization, db)

@@ -1,17 +1,20 @@
 """Gate Engine API — machine-enforced acceptance (Section 0.8)"""
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import List, Optional
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from control_plane.app.infrastructure.db.session import get_db
-from control_plane.app.infrastructure.db.models import Requirement
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from control_plane.app.domain.gate.engine import (
-    GateEngine, Requirement as ReqDomain,
-    Criticality, Gate, GateStatus
+    Criticality,
+    Gate,
+    GateEngine,
+    GateStatus,
 )
+from control_plane.app.domain.gate.engine import Requirement as ReqDomain
+from control_plane.app.infrastructure.db.models import Requirement
+from control_plane.app.infrastructure.db.session import get_db
 
 router = APIRouter(prefix="/gates", tags=["gates"])
 
@@ -23,28 +26,28 @@ class RequirementCreate(BaseModel):
     requirement_id: str
     owner: str
     requirement: str
-    acceptance_criteria: List[str] = []
+    acceptance_criteria: list[str] = []
     security_impact: str = ""
     test_method: str = ""
     failure_behavior: str = ""
     rollback_strategy: str = ""
-    dependency: List[str] = []
+    dependency: list[str] = []
     reviewer: str = "External Retainer"
     criticality: str = "P1"
     gate: str = "MVP"
 
 
 class CheckUpdate(BaseModel):
-    implementation_pass: Optional[bool] = None
-    automated_test_pass: Optional[bool] = None
-    security_test_pass: Optional[bool] = None
-    evidence_valid: Optional[bool] = None
-    independent_reviewer_valid: Optional[bool] = None
-    residual_risk_accepted: Optional[bool] = None
-    dependency_check_pass: Optional[bool] = None
-    rollback_test_pass: Optional[bool] = None
-    drift_detected: Optional[bool] = None
-    implementation_version: Optional[str] = None
+    implementation_pass: bool | None = None
+    automated_test_pass: bool | None = None
+    security_test_pass: bool | None = None
+    evidence_valid: bool | None = None
+    independent_reviewer_valid: bool | None = None
+    residual_risk_accepted: bool | None = None
+    dependency_check_pass: bool | None = None
+    rollback_test_pass: bool | None = None
+    drift_detected: bool | None = None
+    implementation_version: str | None = None
 
 
 @router.post("/requirements")
@@ -67,8 +70,8 @@ async def register_requirement(data: RequirementCreate, db: Session = Depends(ge
         criticality=data.criticality,
         gate=data.gate,
         status="NOT_STARTED",
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
     db.add(row)
     db.commit()
@@ -97,7 +100,7 @@ async def register_requirement(data: RequirementCreate, db: Session = Depends(ge
 
 
 @router.get("/requirements")
-async def list_requirements(criticality: Optional[str] = None, db: Session = Depends(get_db)):
+async def list_requirements(criticality: str | None = None, db: Session = Depends(get_db)):
     q = db.query(Requirement)
     if criticality:
         q = q.filter_by(criticality=criticality)
@@ -162,7 +165,7 @@ async def update_checks(req_id: str, data: CheckUpdate, db: Session = Depends(ge
 
     for field, value in data.dict(exclude_unset=True).items():
         setattr(r, field, value)
-    r.updated_at = datetime.now(timezone.utc)
+    r.updated_at = datetime.now(UTC)
     db.commit()
     return {"id": req_id, "updated": True}
 
@@ -209,7 +212,7 @@ async def evaluate_requirement(req_id: str, db: Session = Depends(get_db)):
 
     # Persist status
     r.status = result["status"]
-    r.updated_at = datetime.now(timezone.utc)
+    r.updated_at = datetime.now(UTC)
     db.commit()
 
     return result

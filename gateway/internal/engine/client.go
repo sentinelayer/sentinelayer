@@ -48,10 +48,7 @@ return &CircuitBreaker{threshold: threshold, cooldown: cooldown}
 func (c *CircuitBreaker) Allow() bool {
 c.mu.Lock()
 defer c.mu.Unlock()
-if time.Now().Before(c.openUntil) {
-return false
-}
-return true
+return !time.Now().Before(c.openUntil)
 }
 
 func (c *CircuitBreaker) RecordSuccess() {
@@ -106,7 +103,7 @@ if err != nil {
 c.cb.RecordFailure()
 return nil, err
 }
-defer resp.Body.Close()
+defer func() { _ = resp.Body.Close() }()
 if resp.StatusCode != http.StatusOK {
 c.cb.RecordFailure()
 return nil, fmt.Errorf("risk engine status %d", resp.StatusCode)

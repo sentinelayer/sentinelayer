@@ -1,6 +1,5 @@
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-import json
-from datetime import datetime
 
 router = APIRouter(prefix="/events-ws", tags=["events"])
 

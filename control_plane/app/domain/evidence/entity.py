@@ -9,14 +9,16 @@ Runtime Provenance (2026).
 """
 from __future__ import annotations
 
-from sqlalchemy import Column, String, DateTime, Text
-from control_plane.app.infrastructure.db.session import Base
-from datetime import datetime, timezone
 import uuid
+from datetime import UTC, datetime
+
+from sqlalchemy import Column, DateTime, String, Text
+
+from control_plane.app.infrastructure.db.session import Base
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Evidence(Base):

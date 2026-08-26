@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta
 
+
 class KeyRotationWorker:
     def __init__(self):
         self.rotation_interval_hours = 24

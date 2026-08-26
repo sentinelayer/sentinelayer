@@ -1,5 +1,6 @@
-from fastapi import APIRouter
 import random
+
+from fastapi import APIRouter
 
 router = APIRouter(prefix="/heatmap", tags=["heatmap"])
 

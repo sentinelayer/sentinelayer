@@ -11,5 +11,5 @@ type HealthResponse struct {
 
 func LivenessHandler(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(HealthResponse{Status: "alive"})
+    _ = json.NewEncoder(w).Encode(HealthResponse{Status: "alive"})
 }

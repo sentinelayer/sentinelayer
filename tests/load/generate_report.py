@@ -7,10 +7,11 @@ import json
 import sys
 from datetime import datetime
 
+
 def generate_report(json_file, output_file):
     with open(json_file, 'r') as f:
         data = json.load(f)
-    
+
     html = f"""
 <!DOCTYPE html>
 <html>
@@ -35,16 +36,16 @@ def generate_report(json_file, output_file):
     <div class="container">
         <h1>🔍 SentinelLayer Performance Test Report</h1>
         <p><strong>Generated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-        
+
         <div class="summary">
             <span>📊 <strong>Test Duration:</strong> {data.get('metrics', {}).get('iteration_duration', {}).get('value', 'N/A')}</span>
             <span>📈 <strong>Total Requests:</strong> {data.get('metrics', {}).get('http_reqs', {}).get('value', 'N/A')}</span>
             <span>✅ <strong>Success Rate:</strong> {data.get('metrics', {}).get('http_req_failed', {}).get('value', 'N/A')}</span>
         </div>
-        
+
         <h2>📊 Key Metrics</h2>
 """
-    
+
     metrics = data.get('metrics', {})
     for key, value in metrics.items():
         if 'duration' in key or 'time' in key:
@@ -54,21 +55,21 @@ def generate_report(json_file, output_file):
             <span class="metric-value">{value.get('value', 'N/A')}</span>
         </div>
 """
-    
+
     html += """
     </div>
 </body>
 </html>
 """
-    
+
     with open(output_file, 'w') as f:
         f.write(html)
-    
+
     print(f"✅ Report generated: {output_file}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Usage: python generate_report.py <input.json> <output.html>")
         sys.exit(1)
-    
+
     generate_report(sys.argv[1], sys.argv[2])

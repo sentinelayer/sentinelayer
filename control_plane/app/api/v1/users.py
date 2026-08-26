@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from control_plane.app.infrastructure.db.session import get_db
-from control_plane.app.infrastructure.db.models import User
-from pydantic import BaseModel
 import uuid
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from control_plane.app.infrastructure.db.models import User
+from control_plane.app.infrastructure.db.session import get_db
 
 router = APIRouter(prefix="/users", tags=["users"])
 

@@ -48,7 +48,7 @@ func (e *Engine) ProcessRequest(r *http.Request) (blocked bool, ruleID int, msg 
 tx := e.waf.NewTransaction()
 defer func() {
 tx.ProcessLogging()
-tx.Close()
+_ = tx.Close()
 }()
 
 tx.ProcessConnection(r.RemoteAddr, 0, "", 0)
@@ -66,7 +66,7 @@ return true, it.RuleID, it.Data
 }
 
 // Body: caller may have already read; we process URI/headers/args primarily here.
-tx.ProcessRequestBody()
+_, _ = tx.ProcessRequestBody()
 it = tx.Interruption()
 if it != nil {
 return true, it.RuleID, it.Data

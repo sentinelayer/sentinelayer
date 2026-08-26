@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
+import uuid
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
+
 from control_plane.app.api.deps import db_with_tenant, tenant_id
 from control_plane.app.infrastructure.db.models import Incident
-from pydantic import BaseModel
-import uuid
-from datetime import datetime, timezone
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 
@@ -24,7 +26,7 @@ async def create_incident(data: IncidentCreate, request: Request, db: Session = 
         description=data.description,
         tenant_id=tid,
         status="open",
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     db.add(incident)
     db.commit()

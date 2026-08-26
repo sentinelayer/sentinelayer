@@ -1,7 +1,8 @@
+import os
+from typing import Any
+
 from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Any
-import os
 
 router = APIRouter(prefix="/configuration", tags=["configuration"])
 

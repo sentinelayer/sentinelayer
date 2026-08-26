@@ -1,14 +1,14 @@
 import os
 import subprocess
 from datetime import datetime
-from typing import Dict, List
+
 
 class BackupManager:
     def __init__(self):
         self.backup_dir = "backups"
         os.makedirs(self.backup_dir, exist_ok=True)
 
-    def create_backup(self, backup_type: str = "full") -> Dict:
+    def create_backup(self, backup_type: str = "full") -> dict:
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         backup_path = f"{self.backup_dir}/{backup_type}_{timestamp}.sql"
 
@@ -28,7 +28,7 @@ class BackupManager:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def restore_backup(self, backup_path: str) -> Dict:
+    def restore_backup(self, backup_path: str) -> dict:
         try:
             result = subprocess.run([
                 "pg_restore",
@@ -45,7 +45,7 @@ class BackupManager:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def list_backups(self) -> List[Dict]:
+    def list_backups(self) -> list[dict]:
         backups = []
         if not os.path.exists(self.backup_dir):
             return backups

@@ -1,5 +1,6 @@
+from datetime import datetime
+
 from fastapi import APIRouter
-from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/sla", tags=["sla"])
 

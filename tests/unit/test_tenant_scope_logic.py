@@ -1,5 +1,9 @@
 """Tenant scope logic unit tests — no network."""
-from control_plane.app.domain.deployment.blast_radius import BlastRadius, DeployMode, Stage
+from control_plane.app.domain.deployment.blast_radius import (
+    BlastRadius,
+    DeployMode,
+    Stage,
+)
 
 
 def test_blast_radius_auto_rollback_on_fp_spike():

@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 from collections import defaultdict, deque
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from math import sqrt
 from typing import Any
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _iso(dt: datetime | None = None) -> str:
@@ -46,7 +46,7 @@ class BehaviorEngine:
             try:
                 t = datetime.fromisoformat(a["timestamp"].replace("Z", "+00:00"))
                 if t.tzinfo is None:
-                    t = t.replace(tzinfo=timezone.utc)
+                    t = t.replace(tzinfo=UTC)
                 if t > cutoff:
                     n += 1
             except Exception:

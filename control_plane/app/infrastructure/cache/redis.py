@@ -1,7 +1,8 @@
-import os
-import redis
 import json
-from typing import Optional
+import os
+
+import redis
+
 
 class RedisCache:
     def __init__(self):
@@ -13,7 +14,7 @@ class RedisCache:
         )
         self.default_ttl = 60
 
-    def get(self, key: str) -> Optional[dict]:
+    def get(self, key: str) -> dict | None:
         data = self.client.get(key)
         if data:
             return json.loads(data)

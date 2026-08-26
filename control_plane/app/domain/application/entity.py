@@ -1,7 +1,10 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey
-from control_plane.app.infrastructure.db.session import Base
-from datetime import datetime
 import uuid
+from datetime import datetime
+
+from sqlalchemy import Column, DateTime, ForeignKey, String
+
+from control_plane.app.infrastructure.db.session import Base
+
 
 class Application(Base):
     __tablename__ = "applications"

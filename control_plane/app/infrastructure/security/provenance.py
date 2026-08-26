@@ -1,7 +1,7 @@
 import hashlib
 import json
 import os
-from typing import Dict
+
 
 class Provenance:
     def __init__(self):
@@ -9,7 +9,7 @@ class Provenance:
         self.verified = False
         self.verified_at = None
 
-    def verify(self) -> Dict:
+    def verify(self) -> dict:
         if not os.path.exists(self.manifest_path):
             return {"verified": False, "reason": "Manifest not found"}
 
@@ -38,7 +38,7 @@ class Provenance:
         except Exception as e:
             return {"verified": False, "reason": str(e)}
 
-    def verify_container(self, container_id: str, expected_hash: str) -> Dict:
+    def verify_container(self, container_id: str, expected_hash: str) -> dict:
         actual_hash = hashlib.sha256(container_id.encode()).hexdigest()
         if actual_hash == expected_hash:
             return {"verified": True, "container_id": container_id}

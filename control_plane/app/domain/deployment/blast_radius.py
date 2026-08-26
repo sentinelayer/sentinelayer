@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -63,7 +63,7 @@ class BlastRadius:
             self.mode = mode
         self.deployment_id = deployment_id
         self.version = version
-        self.started_at = datetime.now(timezone.utc).isoformat()
+        self.started_at = datetime.now(UTC).isoformat()
         self.stage = Stage.INTERNAL if self.mode == DeployMode.SINGLE_TENANT else Stage.PCT_5
         return self.status()
 

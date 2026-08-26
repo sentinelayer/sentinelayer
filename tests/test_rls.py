@@ -1,6 +1,7 @@
 import pytest
-from sqlalchemy import text
 from control_plane.database import engine
+from sqlalchemy import text
+
 
 @pytest.mark.skip(reason="Requires database running")
 def test_rls_enabled():

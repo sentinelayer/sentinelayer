@@ -1,13 +1,13 @@
-from datetime import datetime, timedelta
 import uuid
-from typing import Dict
+from datetime import datetime, timedelta
+
 
 class CSIRTSolo:
     def __init__(self):
         self.incidents = {}
         self.external_retainer_email = "retainer@sentinelayer.com"
 
-    def create_incident(self, severity: str, description: str) -> Dict:
+    def create_incident(self, severity: str, description: str) -> dict:
         incident_id = str(uuid.uuid4())
         self.incidents[incident_id] = {
             "id": incident_id,
@@ -19,7 +19,7 @@ class CSIRTSolo:
         }
         return self.incidents[incident_id]
 
-    def emergency_action_log(self, incident_id: str, action: str) -> Dict:
+    def emergency_action_log(self, incident_id: str, action: str) -> dict:
         incident = self.incidents.get(incident_id)
         if not incident:
             return {"error": "Incident not found"}
@@ -27,7 +27,7 @@ class CSIRTSolo:
         incident["emergency_action_at"] = datetime.utcnow().isoformat()
         return incident
 
-    def post_action_review(self, incident_id: str, notes: str) -> Dict:
+    def post_action_review(self, incident_id: str, notes: str) -> dict:
         incident = self.incidents.get(incident_id)
         if not incident:
             return {"error": "Incident not found"}
@@ -36,5 +36,5 @@ class CSIRTSolo:
         incident["status"] = "reviewed"
         return incident
 
-    def get_incident(self, incident_id: str) -> Dict:
+    def get_incident(self, incident_id: str) -> dict:
         return self.incidents.get(incident_id, {"error": "Not found"})

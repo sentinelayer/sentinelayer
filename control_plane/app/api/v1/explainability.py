@@ -1,6 +1,7 @@
 """Explainability — returns stored decisions; empty until risk engine records one."""
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
-from typing import Any, Optional
 
 router = APIRouter(prefix="/explainability", tags=["explainability"])
 
@@ -17,7 +18,7 @@ async def get_latest_explainability():
 
 @router.get("/")
 @router.get("")
-async def get_explainability(decision_id: Optional[str] = None):
+async def get_explainability(decision_id: str | None = None):
     if decision_id:
         for d in DECISIONS:
             if d.get("id") == decision_id:

@@ -23,7 +23,7 @@ func NormalizeBody(r *http.Request) ([]byte, error) {
         if err != nil {
             return body, nil
         }
-        defer reader.Close()
+        defer func() { _ = reader.Close() }()
         decompressed, err := io.ReadAll(reader)
         if err == nil {
             body = decompressed

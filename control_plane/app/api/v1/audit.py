@@ -1,7 +1,8 @@
+import uuid
+from datetime import datetime
+
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
-from datetime import datetime
-import uuid
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 

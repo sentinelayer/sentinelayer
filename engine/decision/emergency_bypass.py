@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+
 class EmergencyBypass:
     def __init__(self):
         self.bypasses = {}

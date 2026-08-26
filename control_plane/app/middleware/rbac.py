@@ -2,6 +2,7 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+
 class RBACMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)

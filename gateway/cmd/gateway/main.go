@@ -146,7 +146,7 @@ signals := []string{}
 if desync.GuardDesync(r) {
 w.Header().Set("Content-Type", "application/json")
 w.WriteHeader(http.StatusBadRequest)
-json.NewEncoder(w).Encode(map[string]string{"error": "HTTP desync detected", "code": "DESYNC"})
+_ = json.NewEncoder(w).Encode(map[string]string{"error": "HTTP desync detected", "code": "DESYNC"})
 observability.IncBlocked("desync")
 return
 }
@@ -159,7 +159,7 @@ if ssrf.IsBlockedHost(host) || ssrf.IsPrivateIP(host) {
 if failMatrix.ShouldFailClosed("ssrf", endpointClass) {
 w.Header().Set("Content-Type", "application/json")
 w.WriteHeader(http.StatusForbidden)
-json.NewEncoder(w).Encode(map[string]string{"error": "SSRF blocked", "code": "SSRF"})
+_ = json.NewEncoder(w).Encode(map[string]string{"error": "SSRF blocked", "code": "SSRF"})
 observability.IncBlocked("ssrf")
 return
 }
@@ -173,7 +173,7 @@ if aerr != nil {
 if failMatrix.ShouldFailClosed("auth", endpointClass) {
 w.Header().Set("Content-Type", "application/json")
 w.WriteHeader(http.StatusUnauthorized)
-json.NewEncoder(w).Encode(map[string]string{"error": "invalid token", "code": "AUTH"})
+_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid token", "code": "AUTH"})
 observability.IncBlocked("auth")
 return
 }
@@ -184,7 +184,7 @@ claims = c
 } else if endpointClass == "critical" {
 w.Header().Set("Content-Type", "application/json")
 w.WriteHeader(http.StatusUnauthorized)
-json.NewEncoder(w).Encode(map[string]string{"error": "auth required", "code": "AUTH_REQUIRED"})
+_ = json.NewEncoder(w).Encode(map[string]string{"error": "auth required", "code": "AUTH_REQUIRED"})
 observability.IncBlocked("auth")
 return
 }
@@ -196,7 +196,7 @@ if blocked {
 if failMatrix.ShouldFailClosed("waf", endpointClass) || endpointClass == "critical" {
 w.Header().Set("Content-Type", "application/json")
 w.WriteHeader(http.StatusForbidden)
-json.NewEncoder(w).Encode(map[string]interface{}{"error": "WAF Blocked", "rule_id": ruleID, "msg": msg, "code": "WAF"})
+_ = json.NewEncoder(w).Encode(map[string]interface{}{"error": "WAF Blocked", "rule_id": ruleID, "msg": msg, "code": "WAF"})
 observability.IncBlocked("waf")
 return
 }
@@ -211,7 +211,7 @@ if !allowed {
 if !failMatrix.ShouldFailOpen("redis", endpointClass) {
 w.Header().Set("Content-Type", "application/json")
 w.WriteHeader(http.StatusTooManyRequests)
-json.NewEncoder(w).Encode(map[string]string{"error": "Rate limit exceeded", "code": "RATE"})
+_ = json.NewEncoder(w).Encode(map[string]string{"error": "Rate limit exceeded", "code": "RATE"})
 observability.IncBlocked("rate")
 return
 }
@@ -220,8 +220,8 @@ signals = append(signals, "rate_limit_exceeded")
 
 score := 0.0
 confidence := 0.85
-action := "ALLOW"
-reason := "pipeline_v1"
+	var action string
+	var reason string
 
 riskReq := engine.RiskRequest{
 TenantID:      reqCtx.TenantID,
@@ -285,7 +285,7 @@ w.Header().Set("Content-Type", "application/json")
 w.Header().Set("X-SL-Decision", "BLOCK")
 w.Header().Set("X-SL-Score", jsonFloat(score))
 w.WriteHeader(http.StatusForbidden)
-json.NewEncoder(w).Encode(out)
+_ = json.NewEncoder(w).Encode(out)
 observability.IncBlocked("risk")
 return
 }
@@ -300,7 +300,7 @@ observability.IncAllowed()
 
 mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 w.Header().Set("Content-Type", "application/json")
-json.NewEncoder(w).Encode(map[string]interface{}{
+_ = json.NewEncoder(w).Encode(map[string]interface{}{
 "status": "healthy", "waf": "coraza",
 "pipeline":   "waf->auth->rate->risk_http->decision->upstream",
 "provenance": os.Getenv("SL_RUNNING_ARTIFACT_HASH"),
@@ -308,7 +308,7 @@ json.NewEncoder(w).Encode(map[string]interface{}{
 })
 mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
 w.Header().Set("Content-Type", "application/json")
-json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
+_ = json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
 })
 
 server := &http.Server{

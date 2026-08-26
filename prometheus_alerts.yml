@@ -6,19 +6,19 @@ groups:
         for: 1m
         annotations:
           summary: "SentinelLayer service is down"
-      
+
       - alert: HighErrorRate
         expr: rate(sentinelayer_requests_total{status=~"5.."}[5m]) / rate(sentinelayer_requests_total[5m]) > 0.05
         for: 2m
         annotations:
           summary: "Error rate > 5%"
-      
+
       - alert: WAFBlockSpike
         expr: rate(sentinelayer_waf_blocks_total[5m]) > 10
         for: 2m
         annotations:
           summary: "WAF block spike"
-      
+
       - alert: SlowRequests
         expr: histogram_quantile(0.95, sum(rate(sentinelayer_request_duration_seconds_bucket[5m]) by (le))) > 2
         for: 3m

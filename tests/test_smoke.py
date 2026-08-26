@@ -1,6 +1,8 @@
 import pytest
 from httpx import AsyncClient
+
 from control_plane.app.main import app
+
 
 @pytest.mark.asyncio
 async def test_health():

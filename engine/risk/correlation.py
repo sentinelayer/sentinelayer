@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
 
+
 class RiskCorrelation:
     def __init__(self):
         self.signals = defaultdict(list)

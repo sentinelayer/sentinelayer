@@ -1,7 +1,7 @@
 """Lightweight threat-intel feed (offline-capable)."""
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Header, HTTPException
-from typing import Optional
-from datetime import datetime, timezone
 
 router = APIRouter(prefix="/threat-intel", tags=["threat-intel"])
 
@@ -15,12 +15,12 @@ _FEED = [
 
 
 @router.get("/indicators")
-async def list_indicators(x_tenant_id: Optional[str] = Header(None)):
+async def list_indicators(x_tenant_id: str | None = Header(None)):
     if not x_tenant_id:
         raise HTTPException(status_code=400, detail="Missing tenant ID")
     return {
         "count": len(_FEED),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(UTC).isoformat(),
         "indicators": _FEED,
     }
 

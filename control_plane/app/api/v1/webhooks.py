@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, HttpUrl
-from typing import Optional
 import os
-from datetime import datetime, timezone
 import uuid
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 class WebhookRegister(BaseModel):
     url: str
     events: list[str] = Field(default_factory=list)
-    secret: Optional[str] = None
+    secret: str | None = None
 
 
 WEBHOOKS: dict[str, dict] = {}
@@ -26,7 +26,7 @@ async def register_webhook(data: WebhookRegister):
         "url": data.url,
         "events": data.events,
         "secret": data.secret or os.getenv("WEBHOOK_SECRET", "default-secret"),
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
     }
     return WEBHOOKS[wid]
 

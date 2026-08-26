@@ -1,8 +1,9 @@
+import uuid
+from datetime import UTC, datetime
+from typing import Any
+
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
-from typing import Any, Optional
-from datetime import datetime, timezone
-import uuid
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -29,7 +30,7 @@ async def create_event(body: EventCreate):
         "type": body.event_type,
         "source": body.source,
         "data": body.data,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
     EVENTS.append(event)
     return event

@@ -1,6 +1,8 @@
-import pytest
 import asyncio
+
+import pytest
 from httpx import AsyncClient
+
 
 @pytest.mark.asyncio
 async def test_load_100_requests():

@@ -1,5 +1,7 @@
 import os
+
 import httpx
+
 
 class VirusTotalProvider:
     def __init__(self):

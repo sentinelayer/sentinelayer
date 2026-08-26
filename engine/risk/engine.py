@@ -1,5 +1,3 @@
-from typing import Dict, List
-import json
 
 class RiskEngine:
     def __init__(self):
@@ -11,7 +9,7 @@ class RiskEngine:
         }
         self.confidence_threshold = 0.7
 
-    def calculate(self, context: Dict) -> Dict:
+    def calculate(self, context: dict) -> dict:
         score = 0
         confidence = 0.5
 

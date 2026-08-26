@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+
 class OffboardingLifecycle:
     def __init__(self):
         self.retention_days = 30

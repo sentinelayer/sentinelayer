@@ -1,6 +1,6 @@
+import hashlib
 import json
 import os
-import hashlib
 
 manifest = {"artifacts": {}}
 src_dir = "src"

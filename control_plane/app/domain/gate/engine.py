@@ -8,12 +8,12 @@ Rules:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Any, Dict, List, Optional
 import hashlib
 import json
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
+from enum import Enum
+from typing import Any
 
 
 class GateStatus(str, Enum):
@@ -46,14 +46,14 @@ class Requirement:
     """Full Definition of Done (Section 0.1) — first-class object."""
     requirement_id: str
     owner: str
-    dependency: List[str] = field(default_factory=list)
+    dependency: list[str] = field(default_factory=list)
     requirement: str = ""
-    acceptance_criteria: List[str] = field(default_factory=list)
+    acceptance_criteria: list[str] = field(default_factory=list)
     security_impact: str = ""
     test_method: str = ""
     failure_behavior: str = ""
     rollback_strategy: str = ""
-    evidence_ids: List[str] = field(default_factory=list)
+    evidence_ids: list[str] = field(default_factory=list)
     reviewer: str = ""  # Independent reviewer (External Retainer for solo)
     criticality: Criticality = Criticality.P1
     gate: Gate = Gate.MVP
@@ -69,10 +69,10 @@ class Requirement:
     dependency_check_pass: bool = False
     rollback_test_pass: bool = False
     drift_detected: bool = False
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d["criticality"] = self.criticality.value
         d["gate"] = self.gate.value
@@ -92,7 +92,7 @@ class GateEngine:
     """
 
     def __init__(self) -> None:
-        self._requirements: Dict[str, Requirement] = {}
+        self._requirements: dict[str, Requirement] = {}
 
     def register(self, req: Requirement) -> Requirement:
         if req.requirement_id in self._requirements:
@@ -100,13 +100,13 @@ class GateEngine:
         self._requirements[req.requirement_id] = req
         return req
 
-    def get(self, req_id: str) -> Optional[Requirement]:
+    def get(self, req_id: str) -> Requirement | None:
         return self._requirements.get(req_id)
 
-    def list_by_criticality(self, criticality: Criticality) -> List[Requirement]:
+    def list_by_criticality(self, criticality: Criticality) -> list[Requirement]:
         return [r for r in self._requirements.values() if r.criticality == criticality]
 
-    def evaluate(self, req_id: str) -> Dict[str, Any]:
+    def evaluate(self, req_id: str) -> dict[str, Any]:
         req = self._requirements.get(req_id)
         if not req:
             return {
@@ -114,7 +114,7 @@ class GateEngine:
                 "status": GateStatus.REJECTED.value,
                 "reason": "Requirement not found",
                 "all_pass": False,
-                "evaluated_at": datetime.now(timezone.utc).isoformat(),
+                "evaluated_at": datetime.now(UTC).isoformat(),
             }
 
         checks = [
@@ -138,7 +138,7 @@ class GateEngine:
             new_status = GateStatus.REJECTED
 
         req.status = new_status
-        req.updated_at = datetime.now(timezone.utc).isoformat()
+        req.updated_at = datetime.now(UTC).isoformat()
 
         result = {
             "requirement_id": req_id,
@@ -148,19 +148,19 @@ class GateEngine:
             "criticality": req.criticality.value,
             "gate": req.gate.value,
             "implementation_version": req.implementation_version,
-            "evaluated_at": datetime.now(timezone.utc).isoformat(),
+            "evaluated_at": datetime.now(UTC).isoformat(),
             "hash": self._result_hash(req_id, checks, new_status.value),
         }
         return result
 
-    def _result_hash(self, req_id: str, checks: List[Dict], status: str) -> str:
+    def _result_hash(self, req_id: str, checks: list[dict], status: str) -> str:
         payload = json.dumps(
             {"req_id": req_id, "checks": checks, "status": status},
             sort_keys=True,
         )
         return hashlib.sha256(payload.encode()).hexdigest()
 
-    def production_ready(self) -> Dict[str, Any]:
+    def production_ready(self) -> dict[str, Any]:
         """
         PRODUCTION READY only if:
         - All P0 + P1 are ACCEPTED
@@ -187,5 +187,5 @@ class GateEngine:
             "p0_p1_accepted": len(accepted),
             "coverage": round(coverage, 4),
             "coverage_threshold": 0.95,
-            "evaluated_at": datetime.now(timezone.utc).isoformat(),
+            "evaluated_at": datetime.now(UTC).isoformat(),
         }

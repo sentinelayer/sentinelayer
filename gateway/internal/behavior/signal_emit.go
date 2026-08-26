@@ -37,5 +37,5 @@ if err != nil {
 log.Printf("behavior signal emit failed: %v", err)
 return
 }
-resp.Body.Close()
+_ = resp.Body.Close()
 }

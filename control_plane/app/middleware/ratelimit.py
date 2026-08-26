@@ -1,8 +1,10 @@
 import os
 import time
 from collections import defaultdict
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
+
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):

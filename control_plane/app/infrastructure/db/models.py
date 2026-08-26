@@ -1,11 +1,13 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Text, ForeignKey
-from control_plane.app.infrastructure.db.session import Base
-from datetime import datetime, timezone
 import uuid
+from datetime import UTC, datetime
+
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
+
+from control_plane.app.infrastructure.db.session import Base
 
 
 def _utcnow():
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Tenant(Base):

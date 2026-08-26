@@ -1,6 +1,7 @@
 from sqlalchemy.exc import ProgrammingError
-from control_plane.app.infrastructure.db.session import engine, Base
+
 import control_plane.app.infrastructure.db.models  # noqa: F401
+from control_plane.app.infrastructure.db.session import Base, engine
 
 
 def ensure_schema() -> None:

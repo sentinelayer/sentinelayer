@@ -1,9 +1,10 @@
+import hashlib
+import json
+from datetime import UTC, datetime
+from typing import Any
+
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
-from typing import Any
-import json
-import hashlib
-from datetime import datetime, timezone
 
 router = APIRouter(prefix="/schemas", tags=["schemas"])
 
@@ -29,7 +30,7 @@ async def register_schema(data: SchemaRegister):
         "version": data.version,
         "schema": body,
         "hash": hash_val,
-        "registered_at": datetime.now(timezone.utc).isoformat(),
+        "registered_at": datetime.now(UTC).isoformat(),
     }
     return {"status": "registered", "key": key, "hash": hash_val}
 
@@ -44,5 +45,5 @@ async def get_schema(schema_id: str, version: str):
 
 @router.get("/{schema_id}")
 async def list_versions(schema_id: str):
-    versions = [k.split(":")[1] for k in SCHEMAS.keys() if k.startswith(f"{schema_id}:")]
+    versions = [k.split(":")[1] for k in SCHEMAS if k.startswith(f"{schema_id}:")]
     return {"schema_id": schema_id, "versions": versions}

@@ -29,8 +29,8 @@ export const PolicyEditor: React.FC = () => {
 
     const handleSave = async () => {
         try {
-            const data = await api.post('/policies', { 
-                name, 
+            const data = await api.post('/policies', {
+                name,
                 rules: JSON.parse(rules),
                 version: version + 1
             })

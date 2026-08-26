@@ -1,12 +1,14 @@
 """Customer offboarding lifecycle — Blueprint §9.19"""
-from fastapi import APIRouter, Depends, Request, HTTPException
-from sqlalchemy.orm import Session
-from control_plane.app.api.deps import db_with_tenant, tenant_id
-from control_plane.app.infrastructure.db.models import Application, Policy, User
-from pydantic import BaseModel
-from datetime import datetime, timezone
 import hashlib
 import json
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from control_plane.app.api.deps import db_with_tenant, tenant_id
+from control_plane.app.infrastructure.db.models import Application, Policy
 
 router = APIRouter(prefix="/offboarding", tags=["offboarding"])
 
@@ -26,7 +28,7 @@ async def request_offboard(data: OffboardRequest, request: Request, db: Session 
     before = {
         "apps": [a.id for a in apps],
         "policies": [p.id for p in policies],
-        "at": datetime.now(timezone.utc).isoformat(),
+        "at": datetime.now(UTC).isoformat(),
     }
     before_hash = hashlib.sha256(json.dumps(before, sort_keys=True).encode()).hexdigest()
 
@@ -36,7 +38,7 @@ async def request_offboard(data: OffboardRequest, request: Request, db: Session 
         for a in apps:
             db.delete(a)
         db.commit()
-        after = {"apps": [], "policies": [], "at": datetime.now(timezone.utc).isoformat()}
+        after = {"apps": [], "policies": [], "at": datetime.now(UTC).isoformat()}
     else:
         # soft: rename marker
         for a in apps:
@@ -46,7 +48,7 @@ async def request_offboard(data: OffboardRequest, request: Request, db: Session 
         after = {
             "apps": [a.id for a in apps],
             "policies": [p.id for p in policies],
-            "at": datetime.now(timezone.utc).isoformat(),
+            "at": datetime.now(UTC).isoformat(),
         }
 
     after_hash = hashlib.sha256(json.dumps(after, sort_keys=True).encode()).hexdigest()
