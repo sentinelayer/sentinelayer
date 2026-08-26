@@ -13,7 +13,10 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
       - name: Unit tests
-        run: pytest tests/unit tests/unit/ -v --tb=short -m "not integration" --ignore=tests/test_bola_real.py --ignore=tests/test_tenant_matrix.py --ignore=tests/test_security_e2e.py --ignore=tests/test_dr.py --ignore=tests/test_dr_real.py --ignore=tests/test_load.py --ignore=tests/integration --ignore=tests/load --ignore=tests/resilience --ignore=tests/adversarial
+        run: |
+          pytest tests/unit -v --tb=short \
+            --ignore=tests/integration --ignore=tests/load \
+            --ignore=tests/resilience --ignore=tests/adversarial
       - name: Behavior + risk unit
         run: pytest tests/unit/test_behavior_engine.py tests/unit/test_risk_engine.py -v --tb=short
 
@@ -27,3 +30,50 @@ jobs:
       - name: Build gateway
         working-directory: gateway
         run: go build -o /tmp/gateway-bin ./cmd/gateway
+
+  security-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: sentinelayer
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Start control-plane
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sentinelayer
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
+          SL_ENV: test
+          PYTHONPATH: .
+        run: |
+          python -c "from control_plane.app.bootstrap_db import ensure_schema; ensure_schema()" || true
+          alembic -c alembic.ini upgrade head || true
+          nohup uvicorn control_plane.app.main:app --host 0.0.0.0 --port 8005 > /tmp/cp.log 2>&1 &
+          sleep 5
+          curl -sf http://localhost:8005/health || (cat /tmp/cp.log; exit 1)
+      - name: BOLA + tenant matrix
+        env:
+          CONTROL_PLANE_URL: http://localhost:8005
+          JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
+        run: |
+          pytest tests/test_bola_real.py tests/test_tenant_matrix.py -v --tb=short

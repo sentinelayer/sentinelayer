@@ -20,6 +20,7 @@ class Application(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False)
     tenant_id = Column(String, ForeignKey("tenants.id"), index=True)
+    environment = Column(String, default="production")
     created_at = Column(DateTime, default=_utcnow)
 
 
@@ -32,6 +33,9 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
     tenant_id = Column(String, ForeignKey("tenants.id"), index=True)
+    mfa_enabled = Column(Boolean, default=False)
+    mfa_secret = Column(String, nullable=True)
+    mfa_backup_codes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=_utcnow)
 
 
