@@ -1,15 +1,19 @@
 name: Security
 on: [push, pull_request]
 jobs:
-  sast:
+  semgrep:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Run Semgrep
-        run: echo "Semgrep scan"
-  secret-scan:
+        run: |
+          pip install semgrep
+          semgrep --config=auto --error
+  gitleaks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Run Gitleaks
-        run: echo "Gitleaks scan"
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

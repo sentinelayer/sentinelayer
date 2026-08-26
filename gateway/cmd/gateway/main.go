@@ -1,7 +1,9 @@
 package main
 
 import (
+"bytes"
 "encoding/json"
+"io"
 "log"
 "net/http"
 "net/http/httputil"
@@ -10,7 +12,6 @@ import (
 "regexp"
 "sync"
 "time"
-"gateway/internal/waf"
 )
 
 type RateLimiter struct {
@@ -43,11 +44,17 @@ r.requests[key] = valid
 return true
 }
 
-func main() {
-coraza := waf.NewCorazaEngine()
-coraza.LoadCRS("waf/rules")
+func scanBody(body []byte, rules []*regexp.Regexp) bool {
+for _, rule := range rules {
+if rule.Match(body) {
+return true
+}
+}
+return false
+}
 
-regexRules := []*regexp.Regexp{
+func main() {
+wafRules := []*regexp.Regexp{
 regexp.MustCompile(`(?i)(select|insert|update|delete|drop|union|exec|master|script|--|;|\b(OR|AND)\s+\d+\s*=\s*\d+)`),
 regexp.MustCompile(`(?i)(<script|alert\(|onerror=|onclick=|onload=|javascript:|<iframe|document\.cookie)`),
 regexp.MustCompile(`(\.\./|\.\.\\)`),
@@ -61,20 +68,50 @@ proxy := httputil.NewSingleHostReverseProxy(upstream)
 mux := http.NewServeMux()
 
 mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+// Query
 for _, value := range r.URL.Query() {
-if coraza.Match(value[0]) {
-w.WriteHeader(http.StatusForbidden)
-json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked (Coraza)"})
-return
-}
-for _, rule := range regexRules {
+for _, rule := range wafRules {
 if rule.MatchString(value[0]) {
 w.WriteHeader(http.StatusForbidden)
-json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked (Regex)"})
+json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked"})
 return
 }
 }
 }
+
+// Body
+if r.Body != nil {
+body, _ := io.ReadAll(r.Body)
+r.Body = io.NopCloser(bytes.NewBuffer(body))
+if scanBody(body, wafRules) {
+w.WriteHeader(http.StatusForbidden)
+json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked (body)"})
+return
+}
+}
+
+// Path
+for _, rule := range wafRules {
+if rule.MatchString(r.URL.Path) {
+w.WriteHeader(http.StatusForbidden)
+json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked (path)"})
+return
+}
+}
+
+// Headers
+for key, values := range r.Header {
+for _, value := range values {
+for _, rule := range wafRules {
+if rule.MatchString(key) || rule.MatchString(value) {
+w.WriteHeader(http.StatusForbidden)
+json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked (header)"})
+return
+}
+}
+}
+}
+
 if !rateLimiter.Allow(r.RemoteAddr) {
 w.WriteHeader(http.StatusTooManyRequests)
 json.NewEncoder(w).Encode(map[string]string{"error": "Rate limit exceeded"})
