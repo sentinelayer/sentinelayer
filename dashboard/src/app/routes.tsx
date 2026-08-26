@@ -5,4 +5,5 @@ export const routes = {
     incidents: '/incidents',
     evidence: '/evidence',
     risk: '/risk',
+    sla: '/sla',
 }

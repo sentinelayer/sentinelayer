@@ -6,6 +6,7 @@ import { PolicyList } from '../pages/policies/PolicyList'
 import { IncidentList } from '../pages/incidents/IncidentList'
 import { EvidenceList } from '../pages/evidence/EvidenceList'
 import { RiskPage } from '../pages/risk/RiskPage'
+import { SLAPage } from '../pages/sla/SLAPage'
 import { Guards } from './guards'
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
                 <Route path="/incidents" element={<Guards><IncidentList /></Guards>} />
                 <Route path="/evidence" element={<Guards><EvidenceList /></Guards>} />
                 <Route path="/risk" element={<Guards><RiskPage /></Guards>} />
+                <Route path="/sla" element={<Guards><SLAPage /></Guards>} />
             </Routes>
         </BrowserRouter>
     )

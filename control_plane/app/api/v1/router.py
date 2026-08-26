@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from control_plane.app.api.v1 import (
     auth, tenants, applications, users, policies,
     incidents, evidence, metrics, health
-)
+, sla
 from control_plane.app.api.v1.admin import breakglass
 
 router = APIRouter()
