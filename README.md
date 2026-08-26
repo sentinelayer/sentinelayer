@@ -14,13 +14,25 @@ Internet -> Gateway (WAF, Rate Limit, SSRF, Decision) -> Engine (Behavior, Risk,
 
 ## Features
 
-Auth: JWT + bcrypt, MFA, RBAC, Break Glass Access
-Security: WAF (CRS), Rate Limiting, SSRF Protection, Tenant Isolation, BOLA/IDOR Protection, Security Headers
-Intelligence: Risk Engine, Behavior Engine, Threat Intelligence, AI Analysis
-Decision: Circuit Breaker, Safe Mode, Monitor-Only Mode, Last Known Good
-Observability: Prometheus Metrics, Distributed Tracing, Audit Log
-Compliance: SOC2, ISO27001, GDPR (partial)
-Operations: Incident Response, Evidence Collection, Offboarding Lifecycle, Disaster Recovery
+| Feature | Status |
+|---------|--------|
+| JWT Authentication + bcrypt hashing | ✅ |
+| WAF with OWASP-style rules | ✅ |
+| Rate Limiting & Tenant Isolation | ✅ |
+| Risk Scoring Engine | ✅ |
+| Circuit Breaker & Safe Mode | ✅ |
+| Threat Intelligence (VirusTotal/AbuseIPDB) | ✅ |
+| Observability (Prometheus, Grafana, Tracing) | ✅ |
+| Compliance Reporting (SOC2, ISO27001, GDPR) | 🟡 |
+| Incident Response Automation | ✅ |
+| GRC Evidence Collection | ✅ |
+| Security Dashboard | ✅ |
+| MFA | ✅ |
+| RBAC | ✅ |
+| Break Glass Access | ✅ |
+| SSRF Protection | ✅ |
+| BOLA/IDOR Protection | ✅ |
+| AI Analysis (off-path) | ✅ |
 
 ---
 
@@ -38,24 +50,31 @@ cd gateway && go run cmd/gateway/main.go
 
 ## Tech Stack
 
-Gateway: Go + net/http
-Control Plane: Python + FastAPI
-Engine: Python
-Dashboard: TypeScript + React
-Database: PostgreSQL + SQLAlchemy
-Cache: Redis
-Monitoring: Prometheus + Grafana
-Infrastructure: Docker + Kubernetes + Terraform
+Python + FastAPI
+Go + net/http
+PostgreSQL + Redis
+React + TypeScript
+Docker + Kubernetes + Terraform
+Prometheus + Grafana
 
 ---
 
-## Documentation
+## About Me
 
-Architecture: docs/architecture/c4-context.md
-Security: docs/security/threat-model-stride.md
-Compliance: docs/compliance/uu-pdp.md
-Runbooks: docs/runbooks/incident-response.md
-API: docs/api/openapi-control-plane.yaml
+Ex-Security Analyst:
+- JPMorgan Chase
+- Analyst Financial BEI
+- Security Sinarmas
+- Certified ETF
+
+---
+
+## Contact
+
+GitHub: @sentinellayer
+Email: muhamadivan969@gmail.com
+LinkedIn: @sentinelayer
+Twitter: @sentinelayer
 
 ---
 
