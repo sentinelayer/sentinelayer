@@ -33,6 +33,12 @@ class GateEngine:
         checks.append({"name": "Reviewer", "status": "PASS" if req.get("reviewed", False) else "FAIL"})
         results.append(req.get("reviewed", False))
 
+        checks.append({"name": "Residual Risk", "status": "PASS" if req.get("risk_accepted", False) else "FAIL"})
+        results.append(req.get("risk_accepted", False))
+
+        checks.append({"name": "Rollback Test", "status": "PASS" if req.get("rollback_tested", False) else "FAIL"})
+        results.append(req.get("rollback_tested", False))
+
         all_pass = all(results)
         status = "ACCEPTED" if all_pass else "REJECTED"
 

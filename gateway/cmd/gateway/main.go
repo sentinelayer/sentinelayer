@@ -1,7 +1,6 @@
 package main
 
 import (
-"bytes"
 "encoding/json"
 "log"
 "net/http"
@@ -11,6 +10,7 @@ import (
 "regexp"
 "sync"
 "time"
+"gateway/internal/waf"
 )
 
 type RateLimiter struct {
@@ -44,7 +44,10 @@ return true
 }
 
 func main() {
-wafRules := []*regexp.Regexp{
+coraza := waf.NewCorazaEngine()
+coraza.LoadCRS("waf/rules")
+
+regexRules := []*regexp.Regexp{
 regexp.MustCompile(`(?i)(select|insert|update|delete|drop|union|exec|master|script|--|;|\b(OR|AND)\s+\d+\s*=\s*\d+)`),
 regexp.MustCompile(`(?i)(<script|alert\(|onerror=|onclick=|onload=|javascript:|<iframe|document\.cookie)`),
 regexp.MustCompile(`(\.\./|\.\.\\)`),
@@ -59,10 +62,15 @@ mux := http.NewServeMux()
 
 mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 for _, value := range r.URL.Query() {
-for _, rule := range wafRules {
+if coraza.Match(value[0]) {
+w.WriteHeader(http.StatusForbidden)
+json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked (Coraza)"})
+return
+}
+for _, rule := range regexRules {
 if rule.MatchString(value[0]) {
 w.WriteHeader(http.StatusForbidden)
-json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked"})
+json.NewEncoder(w).Encode(map[string]string{"error": "WAF Blocked (Regex)"})
 return
 }
 }

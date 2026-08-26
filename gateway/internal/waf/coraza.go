@@ -1,32 +1,85 @@
 package waf
 
-import "fmt"
+import (
+"bufio"
+"os"
+"path/filepath"
+"strings"
+)
 
-// CorazaEngine is a placeholder for future Coraza integration
-// Full integration requires CGO and coraza-proxy-wasm or coraza-go
+type CorazaRule struct {
+ID      string
+Phase   int
+Action  string
+Pattern string
+}
+
 type CorazaEngine struct {
-    rules []string
+Rules []CorazaRule
 }
 
 func NewCorazaEngine() *CorazaEngine {
-    return &CorazaEngine{
-        rules: []string{
-            "SecRule ARGS|REQUEST_URI|REQUEST_BODY \"@rx (?i)(select|insert|update|delete|drop|union|exec)\" \"id:1000,phase:1,block,status:403\"",
-            "SecRule ARGS|REQUEST_URI|REQUEST_BODY \"@rx (?i)(<script|alert|onerror|javascript:)\" \"id:1001,phase:1,block,status:403\"",
-        },
-    }
+return &CorazaEngine{
+Rules: []CorazaRule{},
+}
 }
 
-func (c *CorazaEngine) Process(input string) bool {
-    for _, rule := range c.rules {
-        if len(input) > 0 {
-            // Placeholder: actual Coraza would parse and execute rules
-            return false
-        }
-    }
-    return false
+func (c *CorazaEngine) LoadCRS(rulesDir string) error {
+return filepath.Walk(rulesDir, func(path string, info os.FileInfo, err error) error {
+if err != nil {
+return err
+}
+if !info.IsDir() && strings.HasSuffix(path, ".conf") {
+file, err := os.Open(path)
+if err != nil {
+return err
+}
+defer file.Close()
+scanner := bufio.NewScanner(file)
+for scanner.Scan() {
+line := scanner.Text()
+if strings.Contains(line, "SecRule") {
+rule := c.parseRule(line)
+c.Rules = append(c.Rules, rule)
+}
+}
+}
+return nil
+})
 }
 
-func (c *CorazaEngine) GetRules() []string {
-    return c.rules
+func (c *CorazaEngine) parseRule(line string) CorazaRule {
+rule := CorazaRule{
+ID:    "CRS-001",
+Phase: 1,
+}
+if strings.Contains(line, "phase:1") {
+rule.Phase = 1
+} else if strings.Contains(line, "phase:2") {
+rule.Phase = 2
+}
+if strings.Contains(line, "block") {
+rule.Action = "block"
+} else {
+rule.Action = "allow"
+}
+// Extract pattern from @rx
+if strings.Contains(line, "@rx") {
+parts := strings.Split(line, "@rx")
+if len(parts) > 1 {
+pattern := strings.TrimSpace(parts[1])
+pattern = strings.Split(pattern, "\"")[0]
+rule.Pattern = pattern
+}
+}
+return rule
+}
+
+func (c *CorazaEngine) Match(input string) bool {
+for _, rule := range c.Rules {
+if rule.Pattern != "" && strings.Contains(input, rule.Pattern) {
+return true
+}
+}
+return false
 }
