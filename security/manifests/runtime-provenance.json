@@ -1,8 +1,9 @@
 {
+  "version": "1.0.0",
   "artifacts": {
     "control_plane/app/main.py": {
       "hash": "placeholder",
-      "verified": true
+      "verified": false
     }
   }
 }
