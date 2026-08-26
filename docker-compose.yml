@@ -1,26 +1,10 @@
-services:
-  api:
-    build: .
-    ports:
-      - "8000:8000"
-    depends_on:
-      - postgres
-      - redis
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sentinelayer
-      REDIS_URL: redis://redis:6379
-
-  postgres:
+postgres:
     image: postgres:15
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_DB: sentinelayer
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7
-
-volumes:
-  postgres_data:
