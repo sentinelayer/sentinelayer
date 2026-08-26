@@ -1,6 +1,4 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from control_plane.app.infrastructure.db.session import get_db
+from fastapi import APIRouter
 from pydantic import BaseModel
 import uuid
 from datetime import datetime, timedelta
@@ -12,7 +10,7 @@ class BreakGlassCreate(BaseModel):
     reason: str
 
 @router.post("/")
-async def create_breakglass(data: BreakGlassCreate, db: Session = Depends(get_db)):
+async def create_breakglass(data: BreakGlassCreate):
     return {
         "id": str(uuid.uuid4()),
         "user_id": data.user_id,
@@ -22,5 +20,5 @@ async def create_breakglass(data: BreakGlassCreate, db: Session = Depends(get_db
     }
 
 @router.get("/")
-async def list_breakglass(db: Session = Depends(get_db)):
+async def list_breakglass():
     return []

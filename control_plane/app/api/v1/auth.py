@@ -1,6 +1,6 @@
-import bcrypt
-import jwt
 import os
+import jwt
+import bcrypt
 import uuid
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Depends
@@ -9,8 +9,12 @@ from pydantic import BaseModel, EmailStr
 from control_plane.app.infrastructure.db.session import get_db
 from control_plane.app.infrastructure.db.models import User
 
-router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
-JWT_SECRET = os.environ.get("JWT_SECRET", "super-secret-key-change-in-production")
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    raise ValueError("JWT_SECRET environment variable is required")
+
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_MINUTES = 15
 
@@ -36,6 +40,7 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     hashed = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt())
     user = User(
+        id=str(uuid.uuid4()),
         email=req.email,
         hashed_password=hashed.decode('utf-8'),
         full_name=req.full_name,

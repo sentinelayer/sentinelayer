@@ -3,6 +3,7 @@ from control_plane.app.api.v1 import (
     auth, tenants, applications, users, policies,
     incidents, evidence, metrics, health
 )
+from control_plane.app.api.v1.admin import breakglass
 
 router = APIRouter()
 
@@ -15,3 +16,4 @@ router.include_router(incidents.router)
 router.include_router(evidence.router)
 router.include_router(metrics.router)
 router.include_router(health.router)
+router.include_router(breakglass.router)
