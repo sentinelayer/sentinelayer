@@ -1,22 +1,13 @@
-# Data Flows
+# Data Flows — SentinelLayer
 
-## Request Flow
-1. Client → Gateway (HTTPS)
-2. Gateway → Normalize (internal)
-3. Gateway → WAF (internal)
-4. Gateway → Behavior (signal to engine)
-5. Gateway → Risk (signal to engine)
-6. Gateway → Decision (internal)
-7. Gateway → Upstream (HTTPS)
+## Primary Request Path (Data Plane)
+Client -> TLS termination -> Gateway (Go reverse proxy) -> Coraza WAF + OWASP CRS -> Application Context normalization -> Behavior Engine -> Risk Engine -> Decision Safety Layer (fail-open/closed matrix) -> Upstream application OR block/monitor response
 
-## Control Flow
-1. Admin → Control Plane (HTTPS)
-2. Control Plane → Database (RLS)
-3. Control Plane → Engine (config)
-4. Control Plane → Dashboard (API)
+## Control Plane Path
+Admin / Founder -> Auth (JWT + MFA gate) -> RBAC -> Gate Engine / Evidence / Policy APIs -> PostgreSQL (RLS)
 
-## Observability Flow
-1. Gateway → Prometheus (metrics)
-2. Control Plane → Prometheus (metrics)
-3. Engine → Prometheus (metrics)
-4. All → Grafana (visualization)
+## Telemetry Path
+Data Plane + Control Plane -> structured logs (no secrets) -> metrics (Prometheus) -> traces. Integrity: clock skew <= 5s
+
+## Evidence Path
+Control / test / incident -> Evidence create (hash, version, owner) -> VERIFIED -> VALID -> linked to Requirement ID -> auto-EXPIRED on implementation version change
