@@ -11,19 +11,7 @@ class DataPlane:
         url = f"{self.upstream_url}{path}"
         headers = dict(request.headers)
         body = await request.body()
-        
-        resp = await self.client.request(
-            method=request.method,
-            url=url,
-            headers=headers,
-            content=body,
-            params=request.query_params
-        )
-        
-        return Response(
-            content=resp.content,
-            status_code=resp.status_code,
-            headers=dict(resp.headers)
-        )
+        resp = await self.client.request(method=request.method, url=url, headers=headers, content=body, params=request.query_params)
+        return Response(content=resp.content, status_code=resp.status_code, headers=dict(resp.headers))
 
 data_plane = DataPlane()

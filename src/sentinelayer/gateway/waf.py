@@ -1,75 +1,42 @@
-from fastapi import Request
-from fastapi.responses import JSONResponse
 import re
 import os
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
 class WAFMiddleware:
     def __init__(self):
         self.rules = []
         self.load_rules()
+        self.load_crs()
     
     def load_rules(self):
-        # SQL Injection patterns
-        self.rules.append({
-            "id": "SQLI-001",
-            "pattern": r"(?i)(select|insert|update|delete|drop|union|exec|master|script|--|;|\b(OR|AND)\s+\d+\s*=\s*\d+)",
-            "description": "SQL Injection"
-        })
-        # XSS patterns
-        self.rules.append({
-            "id": "XSS-001",
-            "pattern": r"(?i)(<script|alert\(|onerror=|onclick=|onload=|javascript:|<iframe|document\.cookie)",
-            "description": "XSS Attack"
-        })
-        # Path traversal
-        self.rules.append({
-            "id": "PT-001",
-            "pattern": r"(\.\./|\.\.\\)",
-            "description": "Path Traversal"
-        })
-        # Command injection
-        self.rules.append({
-            "id": "CMD-001",
-            "pattern": r"(?i)(\||;|\&\&|`|\$\(|ping\s|wget\s|curl\s|nmap\s|python\s-c)",
-            "description": "Command Injection"
-        })
+        self.rules.append({"id": "SQLI-001", "pattern": r"(?i)(select|insert|update|delete|drop|union|exec|master|script|--|;|\b(OR|AND)\s+\d+\s*=\s*\d+)", "description": "SQL Injection"})
+        self.rules.append({"id": "XSS-001", "pattern": r"(?i)(<script|alert\(|onerror=|onclick=|onload=|javascript:|<iframe|document\.cookie)", "description": "XSS Attack"})
+        self.rules.append({"id": "PT-001", "pattern": r"(\.\./|\.\.\\)", "description": "Path Traversal"})
+        self.rules.append({"id": "CMD-001", "pattern": r"(?i)(\||;|\&\&|`|\$\(|ping\s|wget\s|curl\s|nmap\s|python\s-c)", "description": "Command Injection"})
+    
+    def load_crs(self):
+        crs_dir = "waf/rules"
+        if os.path.exists(crs_dir):
+            for file in os.listdir(crs_dir):
+                if file.endswith(".conf"):
+                    with open(os.path.join(crs_dir, file), "r") as f:
+                        content = f.read()
+                        for line in content.split("\n"):
+                            if "SecRule" in line:
+                                self.rules.append({
+                                    "id": "CRS-" + file[:10],
+                                    "pattern": r".*",
+                                    "description": f"CRS Rule from {file}"
+                                })
     
     def is_malicious(self, text: str) -> dict:
         if not text:
             return {"blocked": False}
-        
         for rule in self.rules:
             if re.search(rule["pattern"], text):
-                return {
-                    "blocked": True,
-                    "rule_id": rule["id"],
-                    "description": rule["description"]
-                }
+                return {"blocked": True, "rule_id": rule["id"], "description": rule["description"]}
         return {"blocked": False}
-    
-    async def process(self, request: Request, call_next):
-        # Check query params
-        for key, value in request.query_params.items():
-            result = self.is_malicious(value)
-            if result["blocked"]:
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "error": "WAF Blocked",
-                        "rule": result["rule_id"],
-                        "description": result["description"],
-                        "parameter": key
-                    }
-                )
-        
-        # Check request body (only if JSON)
-        try:
-            body = await request.json()
-            self._check_dict(body)
-        except:
-            pass
-        
-        return await call_next(request)
     
     def _check_dict(self, obj):
         if isinstance(obj, dict):
@@ -81,6 +48,21 @@ class WAFMiddleware:
         elif isinstance(obj, str):
             result = self.is_malicious(obj)
             if result["blocked"]:
-                raise Exception(f"Malicious content detected: {result['description']}")
+                raise Exception(f"Malicious content: {result['description']}")
+    
+    async def process(self, request: Request, call_next):
+        for key, value in request.query_params.items():
+            result = self.is_malicious(value)
+            if result["blocked"]:
+                return JSONResponse(status_code=403, content={"error": "WAF Blocked", "rule": result["rule_id"]})
+        
+        if request.method in ["POST", "PUT", "PATCH"]:
+            try:
+                body = await request.json()
+                self._check_dict(body)
+            except:
+                pass
+        
+        return await call_next(request)
 
 waf_middleware = WAFMiddleware()
