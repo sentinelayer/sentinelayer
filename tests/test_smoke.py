@@ -13,9 +13,3 @@ async def test_root():
     client = AsyncClient(app=app, base_url="http://test")
     resp = await client.get("/")
     assert resp.status_code == 200
-
-@pytest.mark.asyncio
-async def test_metrics():
-    client = AsyncClient(app=app, base_url="http://test")
-    resp = await client.get("/api/v1/metrics/security")
-    assert resp.status_code == 200

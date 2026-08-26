@@ -7,7 +7,8 @@ from src.sentinelayer.decision.safemode import safe_mode
 
 class SecurityPipelineMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        if request.url.path in ["/", "/docs", "/openapi.json", "/health", "/health/readiness", "/api/v1/auth/login", "/api/v1/auth/register"]:
+        public_paths = ["/", "/docs", "/openapi.json", "/health", "/health/readiness", "/api/v1/auth/login", "/api/v1/auth/register"]
+        if request.url.path in public_paths:
             return await call_next(request)
 
         user_id = getattr(request.state, "user_id", "anonymous")
@@ -22,18 +23,14 @@ class SecurityPipelineMiddleware(BaseHTTPMiddleware):
         }
 
         behavior_engine.track(context)
-
         risk_result = risk_engine.calculate(context)
         decision = safe_mode.process_decision({"action": risk_result["action"]})
 
         if decision["blocked"]:
             return JSONResponse(status_code=403, content={
-                "error": "Request blocked by security policy",
+                "error": "Blocked by security policy",
                 "risk_score": risk_result["score"],
-                "action": decision["action"],
-                "reason": decision.get("reason", "Security policy violation")
+                "action": decision["action"]
             })
 
-        response = await call_next(request)
-
-        return response
+        return await call_next(request)

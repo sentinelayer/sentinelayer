@@ -16,14 +16,11 @@ class RedisSlidingWindowRateLimiter:
 
     def allow_request(self, key: str) -> Dict:
         current = int(time.time())
-
         try:
             self.redis_client.zremrangebyscore(key, 0, current - self.window_size)
             count = self.redis_client.zcard(key)
-
             if count >= self.max_requests:
                 return {"allowed": False, "remaining": 0, "reset": current + self.window_size}
-
             self.redis_client.zadd(key, {str(current): current})
             self.redis_client.expire(key, self.window_size)
             return {"allowed": True, "remaining": self.max_requests - count - 1, "reset": current + self.window_size}
