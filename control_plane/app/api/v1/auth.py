@@ -34,7 +34,6 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == req.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
-
     hashed = bcrypt.hashpw(req.password.encode('utf-8'), bcrypt.gensalt())
     user = User(
         email=req.email,
@@ -52,10 +51,8 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == req.email).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-
     if not bcrypt.checkpw(req.password.encode('utf-8'), user.hashed_password.encode('utf-8')):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-
     expiry = datetime.utcnow() + timedelta(minutes=JWT_EXPIRY_MINUTES)
     token = jwt.encode(
         {

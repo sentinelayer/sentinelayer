@@ -1,0 +1,8 @@
+{
+  "artifacts": {
+    "control_plane/app/main.py": {
+      "hash": "placeholder",
+      "verified": true
+    }
+  }
+}
