@@ -1,0 +1,110 @@
+openapi: 3.0.0
+info:
+  title: SentinelLayer Control Plane API
+  version: 0.1.0
+  description: Control Plane API for SentinelLayer
+paths:
+  /api/v1/auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: {type: string}
+                password: {type: string}
+                full_name: {type: string}
+                tenant_id: {type: string}
+      responses:
+        200: {description: Success}
+  /api/v1/auth/login:
+    post:
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: {type: string}
+                password: {type: string}
+      responses:
+        200: {description: Success}
+  /api/v1/tenants:
+    get:
+      summary: List tenants
+      responses:
+        200: {description: Success}
+    post:
+      summary: Create tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {type: string}
+      responses:
+        200: {description: Success}
+  /api/v1/policies:
+    get:
+      summary: List policies
+      responses:
+        200: {description: Success}
+    post:
+      summary: Create policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {type: string}
+                rules: {type: object}
+                application_id: {type: string}
+      responses:
+        200: {description: Success}
+  /api/v1/incidents:
+    get:
+      summary: List incidents
+      responses:
+        200: {description: Success}
+    post:
+      summary: Create incident
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                severity: {type: string}
+                description: {type: string}
+                tenant_id: {type: string}
+      responses:
+        200: {description: Success}
+  /api/v1/evidence:
+    get:
+      summary: List evidence
+      responses:
+        200: {description: Success}
+    post:
+      summary: Create evidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                artifact: {type: string}
+                requirement_id: {type: string}
+                control_id: {type: string}
+      responses:
+        200: {description: Success}
