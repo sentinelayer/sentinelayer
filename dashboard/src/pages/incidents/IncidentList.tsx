@@ -12,10 +12,25 @@ export const IncidentList: React.FC = () => {
     }, [])
 
     if (loading) return <div>Loading...</div>
+
     return (
-        <div>
+        <div className="incident-list">
             <h1>Incidents</h1>
-            <ul>{incidents.map((i: any) => <li key={i.id}>{i.severity} - {i.status}</li>)}</ul>
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>Severity</th><th>Description</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    {incidents.map((i: any) => (
+                        <tr key={i.id}>
+                            <td>{i.id}</td>
+                            <td>{i.severity}</td>
+                            <td>{i.description}</td>
+                            <td>{i.status}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
     )
 }

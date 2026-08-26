@@ -12,10 +12,24 @@ export const EvidenceList: React.FC = () => {
     }, [])
 
     if (loading) return <div>Loading...</div>
+
     return (
-        <div>
+        <div className="evidence-list">
             <h1>Evidence</h1>
-            <ul>{evidence.map((e: any) => <li key={e.id}>{e.artifact} - {e.status}</li>)}</ul>
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>Artifact</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    {evidence.map((e: any) => (
+                        <tr key={e.id}>
+                            <td>{e.id}</td>
+                            <td>{e.artifact}</td>
+                            <td>{e.status}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
     )
 }

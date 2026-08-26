@@ -12,10 +12,23 @@ export const RiskPage: React.FC = () => {
     }, [])
 
     if (loading) return <div>Loading...</div>
+
     return (
-        <div>
+        <div className="risk-page">
             <h1>Risk Score</h1>
-            {risk && <p>Score: {risk.score}</p>}
+            {risk && (
+                <div className="risk-detail">
+                    <p>Score: {risk.score}</p>
+                    <p>Confidence: {risk.confidence}</p>
+                    <p>Action: {risk.action}</p>
+                    <div className="risk-factors">
+                        <h3>Factors</h3>
+                        {Object.entries(risk.factors || {}).map(([k, v]) => (
+                            <div key={k}>{k}: {String(v)}</div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
