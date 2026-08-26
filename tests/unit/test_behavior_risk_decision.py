@@ -1,9 +1,14 @@
 import pytest
+from src.sentinelayer.risk.engine import risk_engine
+from src.sentinelayer.behavior.engine import behavior_engine
 
-def test_baseline_learning():
-    """Test baseline learning functionality"""
-    assert True
+def test_risk_engine():
+    context = {"failed_attempts": 5}
+    score = risk_engine.calculate(context)
+    assert score > 0
 
-def test_anomaly_detection():
-    """Test anomaly detection functionality"""
-    assert True
+def test_behavior_engine():
+    context = {"user_id": "test-user"}
+    behavior_engine.track(context)
+    behavior = behavior_engine.get_behavior("test-user")
+    assert behavior["count"] > 0

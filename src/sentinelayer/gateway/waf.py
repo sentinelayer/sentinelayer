@@ -1,5 +1,4 @@
 import re
-import os
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
@@ -16,37 +15,44 @@ class WAFMiddleware:
 
     def is_malicious(self, text: str) -> dict:
         if not text:
-            return {"blocked": False}
+            return {"blocked": False, "rule_id": None, "description": None}
         for rule in self.rules:
             if re.search(rule["pattern"], text):
                 return {"blocked": True, "rule_id": rule["id"], "description": rule["description"]}
-        return {"blocked": False}
+        return {"blocked": False, "rule_id": None, "description": None}
 
     def _check_dict(self, obj):
         if isinstance(obj, dict):
             for value in obj.values():
-                self._check_dict(value)
+                result = self._check_dict(value)
+                if result and result.get("blocked"):
+                    return result
         elif isinstance(obj, list):
             for item in obj:
-                self._check_dict(item)
+                result = self._check_dict(item)
+                if result and result.get("blocked"):
+                    return result
         elif isinstance(obj, str):
-            result = self.is_malicious(obj)
-            if result["blocked"]:
-                raise Exception(f"Malicious content: {result['description']}")
+            return self.is_malicious(obj)
+        return {"blocked": False, "rule_id": None, "description": None}
 
     async def process(self, request: Request, call_next):
         for key, value in request.query_params.items():
             result = self.is_malicious(value)
             if result["blocked"]:
-                from src.sentinelayer.api.metrics import increment_waf_block; increment_waf_block(); return JSONResponse(status_code=403, content={"error": "WAF Blocked", "rule": result["rule_id"]})
+                from src.sentinelayer.api.metrics import increment_waf_block
+                increment_waf_block()
+                return JSONResponse(status_code=403, content={"error": "WAF Blocked", "rule": result["rule_id"]})
 
         if request.method in ["POST", "PUT", "PATCH"]:
             try:
                 body = await request.json()
-                self._check_dict(body)
-            except Exception as e:
-                if "Malicious" in str(e):
-                    from src.sentinelayer.api.metrics import increment_waf_block; increment_waf_block(); return JSONResponse(status_code=403, content={"error": "WAF Blocked", "rule": result["rule_id"]})
+                result = self._check_dict(body)
+                if result and result.get("blocked"):
+                    from src.sentinelayer.api.metrics import increment_waf_block
+                    increment_waf_block()
+                    return JSONResponse(status_code=403, content={"error": "WAF Blocked", "rule": result["rule_id"]})
+            except:
                 pass
 
         return await call_next(request)

@@ -32,7 +32,6 @@ app.add_middleware(RateLimitMiddleware, calls_per_minute=int(os.getenv("RATE_LIM
 app.add_middleware(TenantMiddleware)
 app.add_middleware(AuthMiddleware)
 
-Base.metadata.create_all(bind=engine)
 
 app.include_router(auth.router)
 app.include_router(health.router)
@@ -89,3 +88,9 @@ async def calculate_risk(request: Request):
 # Security Headers
 from src.sentinelayer.api.middleware.security_headers import SecurityHeadersMiddleware
 app.add_middleware(SecurityHeadersMiddleware)
+
+@app.middleware("http")
+async def count_requests(request: Request, call_next):
+    from src.sentinelayer.api.metrics import increment_request
+    increment_request()
+    return await call_next(request)

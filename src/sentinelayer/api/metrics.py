@@ -36,7 +36,7 @@ async def security_metrics(request: Request):
         {"name": "WAF Blocks", "value": waf_block_counter, "status": "good"},
         {"name": "Active Threats", "value": active_incidents, "status": "warning" if active_incidents > 0 else "good"},
         {"name": "Auth Failures", "value": auth_failure_counter, "status": "critical" if auth_failure_counter > 100 else "good"},
-        {"name": "Risk Score", "value": 0, "status": "good"},
+        {"name": "Risk Score", "value": 50, "status": "good"},
         {"name": "Total Incidents", "value": total_incidents, "status": "good"},
         {"name": "Total Requests", "value": request_counter, "status": "good"},
         {"name": "Uptime", "value": f"{uptime_hours}h {uptime_minutes}m", "status": "good"}

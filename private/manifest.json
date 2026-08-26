@@ -21,7 +21,7 @@
       "verified": true
     },
     "src/sentinelayer/gate/engine.py": {
-      "hash": "0d7b2c95c6b206cb79a9562a479e810d0561b0544b865be312cf0630246076e3",
+      "hash": "41d2358a5fa9b9218680e4df27903bfcd8ed71ba25a746eb1a73587e3536d511",
       "verified": true
     },
     "src/sentinelayer/threatintel/__init__.py": {
@@ -53,7 +53,7 @@
       "verified": true
     },
     "src/sentinelayer/security/provenance.py": {
-      "hash": "b52f82139bbf488110c1e4db9dadff78a32dfc8e16feb60af7b48bbf25bd78e1",
+      "hash": "c3ae02a9c09a3ef3e11e3c4fff4eddf8de6ced03e9b1b086e34fb7ab6c951995",
       "verified": true
     },
     "src/sentinelayer/security/tenant_matrix.py": {
@@ -173,7 +173,7 @@
       "verified": true
     },
     "src/sentinelayer/api/metrics.py": {
-      "hash": "fbcb34119411f5560c9671dded877e5b897ff5ea3c53787fd546c8b49ee236db",
+      "hash": "5b29c4a91c469a43bb2aa6e049dbc8fefaa840734e01e15bc324f5615ac6250a",
       "verified": true
     },
     "src/sentinelayer/api/health.py": {
@@ -185,7 +185,7 @@
       "verified": true
     },
     "src/sentinelayer/api/main_full.py": {
-      "hash": "4990f2232313e21d723d48dacc4f42b89d87dc60d4086c8abc494a9d2ab5fc4a",
+      "hash": "3c7fc8925fd25fbd2ea108cfd9d58b5b5a103ed8c5dc9cfaf9d54d18e851579b",
       "verified": true
     },
     "src/sentinelayer/api/middleware/auth.py": {
@@ -229,7 +229,7 @@
       "verified": true
     },
     "src/sentinelayer/evidence/matrix.py": {
-      "hash": "d8519482c6e2523a71f0729b4ff86eda3de3f54df2ea7bfdc3e71d63ab101331",
+      "hash": "8ac70b93b1ce651c3fd1d06971e02342e9714eed919f7061020baf8024485833",
       "verified": true
     },
     "src/sentinelayer/gateway/ssrf.py": {
@@ -245,7 +245,7 @@
       "verified": true
     },
     "src/sentinelayer/gateway/waf.py": {
-      "hash": "3980be830c48d214ea8f26f1941ba7f355f59c2fe6ef748d254752e5d31fc7cf",
+      "hash": "25f0dad0f5ac4dfd5d97904b81b64300abaacd58a622dc78707e8e787e98ef9a",
       "verified": true
     },
     "src/sentinelayer/gateway/threatintel.py": {
@@ -317,7 +317,7 @@
       "verified": true
     },
     "src/sentinelayer/database/models.py": {
-      "hash": "5a5da7af50f36f4bda71ca0849c0bfd060581fc2632bcdc7c5ae9845775a2a2f",
+      "hash": "e0cde09a80b2fd8f8d4c8e821ba22e1b05db355e6c70643711fa0f7b82ac400b",
       "verified": true
     },
     "src/sentinelayer/database/rls.py": {
@@ -326,10 +326,6 @@
     },
     "src/sentinelayer/behavior/baseline.py": {
       "hash": "9ee5abcb28d68730bc6b4516e18d08bc7d79537f36d3d34e09289d186c761693",
-      "verified": true
-    },
-    "src/sentinelayer/behavior/sequence.py": {
-      "hash": "10a3940864ad801d3cf2119be679c16fec01a3c424c73d64274b4287dd9e2c45",
       "verified": true
     },
     "src/sentinelayer/behavior/engine.py": {
