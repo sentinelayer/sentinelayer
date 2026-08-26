@@ -62,13 +62,13 @@ Built for solo founders, startups, and enterprises who need **simple, affordable
 ## 📊 GitHub Stats
 
 <p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=sentinelayer&show_icons=true&theme=radical&hide_border=true&bg_color=0a0a0a&title_color=00ff88&icon_color=00ff88&text_color=ffffff" width="49%" />
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=sentinelayer&layout=compact&theme=radical&hide_border=true&bg_color=0a0a0a&title_color=00ff88&text_color=ffffff" width="49%" />
+  <img src="https://github-readme-stats.vercel.app/api?username=sentinelayer&show_icons=true&theme=radical&hide_border=true&bg_color=0a0a0a&title_color=00ff88&icon_color=00ff88&text_color=ffffff" width="400" />
+  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=sentinelayer&layout=compact&theme=radical&hide_border=true&bg_color=0a0a0a&title_color=00ff88&text_color=ffffff" width="400" />
 </p>
 
 <p align="center">
-  <img src="https://github-readme-streak-stats.herokuapp.com/?user=sentinelayer&theme=radical&hide_border=true&background=0a0a0a&stroke=00ff88&ring=00ff88&fire=00ff88" width="49%" />
-  <img src="https://github-readme-activity-graph.vercel.app/graph?username=sentinelayer&theme=react-dark&bg_color=0a0a0a&color=00ff88&line=00ff88&point=ffffff&hide_border=true" width="49%" />
+  <img src="https://github-readme-streak-stats.herokuapp.com/?user=sentinelayer&theme=radical&hide_border=true&background=0a0a0a&stroke=00ff88&ring=00ff88&fire=00ff88" width="400" />
+  <img src="https://github-readme-activity-graph.vercel.app/graph?username=sentinelayer&theme=react-dark&bg_color=0a0a0a&color=00ff88&line=00ff88&point=ffffff&hide_border=true" width="400" />
 </p>
 
 ---
