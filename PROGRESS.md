@@ -1,19 +1,37 @@
-# SentinelLayer - Status Aktual (2026-08-26)
+# SentinelLayer Progress
 
-## Yang Jalan
-- JWT auth (env secret)
-- BOLA/IDOR (logic benar, role-based belum diimplementasi)
-- Rate limiting (Redis + in-memory, fallback buggy)
-- WAF regex fallback (6 rules)
-- Decision safety (kill switch, tanpa RBAC)
-- Key rotation (Redis)
-- 38/38 tests passing (belum diverifikasi ulang)
+## Current Status
+- Python syntax: CLEAN
+- Middleware: BaseHTTPMiddleware
+- Frontend: Security Dashboard
+- Migration: Available
+- Provenance: Active with hash verification
+- RLS: Policy created
 
-## Yang Perlu Diperbaiki
-- Risk engine: global singleton → harus per-request
-- Siap deploy: belum, auth masih hardcoded plaintext di beberapa tempat
-- WAF: nama file masih "coraza_wrapper" padahal isinya regex fallback
+## Completed
+- Auth with bcrypt and JWT
+- WAF with 4 rules
+- SSRF protection
+- Threat Intel (VirusTotal/AbuseIPDB)
+- Risk Engine
+- Behavior Engine
+- Decision Safety
+- Control Plane
+- MFA
+- Break Glass
+- Offboarding
+- BCP/DRP
+- SLA Metrics
+- Finance Metrics
+- Bus Factor
+- Evidence Matrix
 
-## Status
-- Masih dalam tahap perbaikan aktif
-- Belum siap deploy production
+## In Progress
+- Security pipeline integration
+- Database model completion
+- Test coverage improvement
+
+## Next
+- Integrate Behavior-Risk-Decision pipeline
+- Complete all database models
+- Add more security tests

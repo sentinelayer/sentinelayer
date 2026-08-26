@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Request
-from src.sentinelayer.gateway.waf import waf_middleware
 from src.sentinelayer.incident.response import incident_response
-from src.sentinelayer.risk.engine import risk_engine
 import time
 
 router = APIRouter(prefix="/api/v1/metrics", tags=["metrics"])
@@ -10,6 +8,18 @@ waf_block_counter = 0
 auth_failure_counter = 0
 request_counter = 0
 start_time = time.time()
+
+def increment_waf_block():
+    global waf_block_counter
+    waf_block_counter += 1
+
+def increment_auth_failure():
+    global auth_failure_counter
+    auth_failure_counter += 1
+
+def increment_request():
+    global request_counter
+    request_counter += 1
 
 @router.get("/security")
 async def security_metrics(request: Request):
@@ -34,6 +44,7 @@ async def security_metrics(request: Request):
 
 @router.get("/waf")
 async def waf_metrics():
+    from src.sentinelayer.gateway.waf import waf_middleware
     return {
         "total_rules": len(waf_middleware.rules),
         "blocks": waf_block_counter,

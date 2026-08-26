@@ -19,10 +19,10 @@ def enable_rls():
 
 def set_tenant_context(tenant_id: str):
     with engine.connect() as conn:
-        conn.execute(text(f"SET app.current_tenant_id = '{tenant_id}'"))
+        conn.execute(text("SET app.current_tenant_id = :tenant_id"), {"tenant_id": tenant_id})
         conn.commit()
 
 def set_user_context(user_id: str):
     with engine.connect() as conn:
-        conn.execute(text(f"SET app.current_user_id = '{user_id}'"))
+        conn.execute(text("SET app.current_user_id = :user_id"), {"user_id": user_id})
         conn.commit()

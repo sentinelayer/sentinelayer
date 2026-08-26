@@ -1,21 +1,24 @@
-from sqlalchemy.orm import Session
-from src.sentinelayer.database import SessionLocal
+from sqlalchemy import text
+from src.sentinelayer.database import engine
 import uuid
 
 class ControlPlane:
     def __init__(self):
-        self.db = SessionLocal()
+        self.db = engine
 
     def create_tenant(self, name: str) -> dict:
-        with self.db.bind.connect() as conn:
-            tenant_id = str(uuid.uuid4())
-            conn.execute(f"INSERT INTO tenants (id, name) VALUES ('{tenant_id}', '{name}')")
+        tenant_id = str(uuid.uuid4())
+        with self.db.connect() as conn:
+            conn.execute(
+                text("INSERT INTO tenants (id, name) VALUES (:id, :name)"),
+                {"id": tenant_id, "name": name}
+            )
             conn.commit()
             return {"id": tenant_id, "name": name}
 
     def get_tenants(self) -> list:
-        with self.db.bind.connect() as conn:
-            result = conn.execute("SELECT id, name FROM tenants")
+        with self.db.connect() as conn:
+            result = conn.execute(text("SELECT id, name FROM tenants"))
             return [{"id": r[0], "name": r[1]} for r in result]
 
 control_plane = ControlPlane()

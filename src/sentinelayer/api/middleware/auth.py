@@ -15,7 +15,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         
         token = auth_header.split(" ")[1]
         try:
-            payload = jwt.decode(token, os.getenv("JWT_SECRET", "change-me"), algorithms=["HS256"])
+            payload = jwt.decode(token, os.environ["JWT_SECRET"], algorithms=["HS256"])
             request.state.user_id = payload.get("sub")
             request.state.tenant_id = payload.get("tenant_id")
             request.state.is_admin = payload.get("is_admin", False)

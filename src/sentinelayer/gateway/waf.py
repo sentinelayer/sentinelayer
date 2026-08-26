@@ -38,7 +38,7 @@ class WAFMiddleware:
         for key, value in request.query_params.items():
             result = self.is_malicious(value)
             if result["blocked"]:
-                return JSONResponse(status_code=403, content={"error": "WAF Blocked", "rule": result["rule_id"]})
+                from src.sentinelayer.api.metrics import increment_waf_block; increment_waf_block(); return JSONResponse(status_code=403, content={"error": "WAF Blocked", "rule": result["rule_id"]})
 
         if request.method in ["POST", "PUT", "PATCH"]:
             try:
@@ -46,7 +46,7 @@ class WAFMiddleware:
                 self._check_dict(body)
             except Exception as e:
                 if "Malicious" in str(e):
-                    return JSONResponse(status_code=403, content={"error": str(e)})
+                    from src.sentinelayer.api.metrics import increment_waf_block; increment_waf_block(); return JSONResponse(status_code=403, content={"error": "WAF Blocked", "rule": result["rule_id"]})
                 pass
 
         return await call_next(request)

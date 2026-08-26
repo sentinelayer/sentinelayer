@@ -85,3 +85,7 @@ async def calculate_risk(request: Request):
     action = risk_engine.get_action(score)
     decision = safe_mode.process_decision({"action": action})
     return {"risk_score": score, "decision": decision}
+
+# Security Headers
+from src.sentinelayer.api.middleware.security_headers import SecurityHeadersMiddleware
+app.add_middleware(SecurityHeadersMiddleware)
