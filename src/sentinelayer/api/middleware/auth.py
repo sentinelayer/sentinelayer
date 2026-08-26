@@ -5,9 +5,18 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 class AuthMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app):
+        super().__init__(app)
+        self.resource_patterns = {
+            "admin": ["/api/v1/controlplane/tenants", "/api/v1/controlplane/applications"],
+            "user": ["/api/v1/metrics/security", "/api/v1/risk/calculate"],
+            "public": ["/", "/docs", "/openapi.json", "/health", "/health/readiness", "/api/v1/auth/login", "/api/v1/auth/register"]
+        }
+
     async def dispatch(self, request: Request, call_next):
-        public_paths = ["/", "/docs", "/openapi.json", "/health", "/health/readiness", "/api/v1/auth/login", "/api/v1/auth/register"]
-        if request.url.path in public_paths:
+        path = request.url.path
+
+        if path in self.resource_patterns["public"]:
             return await call_next(request)
 
         auth_header = request.headers.get("Authorization")
@@ -26,8 +35,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         except jwt.InvalidTokenError:
             return JSONResponse(status_code=401, content={"error": "Invalid token"})
 
-        path = request.url.path
-        if path.startswith("/api/v1/controlplane/tenants"):
+        if path in self.resource_patterns["admin"]:
             if not request.state.is_admin:
                 return JSONResponse(status_code=403, content={"error": "Admin access required"})
 
