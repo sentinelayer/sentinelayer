@@ -36,7 +36,6 @@ class GateEngine:
             "SL-SEC-BOLA-001": "src/sentinelayer/backend/internal/auth/authorization.py",
             "SL-SEC-ISO-001": "src/sentinelayer/database/models/order.py",
             "SL-SEC-RATE-001": "src/sentinelayer/gateway/ratelimit/sliding_window.py",
-            "SL-SEC-WAF-001": "src/sentinelayer/gateway/waf/regex_waf.py",
             "SL-SEC-API-001": "src/sentinelayer/api/main_full.py",
         }
         filepath = impl_map.get(requirement_id)

@@ -1,43 +1,27 @@
-from fastapi import Request, HTTPException, status
-from typing import Optional
-from src.sentinelayer.backend.internal.auth.jwt_handler import verify_token
+from fastapi import Request, HTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+import jwt
+import os
 
-class AuthMiddleware:
-    async def __call__(self, request: Request) -> Optional[dict]:
+class AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path in ["/", "/docs", "/openapi.json", "/health", "/health/readiness", "/api/v1/auth/login", "/api/v1/auth/register"]:
+            return await call_next(request)
+        
         auth_header = request.headers.get("Authorization")
-        if not auth_header:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Missing authorization header"
-            )
-
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return JSONResponse(status_code=401, content={"error": "Missing or invalid token"})
+        
+        token = auth_header.split(" ")[1]
         try:
-            scheme, token = auth_header.split()
-            if scheme.lower() != "bearer":
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid scheme"
-                )
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid header format"
-            )
-
-        payload = verify_token(token)
-        if not payload:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired token"
-            )
-
-        request.state.user = {
-            "sub": payload.sub,
-            "tenant_id": payload.tenant_id,
-            "email": payload.email,
-            "roles": payload.roles
-        }
-        request.state.tenant_id = payload.tenant_id
-        request.state.user_id = payload.sub
-
-        return request.state.user
+            payload = jwt.decode(token, os.getenv("JWT_SECRET", "change-me"), algorithms=["HS256"])
+            request.state.user_id = payload.get("sub")
+            request.state.tenant_id = payload.get("tenant_id")
+            request.state.is_admin = payload.get("is_admin", False)
+        except jwt.ExpiredSignatureError:
+            return JSONResponse(status_code=401, content={"error": "Token expired"})
+        except jwt.InvalidTokenError:
+            return JSONResponse(status_code=401, content={"error": "Invalid token"})
+        
+        return await call_next(request)

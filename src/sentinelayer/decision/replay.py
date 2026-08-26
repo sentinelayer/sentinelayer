@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 import json
 from typing import List, Dict
 from src.sentinelayer.database import SessionLocal
-from src.sentinelayer.database.models import Decision
 
 class DecisionReplay:
     def __init__(self):

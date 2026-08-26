@@ -11,6 +11,9 @@ from src.sentinelayer.api.middleware.ratelimit import RateLimitMiddleware
 from src.sentinelayer.database import engine
 from src.sentinelayer.database.models import Base
 from src.sentinelayer.security.provenance import provenance
+from src.sentinelayer.risk.engine import risk_engine
+from src.sentinelayer.behavior.engine import behavior_engine
+from src.sentinelayer.decision.safemode import safe_mode
 import os
 
 app = FastAPI(title="SentinelLayer API", version="0.1.0")
@@ -22,10 +25,10 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Tenant-ID"],
 )
 
-app.add_middleware(RateLimitMiddleware)
+app.add_middleware(RateLimitMiddleware, calls_per_minute=int(os.getenv("RATE_LIMIT", "60")))
 app.add_middleware(TenantMiddleware)
 app.add_middleware(AuthMiddleware)
 
@@ -69,3 +72,15 @@ async def root():
         "testing": False,
         "provenance_verified": provenance.verified
     }
+
+@app.get("/api/v1/risk/calculate")
+async def calculate_risk(request: Request):
+    context = {
+        "user_id": getattr(request.state, "user_id", None),
+        "tenant_id": getattr(request.state, "tenant_id", None),
+        "ip": request.client.host if request.client else "unknown"
+    }
+    behavior_engine.track(context)
+    score = risk_engine.calculate(context)
+    decision = safe_mode.process_decision({"action": "ALLOW" if score < 30 else "BLOCK" if score > 80 else "CHALLENGE"})
+    return {"risk_score": score, "decision": decision}

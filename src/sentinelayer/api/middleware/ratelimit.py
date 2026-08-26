@@ -1,79 +1,27 @@
-from fastapi import Request, HTTPException, status
-from typing import Optional
-import logging
-import os
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+import time
+from collections import defaultdict
 
-from src.sentinelayer.gateway.ratelimit.sliding_window import (
-    RedisSlidingWindowRateLimiter,
-    SimpleRateLimiter
-)
-
-logger = logging.getLogger(__name__)
-
-# Use Redis if available, fallback to simple
-try:
-    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
-    limiter = RedisSlidingWindowRateLimiter(redis_url)
-    logger.info("Using Redis rate limiter")
-except Exception as e:
-    limiter = SimpleRateLimiter()
-    logger.warning("Redis not available, using simple rate limiter")
-
-class RateLimitMiddleware:
-    def __init__(self):
-        self.limiter = limiter
-        self.default_limit = 100
-        self.default_window = 60
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, calls_per_minute: int = 60):
+        super().__init__(app)
+        self.calls_per_minute = calls_per_minute
+        self.requests = defaultdict(list)
     
-    async def __call__(
-        self,
-        request: Request,
-        endpoint: str = "",
-        limit: Optional[int] = None,
-        window: Optional[int] = None
-    ):
-        # Skip rate limiting for health/docs
-        if request.url.path in ["/health", "/docs", "/redoc", "/openapi.json", "/", "/metrics"]:
-            return
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path in ["/", "/docs", "/openapi.json", "/health", "/health/readiness"]:
+            return await call_next(request)
         
-        # Get identifier
-        identifier = request.client.host if request.client else "unknown"
+        client_ip = request.client.host if request.client else "unknown"
+        now = time.time()
+        window_start = now - 60
         
-        if hasattr(request.state, "user_id"):
-            identifier = f"{identifier}:{request.state.user_id}"
+        self.requests[client_ip] = [t for t in self.requests[client_ip] if t > window_start]
         
-        if hasattr(request.state, "tenant_id"):
-            identifier = f"{identifier}:{request.state.tenant_id}"
+        if len(self.requests[client_ip]) >= self.calls_per_minute:
+            return JSONResponse(status_code=429, content={"error": "Rate limit exceeded"})
         
-        # Endpoint-specific limits
-        endpoint_limits = {
-            "/api/v1/auth/login": (5, 60),
-            "/api/v1/orders/": (100, 60),
-        }
-        
-        path = request.url.path
-        method = request.method
-        
-        if path in endpoint_limits:
-            limit, window = endpoint_limits[path]
-        
-        # Check rate limit - pake parameter yang bener
-        result = self.limiter.is_allowed(
-            dimension="ip",
-            identifier=identifier,
-            endpoint=path,
-            limit=limit,      # ← pake limit, bukan limit_override
-            window=window     # ← pake window, bukan window_override
-        )
-        
-        if not result.get("allowed", False):
-            logger.warning(f"Rate limit exceeded: {identifier} on {path}")
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Rate limit exceeded. Try again in {result.get('reset_in', 60)} seconds"
-            )
-        
-        request.state.rate_limit_remaining = result.get("remaining", 0)
-        request.state.rate_limit_reset = result.get("reset_in", 60)
-        
-        return result
+        self.requests[client_ip].append(now)
+        return await call_next(request)

@@ -1,6 +1,5 @@
 from fastapi import Request, HTTPException, status
 import logging
-from src.sentinelayer.gateway.waf.regex_waf import get_waf_engine
 
 logger = logging.getLogger(__name__)
 
