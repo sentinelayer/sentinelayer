@@ -1,6 +1,6 @@
 import pytest
-from control_plane.risk.engine import risk_engine
-from control_plane.behavior.engine import behavior_engine
+from engine.risk.engine import risk_engine
+from engine.behavior.engine import behavior_engine
 
 def test_risk_engine():
     context = {"failed_attempts": 5}

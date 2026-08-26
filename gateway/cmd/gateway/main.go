@@ -1,6 +1,7 @@
 package main
 
 import (
+"bytes"
 "encoding/json"
 "log"
 "net/http"
@@ -10,7 +11,6 @@ import (
 "regexp"
 "sync"
 "time"
-"gateway/internal/ratelimit"
 )
 
 type RateLimiter struct {
@@ -21,11 +21,7 @@ window   int64
 }
 
 func NewRateLimiter(limit int) *RateLimiter {
-return &RateLimiter{
-requests: make(map[string][]int64),
-limit:    limit,
-window:   60,
-}
+return &RateLimiter{requests: make(map[string][]int64), limit: limit, window: 60}
 }
 
 func (r *RateLimiter) Allow(key string) bool {
@@ -55,16 +51,8 @@ regexp.MustCompile(`(\.\./|\.\.\\)`),
 regexp.MustCompile(`(?i)(\||;|&&|` + "`" + `|\$\(|ping\s|wget\s|curl\s|nmap\s|python\s-c)`),
 }
 
-redisAddr := os.Getenv("REDIS_ADDR")
-if redisAddr == "" {
-redisAddr = "localhost:6379"
-}
-rateLimiter := ratelimit.NewRedisRateLimiter(redisAddr, 60)
-
+rateLimiter := NewRateLimiter(60)
 upstream, _ := url.Parse(os.Getenv("UPSTREAM_URL"))
-if upstream.Host == "" {
-upstream, _ = url.Parse("http://localhost:8005")
-}
 proxy := httputil.NewSingleHostReverseProxy(upstream)
 
 mux := http.NewServeMux()
