@@ -1,15 +1,13 @@
 # SentinelLayer Progress
 
-## Audit fix batch
-- P0: applications/tenants/policies **tenant-scoped** (BOLA path closed in API)
-- Removed dummy tests (test_dr_real assert True, weak bola/tenant stubs)
-- Redis rate limiter score/member fix + fail-open on error
-- Behavior EmitSignal logs + optional HTTP ingest
-- docker-compose.yml valid (postgres, redis, risk, control-plane)
-- KMS refuses missing key in production
+## Done this batch
+- Policy.tenant_id model + alembic 0003 + API filter by tenant_id
+- Register creates Tenant row if missing; password min 12
+- Live integration test tenant isolation (skip if CP down)
+- Unit blast-radius tests
+- Dashboard Overview + API client real fetch / real errors
+- docker-compose runs alembic upgrade head before CP
 
-## Still real gaps
-- Policy model may lack tenant_id column → isolation via application join
-- Integration tests need CP + DB up
-- External Retainer unsigned
-- Dashboard still thin UI over APIs
+## Still external
+- External Retainer signed (legal)
+- Full dashboard polish (all pages still thin)

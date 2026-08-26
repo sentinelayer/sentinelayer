@@ -35,11 +35,9 @@ async def create_policy(data: PolicyCreate, request: Request, db: Session = Depe
         id=str(uuid.uuid4()),
         name=data.name,
         rules=json.dumps(data.rules),
-        application_id=app_id or "",
+        application_id=app_id,
+        tenant_id=tenant_id,
     )
-    # store tenant on policy if model has column; else bind via application
-    if hasattr(policy, "tenant_id"):
-        policy.tenant_id = tenant_id
     db.add(policy)
     db.commit()
     db.refresh(policy)
@@ -50,33 +48,19 @@ async def create_policy(data: PolicyCreate, request: Request, db: Session = Depe
 @router.get("")
 async def list_policies(request: Request, db: Session = Depends(get_db)):
     tenant_id = _tenant(request)
-    # join via applications owned by tenant
-    app_ids = [a.id for a in db.query(Application).filter(Application.tenant_id == tenant_id).all()]
-    q = db.query(Policy)
-    if hasattr(Policy, "tenant_id"):
-        policies = q.filter(Policy.tenant_id == tenant_id).all()
-    elif app_ids:
-        policies = q.filter(Policy.application_id.in_(app_ids)).all()
-    else:
-        policies = []
-    return [{"id": p.id, "name": p.name, "tenant_id": tenant_id} for p in policies]
+    policies = db.query(Policy).filter(Policy.tenant_id == tenant_id).all()
+    return [{"id": p.id, "name": p.name, "tenant_id": p.tenant_id} for p in policies]
 
 
 @router.get("/{policy_id}")
 async def get_policy(policy_id: str, request: Request, db: Session = Depends(get_db)):
     tenant_id = _tenant(request)
-    policy = db.query(Policy).filter(Policy.id == policy_id).first()
+    policy = db.query(Policy).filter(Policy.id == policy_id, Policy.tenant_id == tenant_id).first()
     if not policy:
         raise HTTPException(status_code=404, detail="Not found")
-    if hasattr(policy, "tenant_id") and getattr(policy, "tenant_id", None) not in (None, "", tenant_id):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    if policy.application_id:
-        app = db.query(Application).filter(Application.id == policy.application_id).first()
-        if app and app.tenant_id != tenant_id:
-            raise HTTPException(status_code=403, detail="Forbidden")
     rules = policy.rules
     try:
         rules = json.loads(policy.rules) if isinstance(policy.rules, str) else policy.rules
     except Exception:
         pass
-    return {"id": policy.id, "name": policy.name, "rules": rules, "tenant_id": tenant_id}
+    return {"id": policy.id, "name": policy.name, "rules": rules, "tenant_id": policy.tenant_id}

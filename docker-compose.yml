@@ -41,12 +41,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: python -m uvicorn control_plane.app.main:app --host 0.0.0.0 --port 8005
+    command: >
+      sh -c "alembic -c alembic.ini upgrade head &&
+             python -m uvicorn control_plane.app.main:app --host 0.0.0.0 --port 8005"
     environment:
       PYTHONPATH: /app
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/sentinelayer
       REDIS_URL: redis://redis:6379/0
-      JWT_SECRET: change-me-in-production-min-32-chars
+      JWT_SECRET: change-me-in-production-min-32-chars-xx
+      SL_ENV: development
     ports:
       - "8005:8005"
     depends_on:
