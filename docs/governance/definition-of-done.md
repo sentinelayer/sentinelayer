@@ -20,3 +20,11 @@ Every requirement **must** contain the following fields. Missing any field → c
 | Status | Derived by Gate Engine only | `NOT_STARTED → … → ACCEPTED` |
 
 ## Status Machine (machine-enforced)
+Status is **never** set by human write. Only GateEngine.evaluate() may produce ACCEPTED or REJECTED.
+
+## Production Ready Rule (0.3)
+
+`PRODUCTION READY` = true **only if**:
+1. All P0 + P1 requirements have status = ACCEPTED
+2. Coverage of P0+P1 ≥ 95%
+3. Any non-accepted items have documented risk acceptance + mitigation plan
