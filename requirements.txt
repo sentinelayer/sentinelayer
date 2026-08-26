@@ -8,3 +8,4 @@ python-jose
 passlib
 cryptography
 pyjwt
+requests==2.31.0
