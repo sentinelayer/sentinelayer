@@ -2,16 +2,12 @@
 
 ## Parties
 - **Principal**: SentinelLayer (Founder)
-- **Retainer**: External vCISO / IR provider (to be contracted)
+- **Retainer**: External vCISO / IR provider (TO BE NAMED + SIGNED)
 
 ## Scope (3 functions)
-1. **CSIRT / Incident Response** (Section 14.15)
-   - Severity HIGH: response < 1 hour
-2. **Dual-Control Approval** (Section 14.18)
-   - Planned High: approval < 4 hours
-   - Planned Medium: approval < 24 hours
-3. **Independent Verification / Peer Review** (Section 0.4)
-   - Asynchronous review of critical changes and post-action reviews
+1. **CSIRT / Incident Response** (Section 14.15) — Severity HIGH: response < 1 hour
+2. **Dual-Control Approval** (Section 14.18) — Planned High < 4h; Medium < 24h
+3. **Independent Verification / Peer Review** (Section 0.4) — async review + post-action < 24h
 
 ## SLAs
 | Event | SLA |
@@ -22,16 +18,22 @@
 | Planned change approval (Medium) | < 24 hours |
 
 ## Access
-- Read-only access to audit log and evidence store
-- No write access to production systems
+- Read-only audit log + evidence store
+- No write access to production
 
 ## Fees (indicative)
-- Retainer: USD 1,500 – 5,000 / month (bundled)
-- Year-1 budget envelope: USD 18,000 – 60,000 (see Section 33.4)
+- USD 1,500 – 5,000 / month bundled
+- Year-1 envelope: USD 18,000 – 60,000 (Section 33.4)
 
-## Non-Compliance Consequences
-- Missed SLA by Retainer → contractual penalty / replacement
-- Missed log submission by Founder → automatic REJECTED status + alert
+## Non-Compliance
+- Retainer miss SLA → penalty / replace
+- Founder miss emergency log < 1h → REJECTED + alert
+
+## Signature block
+| Role | Name | Date | Signature |
+|------|------|------|-----------|
+| Founder / Principal | | | |
+| External Retainer | | | |
 
 ## Status
-**PENDING CONTRACT SIGNATURE** — required before any P0 requirement can reach ACCEPTED (Independent Reviewer VALID check).
+**PENDING CONTRACT SIGNATURE** — blocker for Independent Reviewer VALID and any P0 ACCEPTED.

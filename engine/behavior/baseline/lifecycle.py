@@ -1,50 +1,62 @@
-from datetime import datetime, timedelta
+"""Baseline lifecycle: COLLECT → FILTER → VALIDATE → ESTABLISH → MONITOR → UPDATE → ROLLBACK (Section 11.14)."""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from math import sqrt
+from typing import Any
+
 
 class BaselineLifecycle:
-    def __init__(self):
-        self.phases = ["COLLECT", "FILTER", "VALIDATE", "ESTABLISH", "MONITOR", "UPDATE", "ROLLBACK"]
-        self.state = {}
-        self.baseline = {}
+    PHASES = ["COLLECT", "FILTER", "VALIDATE", "ESTABLISH", "MONITOR", "UPDATE", "ROLLBACK"]
 
-    def collect(self, endpoint: str, value: float):
-        if endpoint not in self.state:
-            self.state[endpoint] = []
-        self.state[endpoint].append({"value": value, "timestamp": datetime.utcnow().isoformat()})
+    def __init__(self, min_samples: int = 10, z_threshold: float = 3.0) -> None:
+        self.min_samples = min_samples
+        self.z_threshold = z_threshold
+        self.state: dict[str, list[dict[str, Any]]] = {}
+        self.baseline: dict[str, dict[str, Any]] = {}
+        self.version: dict[str, int] = {}
 
-    def filter(self, endpoint: str):
-        if endpoint in self.state:
-            data = self.state[endpoint]
-            threshold = 3
-            filtered = [d for d in data if abs(d["value"]) < threshold]
-            self.state[endpoint] = filtered
+    def collect(self, endpoint: str, value: float) -> None:
+        self.state.setdefault(endpoint, []).append(
+            {"value": float(value), "timestamp": datetime.now(timezone.utc).isoformat()}
+        )
 
-    def validate(self, endpoint: str):
-        if endpoint in self.state and len(self.state[endpoint]) >= 10:
-            return True
-        return False
+    def filter(self, endpoint: str, abs_max: float = 1e6) -> None:
+        data = self.state.get(endpoint, [])
+        self.state[endpoint] = [d for d in data if abs(d["value"]) < abs_max]
 
-    def establish(self, endpoint: str):
-        if self.validate(endpoint):
-            values = [d["value"] for d in self.state[endpoint]]
-            self.baseline[endpoint] = {
-                "mean": sum(values) / len(values),
-                "std": 1.0,
-                "sample_count": len(values),
-                "established_at": datetime.utcnow().isoformat()
-            }
+    def validate(self, endpoint: str) -> bool:
+        return len(self.state.get(endpoint, [])) >= self.min_samples
 
-    def monitor(self, endpoint: str, value: float):
-        if endpoint in self.baseline:
-            mean = self.baseline[endpoint]["mean"]
-            std = self.baseline[endpoint]["std"]
-            if abs(value - mean) > 3 * std:
-                return {"anomaly": True, "score": abs(value - mean) / std}
-        return {"anomaly": False}
+    def establish(self, endpoint: str) -> dict[str, Any] | None:
+        if not self.validate(endpoint):
+            return None
+        values = [d["value"] for d in self.state[endpoint]]
+        mean = sum(values) / len(values)
+        var = sum((v - mean) ** 2 for v in values) / max(len(values) - 1, 1)
+        std = sqrt(var) or 1.0
+        self.version[endpoint] = self.version.get(endpoint, 0) + 1
+        self.baseline[endpoint] = {
+            "mean": mean,
+            "std": std,
+            "sample_count": len(values),
+            "version": self.version[endpoint],
+            "established_at": datetime.now(timezone.utc).isoformat(),
+        }
+        return self.baseline[endpoint]
 
-    def update(self, endpoint: str):
-        if endpoint in self.state:
-            self.establish(endpoint)
+    def monitor(self, endpoint: str, value: float) -> dict[str, Any]:
+        b = self.baseline.get(endpoint)
+        if not b:
+            return {"anomaly": False, "reason": "no_baseline"}
+        z = abs(value - b["mean"]) / (b["std"] or 1.0)
+        if z > self.z_threshold:
+            return {"anomaly": True, "score": z, "version": b["version"]}
+        return {"anomaly": False, "score": z, "version": b["version"]}
 
-    def rollback(self, endpoint: str):
-        if endpoint in self.baseline:
-            del self.baseline[endpoint]
+    def update(self, endpoint: str) -> dict[str, Any] | None:
+        self.filter(endpoint)
+        return self.establish(endpoint)
+
+    def rollback(self, endpoint: str) -> None:
+        self.baseline.pop(endpoint, None)
