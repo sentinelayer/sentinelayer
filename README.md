@@ -68,29 +68,13 @@
 
 ---
 
-### 📊 GitHub Stats
+## 📊 GitHub Stats
 
-<p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=sentinelaver&show_icons=true&theme=radical&hide_border=true&bg_color=0D1117&icon_color=00FF9D&title_color=00FF9D" width="49%" />
-  <img src="https://github-readme-streak-stats.herokuapp.com/?user=sentinelaver&theme=radical&hide_border=true&background=0D1117&stroke=00FF9D&ring=00FF9D&fire=00FF9D" width="49%" />
-</p>
+![GitHub Stats](https://github-readme-stats.vercel.app/api?username=sentinelaver&show_icons=true&theme=dark)
 
-<p align="center">
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=sentinelaver&layout=compact&theme=radical&hide_border=true&bg_color=0D1117&title_color=00FF9D" width="49%" />
-  <img src="https://github-profile-trophy.vercel.app/?username=sentinelaver&theme=radical&no-frame=true&row=2&column=4&margin-w=15&margin-h=15" width="49%" />
-</p>
+![GitHub Streak](https://github-readme-streak-stats.herokuapp.com/?user=sentinelaver&theme=dark)
 
-<p align="center">
-  <img src="https://komarev.com/ghpvc/?username=sentinelaver&color=00FF9D&style=flat-square" alt="Profile Views" />
-</p>
-
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/sentinelaver/sentinelaver/output/github-contribution-grid-snake-dark.svg" />
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/sentinelaver/sentinelaver/output/github-contribution-grid-snake.svg" />
-    <img alt="github-snake" src="https://raw.githubusercontent.com/sentinelaver/sentinelaver/output/github-contribution-grid-snake-dark.svg" />
-  </picture>
-</p>
+![Profile Views](https://komarev.com/ghpvc/?username=sentinelaver&color=blue)
 
 ---
 
