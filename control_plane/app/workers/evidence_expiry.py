@@ -1,17 +1,19 @@
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from control_plane.app.infrastructure.db.session import SessionLocal
-from control_plane.app.domain.evidence.entity import Evidence
+from control_plane.app.infrastructure.db.models import Evidence
 
 def expire_old_evidence():
     db = SessionLocal()
     try:
         cutoff = datetime.utcnow() - timedelta(days=30)
         old_evidence = db.query(Evidence).filter(Evidence.created_at < cutoff).all()
+        expired_count = 0
         for ev in old_evidence:
             if ev.status != "EXPIRED":
                 ev.status = "EXPIRED"
+                expired_count += 1
         db.commit()
-        return {"expired": len(old_evidence)}
+        return {"expired": expired_count}
     finally:
         db.close()
