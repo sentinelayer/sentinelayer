@@ -115,6 +115,11 @@ def _scoped_actor(req: BehaviorRequest) -> str:
 
 @app.get("/health")
 def health() -> dict[str, Any]:
+    if state.redis_client is not None:
+        try:
+            state.redis_client.ping()
+        except redis.RedisError as exc:
+            raise HTTPException(status_code=503, detail={"status": "not_ready", "behavior_store": "unavailable"}) from exc
     return {"status": "healthy", "service": "behavior-engine", "version": "1.0.0", "state_store": "redis" if state.redis_client else "memory-dev-only"}
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from engine.decision.safety_layer import SafetyLayer
@@ -57,6 +57,11 @@ class RiskResponse(BaseModel):
 
 @app.get("/health")
 def health():
+    if correlation._redis is not None:
+        try:
+            correlation._redis.ping()
+        except Exception as exc:  # noqa: BLE001 - health must fail closed on store outage
+            raise HTTPException(status_code=503, detail={"status": "not_ready", "correlation_store": "unavailable"}) from exc
     return {
         "status": "healthy",
         "service": "risk-engine",
@@ -64,6 +69,7 @@ def health():
         "catalog_signals": len(catalog.list_signals()),
         "calibration_factor": calibration.get_factor(),
         "safety_mode": safety.mode,
+        "correlation_store": "redis" if correlation._redis is not None else "memory-dev-only",
     }
 
 
