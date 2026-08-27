@@ -12,10 +12,22 @@ branch_labels = None
 depends_on = None
 
 
-def _tenant_policy(table: str):
-    op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
-    op.execute(f"""
-        CREATE POLICY {table}_tenant_isolation ON {table}
+def _enable_rls():
+    op.execute("ALTER TABLE behavior_baselines ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE risk_calibrations ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE risk_decisions ENABLE ROW LEVEL SECURITY")
+    op.execute("""
+        CREATE POLICY behavior_baselines_tenant_isolation ON behavior_baselines
+        USING (tenant_id = current_setting('app.tenant_id', true))
+        WITH CHECK (tenant_id = current_setting('app.tenant_id', true))
+    """)
+    op.execute("""
+        CREATE POLICY risk_calibrations_tenant_isolation ON risk_calibrations
+        USING (tenant_id = current_setting('app.tenant_id', true))
+        WITH CHECK (tenant_id = current_setting('app.tenant_id', true))
+    """)
+    op.execute("""
+        CREATE POLICY risk_decisions_tenant_isolation ON risk_decisions
         USING (tenant_id = current_setting('app.tenant_id', true))
         WITH CHECK (tenant_id = current_setting('app.tenant_id', true))
     """)
@@ -66,17 +78,24 @@ def upgrade():
     }.items():
         for column in columns:
             op.create_index(f"ix_{table}_{column}", table, [column])
-        _tenant_policy(table)
+    _enable_rls()
 
 
 def downgrade():
-    for table, columns in {
-        "risk_decisions": ("created_at", "event_id", "tenant_id"),
-        "risk_calibrations": ("status", "tenant_id"),
-        "behavior_baselines": ("status", "baseline_key", "tenant_id"),
-    }.items():
-        op.execute(f"DROP POLICY IF EXISTS {table}_tenant_isolation ON {table}")
-        op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")
-        for column in columns:
-            op.drop_index(f"ix_{table}_{column}", table_name=table)
-        op.drop_table(table)
+    op.execute("DROP POLICY IF EXISTS risk_decisions_tenant_isolation ON risk_decisions")
+    op.execute("ALTER TABLE risk_decisions DISABLE ROW LEVEL SECURITY")
+    op.drop_index("ix_risk_decisions_created_at", table_name="risk_decisions")
+    op.drop_index("ix_risk_decisions_event_id", table_name="risk_decisions")
+    op.drop_index("ix_risk_decisions_tenant_id", table_name="risk_decisions")
+    op.drop_table("risk_decisions")
+    op.execute("DROP POLICY IF EXISTS risk_calibrations_tenant_isolation ON risk_calibrations")
+    op.execute("ALTER TABLE risk_calibrations DISABLE ROW LEVEL SECURITY")
+    op.drop_index("ix_risk_calibrations_status", table_name="risk_calibrations")
+    op.drop_index("ix_risk_calibrations_tenant_id", table_name="risk_calibrations")
+    op.drop_table("risk_calibrations")
+    op.execute("DROP POLICY IF EXISTS behavior_baselines_tenant_isolation ON behavior_baselines")
+    op.execute("ALTER TABLE behavior_baselines DISABLE ROW LEVEL SECURITY")
+    op.drop_index("ix_behavior_baselines_status", table_name="behavior_baselines")
+    op.drop_index("ix_behavior_baselines_baseline_key", table_name="behavior_baselines")
+    op.drop_index("ix_behavior_baselines_tenant_id", table_name="behavior_baselines")
+    op.drop_table("behavior_baselines")

@@ -12,15 +12,6 @@ branch_labels = None
 depends_on = None
 
 
-def _policy(table: str):
-    op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
-    op.execute(f"""
-        CREATE POLICY {table}_tenant_isolation ON {table}
-        USING (tenant_id = current_setting('app.tenant_id', true))
-        WITH CHECK (tenant_id = current_setting('app.tenant_id', true))
-    """)
-
-
 def upgrade():
     op.create_table(
         "legal_holds",
@@ -45,16 +36,32 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("completed_at", sa.DateTime(), nullable=True),
     )
-    for table in ("legal_holds", "privacy_export_requests"):
-        op.create_index(f"ix_{table}_tenant_id", table, ["tenant_id"])
-        op.create_index(f"ix_{table}_status", table, ["status"])
-        _policy(table)
+    op.create_index("ix_legal_holds_tenant_id", "legal_holds", ["tenant_id"])
+    op.create_index("ix_legal_holds_status", "legal_holds", ["status"])
+    op.create_index("ix_privacy_export_requests_tenant_id", "privacy_export_requests", ["tenant_id"])
+    op.create_index("ix_privacy_export_requests_status", "privacy_export_requests", ["status"])
+    op.execute("ALTER TABLE legal_holds ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE privacy_export_requests ENABLE ROW LEVEL SECURITY")
+    op.execute("""
+        CREATE POLICY legal_holds_tenant_isolation ON legal_holds
+        USING (tenant_id = current_setting('app.tenant_id', true))
+        WITH CHECK (tenant_id = current_setting('app.tenant_id', true))
+    """)
+    op.execute("""
+        CREATE POLICY privacy_export_requests_tenant_isolation ON privacy_export_requests
+        USING (tenant_id = current_setting('app.tenant_id', true))
+        WITH CHECK (tenant_id = current_setting('app.tenant_id', true))
+    """)
 
 
 def downgrade():
-    for table in ("privacy_export_requests", "legal_holds"):
-        op.execute(f"DROP POLICY IF EXISTS {table}_tenant_isolation ON {table}")
-        op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")
-        op.drop_index(f"ix_{table}_status", table_name=table)
-        op.drop_index(f"ix_{table}_tenant_id", table_name=table)
-        op.drop_table(table)
+    op.execute("DROP POLICY IF EXISTS privacy_export_requests_tenant_isolation ON privacy_export_requests")
+    op.execute("ALTER TABLE privacy_export_requests DISABLE ROW LEVEL SECURITY")
+    op.drop_index("ix_privacy_export_requests_status", table_name="privacy_export_requests")
+    op.drop_index("ix_privacy_export_requests_tenant_id", table_name="privacy_export_requests")
+    op.drop_table("privacy_export_requests")
+    op.execute("DROP POLICY IF EXISTS legal_holds_tenant_isolation ON legal_holds")
+    op.execute("ALTER TABLE legal_holds DISABLE ROW LEVEL SECURITY")
+    op.drop_index("ix_legal_holds_status", table_name="legal_holds")
+    op.drop_index("ix_legal_holds_tenant_id", table_name="legal_holds")
+    op.drop_table("legal_holds")
