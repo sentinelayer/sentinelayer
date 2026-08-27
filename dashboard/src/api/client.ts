@@ -3,6 +3,18 @@ const API_PREFIX = "/api/v1";
 
 export type ApiError = { status: number; message: string };
 
+async function errorFromResponse(res: Response): Promise<ApiError> {
+  const raw = await res.text();
+  let message = raw || res.statusText;
+  try {
+    const body = JSON.parse(raw) as { detail?: string; error?: string; message?: string };
+    message = body.detail || body.error || body.message || message;
+  } catch {
+    // Keep the plain response when the backend does not return JSON.
+  }
+  return { status: res.status, message };
+}
+
 function apiPath(path: string): string {
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return normalized === API_PREFIX || normalized.startsWith(`${API_PREFIX}/`)
@@ -21,10 +33,7 @@ function authHeaders(): HeadersInit {
 
 export async function apiGet<T = unknown>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${apiPath(path)}`, { headers: authHeaders() });
-  if (!res.ok) {
-    const body = await res.text();
-    throw { status: res.status, message: body || res.statusText } as ApiError;
-  }
+  if (!res.ok) throw await errorFromResponse(res);
   return res.json() as Promise<T>;
 }
 
@@ -34,10 +43,7 @@ export async function apiPost<T = unknown>(path: string, body: unknown): Promise
     headers: authHeaders(),
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw { status: res.status, message: text || res.statusText } as ApiError;
-  }
+  if (!res.ok) throw await errorFromResponse(res);
   return res.json() as Promise<T>;
 }
 

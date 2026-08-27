@@ -3,54 +3,104 @@ import { login, register } from "../../api/client";
 
 export default function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
-  const [tenantId, setTenantId] = useState<string>(() => crypto.randomUUID());
+  const [tenantId] = useState<string>(() => crypto.randomUUID());
   const [mode, setMode] = useState<"login" | "register">("login");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function submit(e: React.FormEvent) {
+  function switchMode(nextMode: "login" | "register") {
+    setMode(nextMode);
+    setError(null);
+  }
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
       if (mode === "register") {
-        await register(email, password, email.split("@")[0], tenantId);
+        await register(email.trim(), password, fullName.trim(), tenantId);
       }
-      await login(email, password);
+      await login(email.trim(), password);
       onSuccess();
-    } catch (err: any) {
-      setError(err?.message || "Auth failed");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : (err as { message?: string })?.message;
+      setError(message || "Permintaan gagal. Coba lagi.");
     } finally {
       setLoading(false);
     }
   }
 
+  const isRegister = mode === "register";
+
   return (
-    <div className="page" style={{ maxWidth: 420, margin: "4rem auto" }}>
-      <h1>SentinelLayer</h1>
-      <p>{mode === "login" ? "Sign in" : "Create tenant account"}</p>
-      <form onSubmit={submit}>
-        {mode === "register" && (
+    <main className="auth-page">
+      <section className="auth-card" aria-labelledby="auth-title">
+        <div className="auth-brand" aria-hidden="true">SL</div>
+        <p className="eyebrow">SENTINELLAYER CONTROL PLANE</p>
+        <h1 id="auth-title">{isRegister ? "Create your workspace" : "Welcome back"}</h1>
+        <p className="auth-subtitle">
+          {isRegister
+            ? "Create a secure tenant workspace to start monitoring your applications."
+            : "Sign in to continue to your security workspace."}
+        </p>
+
+        <form className="auth-form" onSubmit={submit}>
+          {isRegister && (
+            <label>
+              Full name
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                autoComplete="name"
+                placeholder="Your name"
+                required
+              />
+              <span className="field-help">A new workspace ID will be generated automatically.</span>
+            </label>
+          )}
           <label>
-            Tenant ID
-            <input value={tenantId} onChange={(e) => setTenantId(e.target.value)} required />
+            Email address
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              placeholder="you@example.com"
+              required
+            />
           </label>
-        )}
-        <label>
-          Email
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </label>
-        <label>
-          Password (min 12)
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={12} required />
-        </label>
-        {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={loading}>{loading ? "…" : mode === "login" ? "Login" : "Register"}</button>
-      </form>
-      <button type="button" onClick={() => setMode(mode === "login" ? "register" : "login")}>
-        {mode === "login" ? "Need an account? Register" : "Have an account? Login"}
-      </button>
-    </div>
+          <label>
+            Password
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={isRegister ? "new-password" : "current-password"}
+              placeholder="At least 12 characters"
+              minLength={12}
+              required
+            />
+            <span className="field-help">Use at least 12 characters.</span>
+          </label>
+
+          {error && <p className="auth-error" role="alert">{error}</p>}
+
+          <button className="primary-button" type="submit" disabled={loading}>
+            {loading ? "Please wait…" : isRegister ? "Create account" : "Sign in"}
+          </button>
+        </form>
+
+        <div className="auth-switch">
+          <span>{isRegister ? "Already have an account?" : "New to SentinelLayer?"}</span>
+          <button type="button" className="text-button" onClick={() => switchMode(isRegister ? "login" : "register")}>
+            {isRegister ? "Sign in" : "Create an account"}
+          </button>
+        </div>
+      </section>
+    </main>
   );
 }

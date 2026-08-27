@@ -3,6 +3,7 @@ builder = "NIXPACKS"
 buildCommand = "pip install -e ."
 
 [deploy]
+preDeployCommand = "PYTHONPATH=/app alembic -c alembic.ini upgrade head"
 startCommand = "sh -c \"uvicorn control_plane.app.main:app --host 0.0.0.0 --port $PORT\""
 healthcheckPath = "/health"
 restartPolicyType = "ON_FAILURE"
