@@ -39,7 +39,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
             secret = api_key.strip()
             if len(secret) < 24:
                 return JSONResponse(status_code=401, content={"error": "Invalid API key"})
-            db = SessionLocal()
+            session_factory = getattr(request.app.state, "session_factory", SessionLocal)
+            db = session_factory()
             try:
                 digest = hashlib.sha256(secret.encode("utf-8")).hexdigest()
                 now = datetime.now(UTC)

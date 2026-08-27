@@ -34,6 +34,7 @@ def override_db():
 
 
 app.dependency_overrides[get_db] = override_db
+app.state.session_factory = TestingSession
 
 
 def token(user_id: str, tenant_id: str, is_admin: bool = False) -> str:
