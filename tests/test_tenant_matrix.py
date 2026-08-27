@@ -35,7 +35,7 @@ async def test_unauthenticated_sensitive_paths_rejected():
 async def test_tenant_b_cannot_see_tenant_a_resources():
     async with AsyncClient(base_url=BASE, timeout=15.0) as client:
         ta, tb = f"ta-{_uid()}", f"tb-{_uid()}"
-        ea, eb = f"{ta}@test.local", f"{tb}@test.local"
+        ea, eb = f"{ta}@example.com", f"{tb}@example.com"
         password = "TestPass12chars!"
         await client.post("/api/v1/auth/register", json={"email": ea, "password": password, "full_name": "A", "tenant_id": ta})
         await client.post("/api/v1/auth/register", json={"email": eb, "password": password, "full_name": "B", "tenant_id": tb})

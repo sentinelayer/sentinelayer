@@ -1,6 +1,8 @@
 from sqlalchemy.exc import ProgrammingError
 
-import control_plane.app.infrastructure.db.models  # noqa: F401
+import importlib
+
+importlib.import_module("control_plane.app.infrastructure.db.models")
 from control_plane.app.infrastructure.db.session import Base, engine
 
 

@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
+import { apiGet } from '../../api/client'
 
 export const ConfigurationPage: React.FC = () => {
     const [config, setConfig] = useState<any>({})
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch('/api/v1/configuration')
-            .then(res => res.json())
+        apiGet('/configuration')
             .then((data: any) => { setConfig(data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])

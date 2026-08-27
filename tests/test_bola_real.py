@@ -18,8 +18,8 @@ async def test_bola_cross_tenant_object_access_denied():
     async with AsyncClient(base_url=BASE, timeout=15.0) as client:
         ta = f"tenant-a-{_uid()}"
         tb = f"tenant-b-{_uid()}"
-        ea = f"a-{_uid()}@test.local"
-        eb = f"b-{_uid()}@test.local"
+        ea = f"a-{_uid()}@example.com"
+        eb = f"b-{_uid()}@example.com"
         password = "TestPass12chars!"
 
         ra = await client.post("/api/v1/auth/register", json={"email": ea, "password": password, "full_name": "A", "tenant_id": ta})

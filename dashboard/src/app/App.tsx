@@ -6,6 +6,8 @@ import LoginPage from "../pages/login/LoginPage";
 import OverviewPage from "../pages/overview/OverviewPage";
 import ApplicationsPage from "../pages/applications/ApplicationsPage";
 import PoliciesPage from "../pages/policies/PoliciesPage";
+import { PolicyEditor } from "../pages/policies/PolicyEditor";
+import { PolicyDiff } from "../pages/policies/PolicyDiff";
 import IncidentsPage from "../pages/incidents/IncidentsPage";
 import EventsPage from "../pages/events/EventsPage";
 import AlertsPage from "../pages/alerts/AlertsPage";
@@ -41,6 +43,9 @@ export default function App() {
         <Route path="/heatmap" element={<RequireAuth><HeatmapPage /></RequireAuth>} />
         <Route path="/user-risk" element={<RequireAuth><UserRiskPage /></RequireAuth>} />
         <Route path="/policies" element={<RequireAuth><PoliciesPage /></RequireAuth>} />
+        <Route path="/policies/new/edit" element={<RequireAuth><PolicyEditor /></RequireAuth>} />
+        <Route path="/policies/:id/edit" element={<RequireAuth><PolicyEditor /></RequireAuth>} />
+        <Route path="/policies/:id/diff" element={<RequireAuth><PolicyDiff /></RequireAuth>} />
         <Route path="/configuration" element={<RequireAuth><ConfigurationPage /></RequireAuth>} />
         <Route path="/explainability" element={<RequireAuth><ExplainabilityPage /></RequireAuth>} />
         <Route path="/sla" element={<RequireAuth><SLAPage /></RequireAuth>} />

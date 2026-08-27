@@ -16,13 +16,13 @@ jobs:
       id-token: write
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
           go-version: "1.22"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.11"
 
@@ -34,13 +34,15 @@ jobs:
           sha256sum ../dist/gateway | tee ../dist/gateway.sha256
 
       - name: Package tarball
+        env:
+          RELEASE_REF: ${{ github.ref_name }}
         run: |
-          echo "SentinelLayer ${{ github.ref_name }}" > dist/VERSION
-          tar -czf sentinelayer-${{ github.ref_name }}.tar.gz -C dist .
-          sha256sum sentinelayer-${{ github.ref_name }}.tar.gz | tee dist/tarball.sha256
+          printf 'SentinelLayer %s\n' "$RELEASE_REF" > dist/VERSION
+          tar -czf "sentinelayer-${RELEASE_REF}.tar.gz" -C dist .
+          sha256sum "sentinelayer-${RELEASE_REF}.tar.gz" | tee dist/tarball.sha256
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@f713795cb21599bc4e5c4b58cbad1da852d7eeb9
 
       - name: Sign artifacts (keyless)
         env:
@@ -53,16 +55,15 @@ jobs:
           cosign sign-blob --yes \
             --output-signature dist/tarball.sig \
             --output-certificate dist/tarball.pem \
-            sentinelayer-${{ github.ref_name }}.tar.gz || true
+            sentinelayer-*.tar.gz
 
       - name: Generate SBOM note
         run: |
-          pip install cyclonedx-bom || true
-          cyclonedx-py requirements -i requirements.txt -o dist/sbom-python.json || \
-            echo '{"bomFormat":"CycloneDX","specVersion":"1.5","components":[]}' > dist/sbom-python.json
+          pip install cyclonedx-bom
+          cyclonedx-py requirements -i requirements.txt -o dist/sbom-python.json
 
       - name: Upload release assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
           files: |
             dist/gateway

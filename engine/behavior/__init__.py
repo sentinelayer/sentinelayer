@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections import defaultdict, deque
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from math import sqrt
 from typing import Any
 

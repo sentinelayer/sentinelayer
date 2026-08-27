@@ -4,18 +4,23 @@ from starlette.responses import JSONResponse
 
 
 class RBACMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app):
-        super().__init__(app)
-        self.resource_patterns = {
-            "admin": ["/api/v1/tenants", "/api/v1/applications", "/api/v1/policies"],
-            "user": ["/api/v1/metrics", "/api/v1/health"],
-        }
+    """Deny privileged resource paths unless the validated JWT is admin."""
+
+    ADMIN_PREFIXES = (
+        "/api/v1/admin",
+        "/api/v1/users",
+        "/api/v1/configuration",
+        "/api/v1/gates",
+        "/api/v1/evidence",
+        "/api/v1/offboarding",
+        "/api/v1/webhooks",
+    )
 
     async def dispatch(self, request: Request, call_next):
-        path = request.url.path
-        for pattern in self.resource_patterns.get("admin", []):
-            if path.startswith(pattern):
-                roles = getattr(request.state, "roles", [])
-                if "admin" not in roles:
-                    return JSONResponse(status_code=403, content={"error": "Admin access required"})
+        path = request.url.path.rstrip("/") or "/"
+        if any(path == prefix or path.startswith(prefix + "/") for prefix in self.ADMIN_PREFIXES):
+            is_admin = bool(getattr(request.state, "is_admin", False))
+            roles = getattr(request.state, "roles", []) or []
+            if not is_admin and "admin" not in roles:
+                return JSONResponse(status_code=403, content={"error": "Admin access required"})
         return await call_next(request)

@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { routes } from '../app/routes'
+import { logout } from '../api/client'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -30,8 +31,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation()
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('tenant_id')
+    logout()
     navigate('/login')
   }
 

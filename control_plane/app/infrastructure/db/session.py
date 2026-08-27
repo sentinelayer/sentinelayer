@@ -28,4 +28,7 @@ def set_tenant_context(db, tenant_id: str | None) -> None:
     safe = "".join(c for c in tenant_id if c.isalnum() or c in "-_")
     if not safe:
         return
-    db.execute(text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": safe})
+    # PostgreSQL uses transaction-local RLS context. SQLite has no set_config;
+    # application-level tenant filters remain active for local tests.
+    if db.bind is not None and db.bind.dialect.name == "postgresql":
+        db.execute(text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": safe})

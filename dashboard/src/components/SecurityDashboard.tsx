@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiGet } from '../api/client';
 
 interface Metric {
   name: string;
@@ -12,21 +13,16 @@ const SecurityDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        const res = await fetch('/api/v1/metrics/security');
-        if (!res.ok) throw new Error('Failed to fetch metrics');
-        const data = await res.json();
+    apiGet<Metric[]>('/metrics/security')
+      .then((data) => {
         setMetrics(data);
         setError(null);
-      } catch (e) {
+      })
+      .catch(() => {
         setError('No data available - Please check backend');
         setMetrics([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMetrics();
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div>Loading security metrics...</div>;

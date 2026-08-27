@@ -25,21 +25,38 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.11"
       - name: Install deps
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Unit + security-related tests
+      - name: Start control plane
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sentinelayer
           REDIS_URL: redis://localhost:6379/0
           JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
           SL_ENV: test
         run: |
-          pytest tests/unit tests/test_bola_real.py tests/test_tenant_matrix.py \
+          nohup uvicorn control_plane.app.main:app --host 127.0.0.1 --port 8005 > /tmp/control-plane.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8005/health > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/control-plane.log
+          exit 1
+      - name: Unit + security-related tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sentinelayer
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
+          SL_ENV: test
+          CONTROL_PLANE_URL: http://127.0.0.1:8005
+        run: |
+          PYTHONPATH=. pytest tests/unit tests/test_bola_real.py tests/test_tenant_matrix.py \
             tests/test_security_e2e.py -v --tb=short \
-            --ignore=tests/load --ignore=tests/resilience || true
+            --ignore=tests/load --ignore=tests/resilience

@@ -1,16 +1,16 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from control_plane.app.infrastructure.db.models import Tenant
-from control_plane.app.infrastructure.db.session import get_db
+from control_plane.app.api.deps import db_with_tenant
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
 
 
 class TenantCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=255)
 
 
 def _tenant(request: Request) -> str:
@@ -22,7 +22,7 @@ def _tenant(request: Request) -> str:
 
 @router.post("/")
 @router.post("")
-async def create_tenant(data: TenantCreate, request: Request, db: Session = Depends(get_db)):
+async def create_tenant(data: TenantCreate, request: Request, db: Session = Depends(db_with_tenant)):
     # only create self-record for current tenant context (solo: one row per tenant id)
     tenant_id = _tenant(request)
     existing = db.query(Tenant).filter(Tenant.id == tenant_id).first()
@@ -37,14 +37,14 @@ async def create_tenant(data: TenantCreate, request: Request, db: Session = Depe
 
 @router.get("/")
 @router.get("")
-async def list_tenants(request: Request, db: Session = Depends(get_db)):
+async def list_tenants(request: Request, db: Session = Depends(db_with_tenant)):
     tenant_id = _tenant(request)
     tenants = db.query(Tenant).filter(Tenant.id == tenant_id).all()
     return [{"id": t.id, "name": t.name} for t in tenants]
 
 
 @router.get("/{tenant_id}")
-async def get_tenant(tenant_id: str, request: Request, db: Session = Depends(get_db)):
+async def get_tenant(tenant_id: str, request: Request, db: Session = Depends(db_with_tenant)):
     caller = _tenant(request)
     if tenant_id != caller:
         raise HTTPException(status_code=403, detail="Forbidden")

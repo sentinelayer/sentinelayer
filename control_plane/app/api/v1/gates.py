@@ -3,7 +3,7 @@ import json
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from control_plane.app.domain.gate.engine import (
@@ -26,12 +26,12 @@ class RequirementCreate(BaseModel):
     requirement_id: str
     owner: str
     requirement: str
-    acceptance_criteria: list[str] = []
+    acceptance_criteria: list[str] = Field(default_factory=list)
     security_impact: str = ""
     test_method: str = ""
     failure_behavior: str = ""
     rollback_strategy: str = ""
-    dependency: list[str] = []
+    dependency: list[str] = Field(default_factory=list)
     reviewer: str = "External Retainer"
     criticality: str = "P1"
     gate: str = "MVP"
@@ -163,7 +163,7 @@ async def update_checks(req_id: str, data: CheckUpdate, db: Session = Depends(ge
     if not r:
         raise HTTPException(404, "Requirement not found")
 
-    for field, value in data.dict(exclude_unset=True).items():
+    for field, value in data.model_dump(exclude_unset=True).items():
         setattr(r, field, value)
     r.updated_at = datetime.now(UTC)
     db.commit()

@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react'
+import { apiGet } from '../../../api/client'
 
 export const BreakGlassPage: React.FC = () => {
-    const [sessions, setSessions] = useState([])
+    const [sessions, setSessions] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        fetch('/api/v1/admin/breakglass')
-            .then(res => res.json())
-            .then((data: any) => { setSessions(data); setLoading(false) })
-            .catch(() => setLoading(false))
+        apiGet<any[]>('/admin/breakglass')
+            .then(setSessions)
+            .catch(() => setError('Unable to load break-glass sessions'))
+            .finally(() => setLoading(false))
     }, [])
 
     if (loading) return <div>Loading...</div>
+    if (error) return <div className="error">{error}</div>
 
     return (
         <div className="break-glass-page">
@@ -21,7 +24,7 @@ export const BreakGlassPage: React.FC = () => {
                     <tr><th>ID</th><th>User</th><th>Reason</th><th>Status</th><th>Expires</th></tr>
                 </thead>
                 <tbody>
-                    {sessions.map((s: any) => (
+                    {sessions.map((s) => (
                         <tr key={s.id}>
                             <td>{s.id}</td>
                             <td>{s.user_id}</td>
