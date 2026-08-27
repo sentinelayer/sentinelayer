@@ -13,9 +13,6 @@ def test_cl_te_smuggling():
     assert response.status_code in [200, 400, 403]
 
 def test_duplicate_content_length():
-    headers = {
-        "Content-Length": "10",
-        "Content-Length": "20"
-    }
+    headers = [("Content-Length", "10"), ("Content-Length", "20")]
     response = client.get("/health", headers=headers)
     assert response.status_code in [200, 400, 403]

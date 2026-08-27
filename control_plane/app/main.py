@@ -3,6 +3,7 @@ import os
 from fastapi import FastAPI, Header, HTTPException, Response
 from prometheus_client import CONTENT_TYPE_LATEST
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from control_plane.app.api.v1.router import router
 from control_plane.app.lifespan import lifespan
@@ -13,6 +14,19 @@ from control_plane.app.middleware.tenant import TenantMiddleware
 
 app = FastAPI(title="SentinelLayer Control Plane", version="0.1.0", lifespan=lifespan)
 
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        if os.getenv("SL_ENV", "development").lower() == "production":
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        return response
+
+
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 
 app.add_middleware(
@@ -22,6 +36,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Add middleware from inner to outer: authentication must populate claims
 # before tenant and RBAC checks run.

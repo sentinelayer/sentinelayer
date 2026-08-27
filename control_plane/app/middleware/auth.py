@@ -10,7 +10,7 @@ from sqlalchemy import or_
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-from control_plane.app.infrastructure.db.models import ApiKeyRecord
+from control_plane.app.infrastructure.db.models import ApiKeyRecord, AuthSession, User
 from control_plane.app.infrastructure.db.session import SessionLocal
 
 PUBLIC_PATHS = {
@@ -82,6 +82,24 @@ class AuthMiddleware(BaseHTTPMiddleware):
             request.state.auth_method = "jwt"
             if not request.state.user_id or not request.state.tenant_id:
                 return JSONResponse(status_code=401, content={"error": "Invalid token claims"})
+            token_id = payload.get("jti")
+            if token_id:
+                session_factory = getattr(request.app.state, "session_factory", SessionLocal)
+                db = session_factory()
+                try:
+                    now = datetime.now(UTC)
+                    session = db.query(AuthSession).filter(
+                        AuthSession.token_id == token_id,
+                        AuthSession.user_id == request.state.user_id,
+                        AuthSession.tenant_id == request.state.tenant_id,
+                        AuthSession.revoked_at.is_(None),
+                        AuthSession.expires_at > now,
+                    ).first()
+                    user = db.query(User).filter(User.id == request.state.user_id).first()
+                    if not session or (user is not None and not user.is_active):
+                        return JSONResponse(status_code=401, content={"error": "Session revoked or expired"})
+                finally:
+                    db.close()
         except jwt.ExpiredSignatureError:
             return JSONResponse(status_code=401, content={"error": "Token expired"})
         except jwt.InvalidTokenError:
