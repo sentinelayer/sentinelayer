@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import os
 import socket
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -16,8 +17,8 @@ from control_plane.app.infrastructure.db.models import WebhookDelivery, WebhookR
 from control_plane.app.infrastructure.db.session import SessionLocal
 from control_plane.app.infrastructure.kms.client import KMSClient
 
-MAX_ATTEMPTS = 5
-TIMEOUT_SECONDS = 5
+MAX_ATTEMPTS = max(1, int(os.getenv("WEBHOOK_DELIVERY_MAX_ATTEMPTS", "5")))
+TIMEOUT_SECONDS = max(1, int(os.getenv("WEBHOOK_DELIVERY_TIMEOUT_SECONDS", "5")))
 _kms = KMSClient()
 
 
