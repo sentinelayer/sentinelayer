@@ -16,7 +16,6 @@ def test_postgres_rls_isolation_with_unprivileged_role():
         pytest.skip("set TEST_POSTGRES_RLS=1 to run live PostgreSQL RLS evidence")
 
     role = f"sl_rls_probe_{uuid.uuid4().hex[:12]}"
-    role_password = uuid.uuid4().hex
     tenant_a = f"rls-a-{uuid.uuid4().hex}"
     tenant_b = f"rls-b-{uuid.uuid4().hex}"
     hold_a = str(uuid.uuid4())
@@ -25,11 +24,11 @@ def test_postgres_rls_isolation_with_unprivileged_role():
         pytest.fail("DATABASE_URL must be configured for the live RLS probe")
     admin = engine.raw_connection()
     role_identifier = sql.Identifier(role)
+    role_active = False
     try:
         admin.autocommit = True
         with admin.cursor() as cur:
-            cur.execute(sql.SQL("CREATE ROLE {} LOGIN").format(role_identifier))
-            cur.execute(sql.SQL("ALTER ROLE {} PASSWORD %s").format(role_identifier), (role_password,))
+            cur.execute(sql.SQL("CREATE ROLE {} NOLOGIN").format(role_identifier))
             cur.execute(sql.SQL("GRANT USAGE ON SCHEMA public TO {}").format(role_identifier))
             cur.execute(sql.SQL("GRANT SELECT, INSERT ON legal_holds TO {}").format(role_identifier))
             cur.execute("ALTER TABLE legal_holds FORCE ROW LEVEL SECURITY")
@@ -42,31 +41,22 @@ def test_postgres_rls_isolation_with_unprivileged_role():
                 "(%s, %s, %s, %s, %s, now()), (%s, %s, %s, %s, %s, now())",
                 (hold_a, tenant_a, "test-a", "{}", "active", hold_b, tenant_b, "test-b", "{}", "active"),
             )
-
-        user = psycopg2.connect(
-            host=engine.url.host,
-            port=engine.url.port or 5432,
-            dbname=engine.url.database,
-            user=role,
-            password=role_password,
-            connect_timeout=5,
-        )
-        try:
-            with user.cursor() as cur:
-                cur.execute("SELECT set_config('app.tenant_id', %s, false)", (tenant_a,))
-                cur.execute("SELECT id, tenant_id FROM legal_holds ORDER BY id")
-                assert cur.fetchall() == [(hold_a, tenant_a)]
-                with pytest.raises(psycopg2.errors.InsufficientPrivilege):
-                    cur.execute(
-                        "INSERT INTO legal_holds (id, tenant_id, reason, scope, status, created_at) "
-                        "VALUES (%s, %s, %s, %s, %s, now())",
-                        (str(uuid.uuid4()), tenant_b, "cross-tenant", "{}", "active"),
-                    )
-                user.rollback()
-        finally:
-            user.close()
+            cur.execute(sql.SQL("SET ROLE {}").format(role_identifier))
+            role_active = True
+            cur.execute("SELECT set_config('app.tenant_id', %s, false)", (tenant_a,))
+            cur.execute("SELECT id, tenant_id FROM legal_holds ORDER BY id")
+            assert cur.fetchall() == [(hold_a, tenant_a)]
+            with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+                cur.execute(
+                    "INSERT INTO legal_holds (id, tenant_id, reason, scope, status, created_at) "
+                    "VALUES (%s, %s, %s, %s, %s, now())",
+                    (str(uuid.uuid4()), tenant_b, "cross-tenant", "{}", "active"),
+                )
+            admin.rollback()
     finally:
         with admin.cursor() as cur:
+            if role_active:
+                cur.execute("RESET ROLE")
             cur.execute("ALTER TABLE legal_holds NO FORCE ROW LEVEL SECURITY")
             cur.execute("DELETE FROM legal_holds WHERE id IN (%s, %s)", (hold_a, hold_b))
             cur.execute("DELETE FROM tenants WHERE id IN (%s, %s)", (tenant_a, tenant_b))
