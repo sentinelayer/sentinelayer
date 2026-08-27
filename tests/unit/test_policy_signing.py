@@ -22,3 +22,24 @@ def test_policy_signature_is_stable_for_same_config(monkeypatch):
     policy = {"policy_id": "p1", "tenant_id": "t1", "version": 1, "rules": {"mode": "monitor"}}
     assert first.sign(policy) == second.sign(policy)
     assert first.get_public_key() == second.get_public_key()
+
+
+def test_policy_key_rotation_keeps_previous_signatures_verifiable(monkeypatch):
+    import base64
+
+    old_seed = base64.b64encode(b"1" * 32).decode("ascii")
+    new_seed = base64.b64encode(b"2" * 32).decode("ascii")
+    monkeypatch.setenv("SL_ENV", "test")
+    monkeypatch.setenv("POLICY_SIGNING_PRIVATE_KEY", old_seed)
+    monkeypatch.setenv("POLICY_SIGNING_KEY_ID", "old-key")
+    old_signer = PolicySigning()
+    policy = {"policy_id": "p1", "tenant_id": "t1", "version": 1, "rules": {"mode": "block"}}
+    signature = old_signer.sign(policy)
+
+    monkeypatch.setenv("POLICY_SIGNING_PRIVATE_KEY", new_seed)
+    monkeypatch.setenv("POLICY_SIGNING_KEY_ID", "new-key")
+    monkeypatch.setenv("POLICY_SIGNING_PUBLIC_KEYS_JSON", '{"old-key": "' + old_signer.get_public_key() + '"}')
+    rotated = PolicySigning()
+    assert rotated.verify(policy, signature, "old-key") is True
+    assert rotated.verify(policy, signature, "new-key") is False
+    assert rotated.verify(policy, signature, "unknown-key") is False

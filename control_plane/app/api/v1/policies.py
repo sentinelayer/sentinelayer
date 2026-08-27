@@ -59,8 +59,11 @@ def _signature_for(policy_id: str, tenant_id: str, version: int, rules: str | di
 def _signature_valid(version: PolicyVersion) -> bool:
     return bool(
         version.signature
-        and version.signing_key_id == _signer.key_id
-        and _signer.verify(_version_payload(version.policy_id, version.tenant_id, version.version, version.rules), version.signature)
+        and _signer.verify(
+            _version_payload(version.policy_id, version.tenant_id, version.version, version.rules),
+            version.signature,
+            version.signing_key_id,
+        )
     )
 
 
