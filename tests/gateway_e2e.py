@@ -31,7 +31,9 @@ def wait_http(url: str, timeout: float = 20.0) -> None:
 
 
 def request(url: str, data: bytes | None = None, headers: dict[str, str] | None = None) -> tuple[int, bytes, dict[str, str]]:
-    req = urllib.request.Request(url, data=data, headers=headers or {}, method="POST" if data is not None else "GET")
+    request_headers = {"Accept": "application/json", "User-Agent": "SentinelLayer-E2E/1.0"}
+    request_headers.update(headers or {})
+    req = urllib.request.Request(url, data=data, headers=request_headers, method="POST" if data is not None else "GET")
     try:
         with urllib.request.urlopen(req, timeout=5) as response:
             return response.status, response.read(), dict(response.headers)
