@@ -1,42 +1,21 @@
-import React, { useState } from 'react'
-import { apiPost } from '../../../api/client'
+import React, { useEffect, useState } from "react";
+import { apiGet, apiPost, ApiError } from "../../../api/client";
 
-export const HighRiskActionsPage: React.FC = () => {
-    const [action, setAction] = useState('')
-    const [reason, setReason] = useState('')
-    const [result, setResult] = useState('')
+type Action = { id: string; action: string; reason: string; requested_by?: string; approved_by?: string | null; status: string; requested_at?: string; approved_at?: string | null; executed_at?: string | null; requires_approval?: boolean; revoked_sessions?: number };
+function errorMessage(error: unknown): string { return (error as ApiError)?.message || (error instanceof Error ? error.message : "Unable to load high-risk actions"); }
+function date(value?: string | null): string { if (!value) return "Not recorded"; const current = new Date(value); return Number.isNaN(current.getTime()) ? "Not recorded" : current.toLocaleString(); }
 
-    const handleExecute = async () => {
-        if (!action || !reason.trim()) {
-            setResult('Action and reason are required.')
-            return
-        }
-        try {
-            const data = await apiPost('/admin/high-risk-actions', { action, reason: reason.trim() })
-            setResult(JSON.stringify(data, null, 2))
-        } catch (error: any) {
-            setResult('Error: ' + (error?.message || 'Request failed'))
-        }
-    }
-
-    return (
-        <div className="high-risk-actions-page">
-            <h1>High Risk Actions</h1>
-            <p>Warning: These actions require a separate approval and are recorded in the audit trail.</p>
-            <div className="action-form">
-                <select value={action} onChange={(e) => setAction(e.target.value)}>
-                    <option value="">Select Action</option>
-                    <option value="block_tenant">Block Tenant</option>
-                    <option value="revoke_all_tokens">Revoke All Tokens</option>
-                    <option value="disable_waf">Disable WAF</option>
-                    <option value="force_rotation">Force Key Rotation</option>
-                </select>
-                <textarea placeholder="Reason for action" value={reason} onChange={(e) => setReason(e.target.value)} />
-                <button onClick={handleExecute} disabled={!action || !reason.trim()}>Request Approval</button>
-            </div>
-            {result && <pre>{result}</pre>}
-        </div>
-    )
+export default function HighRiskActionsPage() {
+  const [items, setItems] = useState<Action[]>([]);
+  const [action, setAction] = useState("revoke_all_tokens");
+  const [reason, setReason] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [working, setWorking] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  async function load() { try { const data = await apiGet<Action[]>("/admin/high-risk-actions"); setItems(Array.isArray(data) ? data : []); setError(null); } catch (currentError) { setError(errorMessage(currentError)); } }
+  useEffect(() => { void load(); }, []);
+  async function requestAction(event: React.FormEvent) { event.preventDefault(); setCreating(true); setError(null); try { await apiPost("/admin/high-risk-actions", { action, reason: reason.trim() }); setReason(""); await load(); } catch (currentError) { setError(errorMessage(currentError)); } finally { setCreating(false); } }
+  async function transition(id: string, verb: "approve" | "execute" | "reject") { setWorking(`${verb}:${id}`); setError(null); try { await apiPost(`/admin/high-risk-actions/${id}/${verb}`, {}); await load(); } catch (currentError) { setError(errorMessage(currentError)); } finally { setWorking(null); } }
+  const pending = items.filter((item) => item.status === "PENDING_APPROVAL").length;
+  return <div className="page"><section className="hero-row"><div><p className="eyebrow">ADMIN / CONTROLLED ACTIONS</p><h1 className="page-title">High-risk actions</h1><p className="page-lede">Request only the capability that is needed. Every action is durable, audited, and requires a second administrator before execution.</p></div><span className="environment-badge"><span className="status-dot status-dot-good" />Two-person control</span></section>{error && <div className="inline-alert"><strong>Admin action failed</strong><span>{error}</span><button className="text-button" type="button" onClick={() => void load()}>Retry</button></div>}<section className="metric-grid metric-grid-four"><article className="metric-card metric-card-danger"><span>Pending approval</span><strong>{pending}</strong><small>Must be approved by another admin</small></article><article className="metric-card"><span>Total requests</span><strong>{items.length}</strong><small>Durable action records</small></article><article className="metric-card"><span>Registered capability</span><strong>1</strong><small>Revoke all sessions/tokens</small></article><article className="metric-card"><span>Execution model</span><strong>2P</strong><small>Request · approve · execute</small></article></section><section className="dashboard-grid"><article className="panel"><div className="panel-heading"><div><p className="eyebrow">REQUEST ACTION</p><h2>Start a controlled action</h2></div></div><p className="panel-note">Only the currently registered capability is offered by the API. The requester cannot approve their own request.</p><form className="application-form" onSubmit={requestAction}><label>Action<select value={action} onChange={(event) => setAction(event.target.value)}><option value="revoke_all_tokens">Revoke all active sessions</option></select></label><label>Reason<textarea value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Explain why this action is necessary" rows={5} required /></label><button className="primary-button" type="submit" disabled={creating}>{creating ? "Requesting…" : "Request approval"}</button></form></article><article className="panel"><div className="panel-heading"><div><p className="eyebrow">CONTROL MODEL</p><h2>No silent execution</h2></div></div><div className="setup-steps"><div className="setup-step setup-step-active"><b>01</b><span><strong>Request</strong><small>Record actor, capability, reason, and time.</small></span></div><div className="setup-step"><b>02</b><span><strong>Approve</strong><small>A different admin reviews the request.</small></span></div><div className="setup-step"><b>03</b><span><strong>Execute</strong><small>Execution is available only after approval.</small></span></div></div></article></section><section className="panel application-list-panel"><div className="panel-heading"><div><p className="eyebrow">ACTION REGISTER</p><h2>{items.length} record{items.length === 1 ? "" : "s"}</h2></div><button className="secondary-button compact-button" type="button" onClick={() => void load()}>Refresh</button></div>{items.length ? <div className="admin-record-list">{items.map((item) => <article className="admin-record" key={item.id}><div className="admin-record-main"><div className="admin-record-title"><span className={`decision-badge ${item.status === "EXECUTED" ? "badge-neutral" : item.status === "PENDING_APPROVAL" ? "badge-warning" : "badge-danger"}`}>{item.status.replace(/_/g, " ")}</span><b>{item.action.replace(/_/g, " ")}</b></div><p>{item.reason}</p><small>Requested by {item.requested_by || "unknown"} · {date(item.requested_at)}{item.approved_by ? ` · Approved by ${item.approved_by}` : ""}</small></div><div className="admin-record-actions">{item.status === "PENDING_APPROVAL" && <><button className="secondary-button compact-button" type="button" disabled={working !== null} onClick={() => void transition(item.id, "approve")}>Approve</button><button className="danger-button" type="button" disabled={working !== null} onClick={() => void transition(item.id, "reject")}>Reject</button></>}{item.status === "APPROVED" && <button className="primary-button compact-button" type="button" disabled={working !== null} onClick={() => void transition(item.id, "execute")}>{working === `execute:${item.id}` ? "Executing…" : "Execute"}</button>}</div></article>)}</div> : <div className="empty-state"><strong>No high-risk action requests</strong><span>Durable requests will appear here. No action is executed from an unapproved state.</span></div>}</section></div>;
 }
-
-export default HighRiskActionsPage;

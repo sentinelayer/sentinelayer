@@ -632,3 +632,16 @@ td {
 .evidence-card p { margin: 0; color: #8398ab; font-size: 0.7rem; line-height: 1.45; }
 .evidence-card code, .evidence-card small { overflow: hidden; color: #71869b; font-size: 0.62rem; text-overflow: ellipsis; white-space: nowrap; }
 .evidence-card small { color: #8aa2b6; }
+
+.admin-record-list { display: grid; }
+.admin-record { display: flex; gap: 1rem; align-items: center; justify-content: space-between; padding: 0.95rem 0.5rem; border-bottom: 1px solid rgba(157, 177, 207, 0.1); }
+.admin-record:last-child { border-bottom: 0; }
+.admin-record-main { min-width: 0; flex: 1; }
+.admin-record-title { display: flex; gap: 0.7rem; align-items: center; }
+.admin-record-title b { color: #dce9f2; font-size: 0.8rem; text-transform: capitalize; }
+.admin-record-main p { margin: 0.45rem 0 0; color: #a6b9ca; font-size: 0.75rem; line-height: 1.45; }
+.admin-record-main small { display: block; margin-top: 0.35rem; color: #73889c; font-size: 0.66rem; }
+.admin-record-actions { display: flex; gap: 0.45rem; flex: 0 0 auto; align-items: center; }
+.danger-button { min-height: 34px; padding: 0.4rem 0.65rem; border: 1px solid rgba(255, 120, 136, 0.35); border-radius: 9px; color: #ffacb6; background: rgba(143, 40, 60, 0.15); font-size: 0.68rem; font-weight: 700; }
+.danger-button:hover { background: rgba(143, 40, 60, 0.3); }
+@media (max-width: 620px) { .admin-record { align-items: stretch; flex-direction: column; } .admin-record-actions { justify-content: flex-end; } }
