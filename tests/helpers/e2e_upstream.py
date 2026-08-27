@@ -16,7 +16,12 @@ class Handler(BaseHTTPRequestHandler):
         self._respond()
 
     def _respond(self):
-        body = json.dumps({"upstream": True, "path": self.path}).encode()
+        body = json.dumps({
+            "upstream": True,
+            "path": self.path,
+            "decision": self.headers.get("X-SL-Decision"),
+            "score": self.headers.get("X-SL-Score"),
+        }).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))

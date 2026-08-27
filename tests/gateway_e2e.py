@@ -67,10 +67,11 @@ def main() -> None:
         processes.append(subprocess.Popen([gateway_bin], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT))
         wait_http(f"http://127.0.0.1:{GATEWAY_PORT}/health")
 
-        status, body, headers = request(f"http://127.0.0.1:{GATEWAY_PORT}/safe")
+        status, body, _ = request(f"http://127.0.0.1:{GATEWAY_PORT}/safe")
         assert status == 200, (status, body)
-        assert json.loads(body)["upstream"] is True
-        assert headers.get("X-SL-Decision") in {"ALLOW", "MONITOR"}
+        safe_response = json.loads(body)
+        assert safe_response["upstream"] is True
+        assert safe_response["decision"] in {"ALLOW", "MONITOR"}
 
         attack = b'{"username":"admin\' OR 1=1 --"}'
         status, _, _ = request(f"http://127.0.0.1:{GATEWAY_PORT}/safe", attack, {"Content-Type": "application/json"})
