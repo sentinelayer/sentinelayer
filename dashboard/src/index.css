@@ -624,3 +624,11 @@ td {
 .config-card strong { overflow: hidden; color: #e4eff5; font-size: 1.18rem; text-overflow: ellipsis; white-space: nowrap; }
 .config-card small { color: #71879c; font-size: 0.67rem; line-height: 1.45; }
 .configuration-editor-grid { margin-top: 1rem; }
+
+.evidence-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.8rem; }
+.evidence-card { display: grid; gap: 0.5rem; padding: 0.9rem; border: 1px solid var(--sl-line); border-radius: 11px; background: rgba(157, 177, 207, 0.035); }
+.evidence-card:hover { border-color: rgba(114, 226, 206, 0.35); }
+.evidence-card h3 { margin: 0.4rem 0 0; color: #e6f0f5; font-size: 0.9rem; }
+.evidence-card p { margin: 0; color: #8398ab; font-size: 0.7rem; line-height: 1.45; }
+.evidence-card code, .evidence-card small { overflow: hidden; color: #71869b; font-size: 0.62rem; text-overflow: ellipsis; white-space: nowrap; }
+.evidence-card small { color: #8aa2b6; }
