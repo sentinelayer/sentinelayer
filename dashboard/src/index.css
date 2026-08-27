@@ -616,3 +616,11 @@ td {
 .alert-main code { overflow: hidden; color: #687d91; font-size: 0.61rem; text-overflow: ellipsis; white-space: nowrap; }
 .alert-action { min-height: 34px; flex: 0 0 auto; padding: 0.4rem 0.65rem; font-size: 0.68rem; }
 @media (max-width: 620px) { .alert-row { align-items: stretch; flex-wrap: wrap; } .alert-action { margin-left: 1.5rem; } }
+
+.config-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.8rem; }
+.config-card { display: grid; gap: 0.45rem; min-height: 130px; padding: 0.9rem; border: 1px solid var(--sl-line); border-radius: 11px; color: inherit; background: rgba(16, 25, 35, 0.8); text-align: left; transition: border-color 160ms ease, transform 160ms ease, background 160ms ease; }
+.config-card:hover, .config-card-selected { border-color: rgba(114, 226, 206, 0.42); background: rgba(114, 226, 206, 0.07); transform: translateY(-1px); }
+.config-card .config-key { color: #8ba2b8; font-size: 0.69rem; font-weight: 800; text-transform: capitalize; }
+.config-card strong { overflow: hidden; color: #e4eff5; font-size: 1.18rem; text-overflow: ellipsis; white-space: nowrap; }
+.config-card small { color: #71879c; font-size: 0.67rem; line-height: 1.45; }
+.configuration-editor-grid { margin-top: 1rem; }

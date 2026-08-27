@@ -1,31 +1,22 @@
-import React, { useEffect, useState } from 'react'
-import { apiGet } from '../../api/client'
+import React, { useEffect, useMemo, useState } from "react";
+import { apiGet, apiPut, ApiError } from "../../api/client";
 
-export const ConfigurationPage: React.FC = () => {
-    const [config, setConfig] = useState<any>({})
-    const [loading, setLoading] = useState(true)
+type ConfigValue = string | number | boolean | null;
+type Config = Record<string, ConfigValue>;
+const DESCRIPTIONS: Record<string, string> = { environment: "Runtime environment reported by the control plane.", rate_limit: "Default request rate limit used by the configured runtime.", jwt_expiry_minutes: "Access token lifetime in minutes.", mfa_enabled: "Whether MFA is enabled in the control plane.", waf_enabled: "Whether WAF protection is enabled by configuration.", threat_intel_enabled: "Whether threat intelligence checks are enabled.", log_level: "Application logging verbosity.", version: "Control plane application version." };
+function errorMessage(error: unknown): string { return (error as ApiError)?.message || (error instanceof Error ? error.message : "Unable to load configuration"); }
 
-    useEffect(() => {
-        apiGet('/configuration')
-            .then((data: any) => { setConfig(data); setLoading(false) })
-            .catch(() => setLoading(false))
-    }, [])
-
-    if (loading) return <div>Loading...</div>
-
-    return (
-        <div className="configuration-page">
-            <h1>Configuration</h1>
-            <div className="config-grid">
-                {Object.entries(config).map(([key, value]) => (
-                    <div key={key} className="config-item">
-                        <span className="config-key">{key}</span>
-                        <span className="config-value">{String(value)}</span>
-                    </div>
-                ))}
-            </div>
-        </div>
-    )
+export default function ConfigurationPage() {
+  const [config, setConfig] = useState<Config>({});
+  const [selected, setSelected] = useState("rate_limit");
+  const [draft, setDraft] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const load = async () => { try { const data = await apiGet<Config>("/configuration"); setConfig(data || {}); setDraft(String(data?.[selected] ?? "")); setError(null); } catch (currentError) { setError(errorMessage(currentError)); } finally { setLoading(false); } };
+  useEffect(() => { void load(); }, []);
+  const entries = useMemo(() => Object.entries(config), [config]);
+  function choose(key: string) { setSelected(key); setDraft(String(config[key] ?? "")); }
+  async function save(event: React.FormEvent) { event.preventDefault(); setSaving(true); setError(null); let value: ConfigValue = draft; if (draft === "true" || draft === "false") value = draft === "true"; else if (draft.trim() !== "" && Number.isFinite(Number(draft))) value = Number(draft); try { const response = await apiPut<{ key: string; value: ConfigValue }>("/configuration", { key: selected, value }); setConfig((current) => ({ ...current, [response.key]: response.value })); } catch (currentError) { setError(errorMessage(currentError)); } finally { setSaving(false); } }
+  return <div className="page"><section className="hero-row"><div><p className="eyebrow">GOVERN / RUNTIME</p><h1 className="page-title">Configuration</h1><p className="page-lede">Review the effective tenant configuration. Changes are admin-only and should be made deliberately because they can alter runtime behavior.</p></div><span className="environment-badge"><span className="status-dot status-dot-good" />Effective values</span></section>{error && <div className="inline-alert"><strong>Configuration unavailable</strong><span>{error}</span><button className="text-button" type="button" onClick={() => void load()}>Retry</button></div>}{loading ? <div className="page-state"><span className="loading-bar" />Loading effective configuration…</div> : <><section className="config-card-grid">{entries.map(([key, value]) => <button className={`config-card ${selected === key ? "config-card-selected" : ""}`} type="button" key={key} onClick={() => choose(key)}><span className="config-key">{key.replace(/_/g, " ")}</span><strong>{String(value)}</strong><small>{DESCRIPTIONS[key] || "Configuration value returned by the control plane."}</small></button>)}</section><section className="dashboard-grid configuration-editor-grid"><article className="panel"><div className="panel-heading"><div><p className="eyebrow">ADMIN CHANGE</p><h2>Update selected value</h2></div><span className="muted">Admin permission required</span></div><form className="application-form" onSubmit={save}><label>Configuration key<input value={selected} readOnly /></label><label>Value<input value={draft} onChange={(event) => setDraft(event.target.value)} aria-describedby="configuration-help" /></label><span id="configuration-help" className="field-help">Boolean values use true/false. Numeric values are parsed as numbers; all other values remain text.</span><button className="primary-button" type="submit" disabled={saving}>{saving ? "Saving…" : "Save configuration"}</button></form></article><article className="panel"><div className="panel-heading"><div><p className="eyebrow">CHANGE SAFETY</p><h2>Before you save</h2></div></div><div className="setup-steps"><div className="setup-step setup-step-active"><b>01</b><span><strong>Review scope</strong><small>Confirm the selected key and its expected effect.</small></span></div><div className="setup-step"><b>02</b><span><strong>Save as admin</strong><small>Unauthorized changes are rejected by the API.</small></span></div><div className="setup-step"><b>03</b><span><strong>Verify behavior</strong><small>Review events and audit records after a change.</small></span></div></div></article></section></>}</div>;
 }
-
-export default ConfigurationPage;

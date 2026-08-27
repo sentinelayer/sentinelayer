@@ -47,6 +47,16 @@ export async function apiPost<T = unknown>(path: string, body: unknown): Promise
   return res.json() as Promise<T>;
 }
 
+export async function apiPut<T = unknown>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${apiPath(path)}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw await errorFromResponse(res);
+  return res.json() as Promise<T>;
+}
+
 export async function login(email: string, password: string): Promise<{ access_token: string }> {
   const data = await apiPost<{ access_token: string }>("/auth/login", { email, password });
   if (data.access_token) {
