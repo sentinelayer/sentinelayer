@@ -21,7 +21,8 @@ def test_postgres_rls_isolation_with_unprivileged_role():
     tenant_b = f"rls-b-{uuid.uuid4().hex}"
     hold_a = str(uuid.uuid4())
     hold_b = str(uuid.uuid4())
-    database_url = os.environ["DATABASE_URL"]
+    if not os.environ.get("DATABASE_URL"):
+        pytest.fail("DATABASE_URL must be configured for the live RLS probe")
     admin = engine.raw_connection()
     role_identifier = sql.Identifier(role)
     try:
@@ -42,7 +43,14 @@ def test_postgres_rls_isolation_with_unprivileged_role():
                 (hold_a, tenant_a, "test-a", "{}", "active", hold_b, tenant_b, "test-b", "{}", "active"),
             )
 
-        user = psycopg2.connect(database_url, user=role, password=role_password, connect_timeout=5)
+        user = psycopg2.connect(
+            host=engine.url.host,
+            port=engine.url.port or 5432,
+            dbname=engine.url.database,
+            user=role,
+            password=role_password,
+            connect_timeout=5,
+        )
         try:
             with user.cursor() as cur:
                 cur.execute("SELECT set_config('app.tenant_id', %s, false)", (tenant_a,))
