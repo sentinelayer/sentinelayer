@@ -10,6 +10,9 @@ export default defineConfig({
       '/api': 'http://localhost:8005',
     },
   },
+  preview: {
+    allowedHosts: ['.manus.computer'],
+  },
   build: {
     outDir: 'dist',
   },

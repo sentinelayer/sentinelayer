@@ -1,57 +1,21 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { apiGet, apiPost, ApiError } from "../../api/client";
 
-type Incident = { id: string; severity: string; status: string };
+type Incident = { id: string; severity: string; status: string; tenant_id?: string; description?: string; created_at?: string };
+function errorMessage(error: unknown): string { return (error as ApiError)?.message || (error instanceof Error ? error.message : "Unable to load incidents"); }
+function relativeTime(value?: string): string { if (!value) return "Recorded time unavailable"; const date = new Date(value); return Number.isNaN(date.getTime()) ? "Recorded time unavailable" : date.toLocaleString(); }
 
 export default function IncidentsPage() {
   const [items, setItems] = useState<Incident[]>([]);
   const [severity, setSeverity] = useState("medium");
   const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  async function load() {
-    try {
-      setItems(await apiGet<Incident[]>("/api/v1/incidents"));
-      setError(null);
-    } catch (e) {
-      setError((e as ApiError).message);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function create(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      await apiPost("/api/v1/incidents", { severity, description });
-      setDescription("");
-      await load();
-    } catch (err) {
-      setError((err as ApiError).message);
-    }
-  }
-
-  return (
-    <div className="page">
-      <h1>Incidents</h1>
-      {error && <p className="error">{error}</p>}
-      <form onSubmit={create}>
-        <select value={severity} onChange={(e) => setSeverity(e.target.value)}>
-          <option value="low">low</option>
-          <option value="medium">medium</option>
-          <option value="high">high</option>
-          <option value="critical">critical</option>
-        </select>
-        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" required />
-        <button type="submit">Open incident</button>
-      </form>
-      <ul>
-        {items.map((i) => (
-          <li key={i.id}>{i.severity} — {i.status} <code>{i.id}</code></li>
-        ))}
-      </ul>
-    </div>
-  );
+  async function load() { try { const data = await apiGet<Incident[]>("/incidents"); setItems(Array.isArray(data) ? data : []); setError(null); } catch (currentError) { setError(errorMessage(currentError)); } finally { setLoading(false); } }
+  useEffect(() => { void load(); }, []);
+  async function create(event: React.FormEvent) { event.preventDefault(); setCreating(true); setError(null); try { await apiPost("/incidents", { severity, description: description.trim() }); setDescription(""); await load(); } catch (currentError) { setError(errorMessage(currentError)); } finally { setCreating(false); } }
+  const open = useMemo(() => items.filter((item) => !["resolved", "closed"].includes(String(item.status).toLowerCase())), [items]);
+  const critical = items.filter((item) => /critical|high/i.test(item.severity)).length;
+  return <div className="page"><section className="hero-row"><div><p className="eyebrow">DETECT / RESPONSE</p><h1 className="page-title">Incidents</h1><p className="page-lede">Track security situations, assign priority, and preserve a clear record of response work.</p></div><span className="environment-badge"><span className="status-dot status-dot-good" />Tenant-scoped</span></section>{error && <div className="inline-alert"><strong>Incident action failed</strong><span>{error}</span><button className="text-button" type="button" onClick={() => void load()}>Retry</button></div>}<section className="metric-grid metric-grid-four"><article className="metric-card metric-card-accent"><span>Open incidents</span><strong>{open.length}</strong><small>Not resolved or closed</small></article><article className="metric-card metric-card-danger"><span>High priority</span><strong>{critical}</strong><small>High or critical severity</small></article><article className="metric-card"><span>All records</span><strong>{items.length}</strong><small>Stored in this workspace</small></article><article className="metric-card"><span>Response model</span><strong>4</strong><small>Open · Investigating · Contained · Resolved</small></article></section><section className="dashboard-grid"><article className="panel"><div className="panel-heading"><div><p className="eyebrow">RESPONSE INTAKE</p><h2>Open an incident</h2></div></div><p className="panel-note">Use a concise description that explains what happened. Incident records are scoped to the current workspace and remain visible in the audit workflow.</p><form className="application-form" onSubmit={create}><label>Severity<select value={severity} onChange={(event) => setSeverity(event.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label><label>Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the observed security situation" required rows={5} /></label><button className="primary-button" type="submit" disabled={creating}>{creating ? "Opening…" : "Open incident"}</button></form></article><article className="panel"><div className="panel-heading"><div><p className="eyebrow">RESPONSE LIFECYCLE</p><h2>Make the next action clear</h2></div></div><div className="setup-steps"><div className="setup-step setup-step-active"><b>01</b><span><strong>Open</strong><small>Record the situation and its severity.</small></span></div><div className="setup-step"><b>02</b><span><strong>Investigate</strong><small>Link relevant events and decision evidence.</small></span></div><div className="setup-step"><b>03</b><span><strong>Contain and resolve</strong><small>Document response actions and closure reason.</small></span></div></div></article></section><section className="panel application-list-panel"><div className="panel-heading"><div><p className="eyebrow">INCIDENT REGISTER</p><h2>{loading ? "Loading incidents" : `${items.length} incident${items.length === 1 ? "" : "s"}`}</h2></div><span className="muted">Latest workspace records</span></div>{loading ? <div className="empty-state"><span className="loading-bar" />Loading incidents…</div> : items.length ? <div className="incident-grid">{items.map((item) => <article className="incident-card" key={item.id}><div className="incident-card-top"><span className={`severity-dot severity-${String(item.severity || "medium").toLowerCase()}`} /><span className={`decision-badge ${/high|critical/i.test(item.severity) ? "badge-danger" : "badge-warning"}`}>{item.severity}</span></div><h3>{item.description || "Incident description not returned by API"}</h3><code>{item.id}</code><p>{item.status} · {relativeTime(item.created_at)}</p></article>)}</div> : <div className="empty-state"><strong>No incidents recorded</strong><span>When an incident is opened, it will appear here for triage.</span></div>}</section></div>;
 }
