@@ -22,6 +22,7 @@ from control_plane.app.api.v1 import (
     metrics,
     offboarding,
     policies,
+    privacy,
     residency,
     risk_calibration,
     schema,
@@ -41,6 +42,7 @@ router.include_router(tenants.router)
 router.include_router(applications.router)
 router.include_router(users.router)
 router.include_router(policies.router)
+router.include_router(privacy.router)
 router.include_router(incidents.router)
 router.include_router(evidence.router)
 router.include_router(gates.router)

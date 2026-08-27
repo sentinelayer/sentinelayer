@@ -295,3 +295,19 @@ def test_risk_calibration_is_versioned_and_tenant_scoped():
     rows = client.get("/api/v1/risk/calibrations", headers=h)
     assert rows.status_code == 200
     assert rows.json()[0]["version"] == 2 and rows.json()[1]["version"] == 1
+
+
+def test_privacy_export_and_legal_hold_lifecycle():
+    seed_users()
+    client = TestClient(app)
+    h = headers("admin-a", "tenant-a", True)
+    hold = client.post("/api/v1/privacy/legal-holds", headers=h, json={"reason": "legal review", "scope": {"case": "CASE-1"}})
+    assert hold.status_code == 200
+    assert hold.json()["status"] == "active"
+    exports = client.post("/api/v1/privacy/exports", headers=h)
+    assert exports.status_code == 200
+    assert len(exports.json()["artifact_hash"]) == 64
+    listed = client.get("/api/v1/privacy/exports", headers=h)
+    assert listed.status_code == 200 and listed.json()[0]["status"] == "COMPLETED"
+    released = client.post(f"/api/v1/privacy/legal-holds/{hold.json()['id']}/release", headers=h)
+    assert released.status_code == 200 and released.json()["status"] == "released"

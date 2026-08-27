@@ -381,6 +381,31 @@ class GateEvaluation(Base):
     evaluated_at = Column(DateTime, default=_utcnow, nullable=False, index=True)
 
 
+class LegalHoldRecord(Base):
+    __tablename__ = "legal_holds"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    reason = Column(Text, nullable=False)
+    scope = Column(Text, nullable=False, default="{}")
+    status = Column(String(16), nullable=False, default="active", index=True)
+    created_by = Column(String, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    released_at = Column(DateTime, nullable=True)
+    released_by = Column(String, nullable=True)
+
+
+class PrivacyExportRequest(Base):
+    __tablename__ = "privacy_export_requests"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    requested_by = Column(String, nullable=True)
+    status = Column(String(16), nullable=False, default="REQUESTED", index=True)
+    artifact_path = Column(Text, nullable=True)
+    artifact_hash = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+
+
 class OffboardingRequest(Base):
     __tablename__ = "offboarding_requests"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))

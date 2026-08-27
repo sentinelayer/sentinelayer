@@ -5,7 +5,7 @@ import json
 import uuid
 from datetime import UTC, datetime
 
-from control_plane.app.infrastructure.db.models import Application, AuditEvent, OffboardingRequest, Policy, PolicyVersion
+from control_plane.app.infrastructure.db.models import Application, AuditEvent, LegalHoldRecord, OffboardingRequest, Policy, PolicyVersion
 from control_plane.app.infrastructure.db.session import SessionLocal
 
 
@@ -42,6 +42,11 @@ def purge_offboarded() -> dict[str, int]:
             if boundary.tzinfo is None:
                 boundary = boundary.replace(tzinfo=UTC)
             if boundary > now:
+                continue
+            active_hold = db.query(LegalHoldRecord).filter(
+                LegalHoldRecord.tenant_id == request.tenant_id, LegalHoldRecord.status == "active"
+            ).first()
+            if active_hold:
                 continue
             apps = db.query(Application).filter(Application.tenant_id == request.tenant_id).all()
             policies = db.query(Policy).filter(Policy.tenant_id == request.tenant_id).all()
