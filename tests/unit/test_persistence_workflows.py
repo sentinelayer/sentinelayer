@@ -184,3 +184,55 @@ def test_key_rotation_is_persistent_and_interval_aware(tmp_path):
     assert worker.keys["current"] == current
     reloaded = KeyRotationWorker(tmp_path / "key-state.json")
     assert reloaded.keys["current"] == current
+
+
+def test_gate_and_applicability_are_durable_and_tenant_scoped():
+    seed_users()
+    client = TestClient(app)
+    h = headers("admin-a", "tenant-a", True)
+    req = client.post("/api/v1/gates/requirements", headers=h, json={
+        "requirement_id": "SL-TEST-GATE-001", "owner": "security", "requirement": "Gate test",
+        "criticality": "P0", "gate": "Production",
+    })
+    assert req.status_code == 200
+    checks = {name: True for name in [
+        "implementation_pass", "automated_test_pass", "security_test_pass", "evidence_valid",
+        "independent_reviewer_valid", "residual_risk_accepted", "dependency_check_pass",
+        "rollback_test_pass",
+    ]}
+    assert client.patch("/api/v1/gates/requirements/SL-TEST-GATE-001/checks", headers=h, json=checks).status_code == 200
+    evaluation = client.post("/api/v1/gates/requirements/SL-TEST-GATE-001/evaluate", headers=h)
+    assert evaluation.status_code == 200
+    assert evaluation.json()["status"] == "ACCEPTED"
+    ready = client.get("/api/v1/gates/production-ready", headers=h)
+    assert ready.status_code == 200
+    assert ready.json()["ready"] is True
+    assert client.get("/api/v1/gates/requirements/SL-TEST-GATE-001", headers=h).json()["tenant_id"] == "tenant-a"
+
+    applicability = client.post("/api/v1/compliance/applicability/evaluate", headers=h, json={
+        "customer_type": "fintech", "industry": "fintech", "data_type": "cardholder", "region": "id",
+    })
+    assert applicability.status_code == 200
+    assert any(item["framework"] == "pci_dss" for item in applicability.json()["applicable_frameworks"])
+    latest = client.get("/api/v1/compliance/applicability/latest", headers=h)
+    assert latest.status_code == 200
+    assert latest.json()["tenant_id"] == "tenant-a"
+
+
+def test_api_key_lifecycle_is_hashed_and_revocable():
+    seed_users()
+    client = TestClient(app)
+    h = headers("admin-a", "tenant-a", True)
+    created = client.post("/api/v1/auth/api-keys", headers=h, json={"name": "integration", "expires_in_days": 7})
+    assert created.status_code == 200
+    payload = created.json()
+    assert payload["key"].startswith("slk_")
+    assert "hash" not in payload and payload["key_prefix"] in payload["key"]
+    key_id = payload["id"]
+    listed = client.get("/api/v1/auth/api-keys", headers=h)
+    assert listed.status_code == 200
+    assert listed.json()[0]["id"] == key_id
+    assert "key" not in listed.json()[0]
+    revoked = client.post(f"/api/v1/auth/api-keys/{key_id}/revoke", headers=h)
+    assert revoked.status_code == 200
+    assert revoked.json()["revoked"] is True

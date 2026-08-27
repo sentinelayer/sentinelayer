@@ -1,9 +1,17 @@
+from __future__ import annotations
+
+import hashlib
 import os
+from datetime import UTC, datetime
 
 import jwt
 from fastapi import Request
+from sqlalchemy import or_
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
+
+from control_plane.app.infrastructure.db.models import ApiKeyRecord
+from control_plane.app.infrastructure.db.session import SessionLocal
 
 PUBLIC_PATHS = {
     "/",
@@ -26,6 +34,33 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if path in PUBLIC_PATHS or path.startswith("/docs") or path.startswith("/openapi"):
             return await call_next(request)
 
+        api_key = request.headers.get("X-API-Key")
+        if api_key:
+            secret = api_key.strip()
+            if len(secret) < 24:
+                return JSONResponse(status_code=401, content={"error": "Invalid API key"})
+            db = SessionLocal()
+            try:
+                digest = hashlib.sha256(secret.encode("utf-8")).hexdigest()
+                now = datetime.now(UTC)
+                row = db.query(ApiKeyRecord).filter(
+                    ApiKeyRecord.key_hash == digest,
+                    ApiKeyRecord.revoked_at.is_(None),
+                    or_(ApiKeyRecord.expires_at.is_(None), ApiKeyRecord.expires_at > now),
+                ).first()
+                if not row:
+                    return JSONResponse(status_code=401, content={"error": "Invalid or expired API key"})
+                row.last_used_at = now
+                db.commit()
+                request.state.user_id = row.user_id
+                request.state.tenant_id = row.tenant_id
+                request.state.is_admin = False
+                request.state.roles = []
+                request.state.auth_method = "api_key"
+            finally:
+                db.close()
+            return await call_next(request)
+
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
             return JSONResponse(status_code=401, content={"error": "Missing or invalid token"})
@@ -43,6 +78,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             request.state.tenant_id = payload.get("tenant_id")
             request.state.is_admin = bool(payload.get("is_admin", False))
             request.state.roles = payload.get("roles", []) or []
+            request.state.auth_method = "jwt"
             if not request.state.user_id or not request.state.tenant_id:
                 return JSONResponse(status_code=401, content={"error": "Invalid token claims"})
         except jwt.ExpiredSignatureError:

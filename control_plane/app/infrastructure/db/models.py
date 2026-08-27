@@ -151,6 +151,7 @@ class WebhookRegistration(Base):
     url = Column(String(2048), nullable=False)
     events = Column(Text, nullable=False, default="[]")
     secret_hash = Column(String(64), nullable=False)
+    secret_ciphertext = Column(Text, nullable=True)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
 
@@ -160,8 +161,13 @@ class WebhookDelivery(Base):
     tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
     webhook_id = Column(String, ForeignKey("webhook_registrations.id", ondelete="CASCADE"), nullable=False, index=True)
     event_type = Column(String(128), nullable=False)
+    payload = Column(Text, nullable=False, default="{}")
     status = Column(String(32), nullable=False, default="queued")
     response_code = Column(Integer, nullable=True)
+    attempt_count = Column(Integer, nullable=False, default=0)
+    next_attempt_at = Column(DateTime, nullable=True, index=True)
+    last_error = Column(Text, nullable=True)
+    last_signature = Column(String(128), nullable=True)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
 
@@ -255,6 +261,7 @@ class Requirement(Base):
     __tablename__ = "requirements"
 
     id = Column(String(64), primary_key=True)
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
     owner = Column(String(128), nullable=False)
     dependency = Column(Text, default="[]")
     requirement = Column(Text, nullable=False)
@@ -280,6 +287,58 @@ class Requirement(Base):
     drift_detected = Column(Boolean, default=False)
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow)
+
+
+class ApiKeyRecord(Base):
+    __tablename__ = "api_keys"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String(128), nullable=False)
+    key_prefix = Column(String(16), nullable=False)
+    key_hash = Column(String(64), unique=True, nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    expires_at = Column(DateTime, nullable=True, index=True)
+    revoked_at = Column(DateTime, nullable=True, index=True)
+    last_used_at = Column(DateTime, nullable=True)
+
+
+class AuthSession(Base):
+    __tablename__ = "auth_sessions"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    token_id = Column(String(128), unique=True, nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    revoked_at = Column(DateTime, nullable=True, index=True)
+    revoke_reason = Column(String(256), nullable=True)
+
+
+class ApplicabilityDecision(Base):
+    __tablename__ = "applicability_decisions"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    customer_type = Column(String(64), nullable=False)
+    industry = Column(String(128), nullable=False)
+    data_type = Column(String(128), nullable=False)
+    region = Column(String(64), nullable=False)
+    result = Column(Text, nullable=False, default="{}")
+    evaluated_by = Column(String, nullable=True)
+    evaluated_at = Column(DateTime, default=_utcnow, nullable=False, index=True)
+
+
+class GateEvaluation(Base):
+    __tablename__ = "gate_evaluations"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    requirement_id = Column(String(64), ForeignKey("requirements.id"), nullable=False, index=True)
+    evaluator_id = Column(String, nullable=True)
+    status = Column(String(16), nullable=False, index=True)
+    checks = Column(Text, nullable=False, default="[]")
+    all_pass = Column(Boolean, nullable=False, default=False)
+    result_hash = Column(String(64), nullable=False)
+    evaluated_at = Column(DateTime, default=_utcnow, nullable=False, index=True)
 
 
 class OffboardingRequest(Base):

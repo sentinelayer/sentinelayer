@@ -8,6 +8,7 @@ from control_plane.app.api.v1 import (
     audit,
     auth,
     configuration,
+    compliance,
     events,
     events_ws,
     evidence,
@@ -52,6 +53,7 @@ router.include_router(attack_graph.router)
 router.include_router(heatmap.router)
 router.include_router(user_risk.router)
 router.include_router(configuration.router)
+router.include_router(compliance.router)
 router.include_router(explainability.router)
 router.include_router(high_risk_actions.router)
 router.include_router(breakglass.router)

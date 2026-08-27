@@ -13,6 +13,7 @@ from typing import Any
 from control_plane.app.workers.evidence_expiry import expire_old_evidence
 from control_plane.app.workers.key_rotation import rotate_if_due
 from control_plane.app.workers.offboarding_purge import purge_offboarded
+from control_plane.app.workers.webhook_delivery import deliver_pending_webhooks
 
 logger = logging.getLogger("sentinelayer.maintenance")
 _STOP = False
@@ -28,6 +29,7 @@ def run_once() -> dict[str, Any]:
         "evidence_expiry": expire_old_evidence,
         "offboarding_purge": purge_offboarded,
         "key_rotation": rotate_if_due,
+        "webhook_delivery": deliver_pending_webhooks,
     }
     result: dict[str, Any] = {}
     for name, job in jobs.items():

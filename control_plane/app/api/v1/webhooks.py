@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import uuid
 from datetime import UTC, datetime
 from ipaddress import ip_address
@@ -15,8 +14,10 @@ from sqlalchemy.orm import Session
 
 from control_plane.app.api.deps import db_with_tenant, tenant_id
 from control_plane.app.infrastructure.db.models import WebhookDelivery, WebhookRegistration
+from control_plane.app.infrastructure.kms.client import KMSClient
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+_kms = KMSClient()
 
 
 class WebhookRegister(BaseModel):
@@ -41,10 +42,15 @@ def _validate_url(url: str) -> str:
     return url
 
 
+def _admin(request: Request) -> None:
+    if not getattr(request.state, "is_admin", False):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+
 def _secret(data: WebhookRegister) -> str:
-    secret = data.secret or os.getenv("WEBHOOK_SECRET")
+    secret = data.secret
     if not secret or len(secret) < 16:
-        raise HTTPException(status_code=400, detail="Webhook secret must be provided or configured")
+        raise HTTPException(status_code=400, detail="Webhook secret must be provided")
     return secret
 
 
@@ -52,18 +58,20 @@ def _serialize(webhook: WebhookRegistration) -> dict[str, Any]:
     return {
         "id": webhook.id, "tenant_id": webhook.tenant_id, "url": webhook.url,
         "events": json.loads(webhook.events or "[]"), "created_at": webhook.created_at.isoformat(),
-        "secret_configured": True,
+        "secret_configured": bool(webhook.secret_ciphertext),
     }
 
 
 @router.post("/register")
 async def register_webhook(data: WebhookRegister, request: Request, db: Session = Depends(db_with_tenant)):
+    _admin(request)
     url = _validate_url(str(data.url))
     secret = _secret(data)
+    now = datetime.now(UTC)
     webhook = WebhookRegistration(
         id=str(uuid.uuid4()), tenant_id=tenant_id(request), url=url,
         events=json.dumps(data.events), secret_hash=hashlib.sha256(secret.encode()).hexdigest(),
-        created_at=datetime.now(UTC),
+        secret_ciphertext=_kms.encrypt(secret), created_at=now,
     )
     db.add(webhook)
     db.commit()
@@ -87,9 +95,12 @@ async def test_webhook(wid: str, request: Request, db: Session = Depends(db_with
     ).first()
     if not webhook:
         raise HTTPException(status_code=404, detail="Webhook not found")
+    payload = {"type": "webhook.test", "webhook_id": webhook.id, "tenant_id": webhook.tenant_id,
+               "created_at": datetime.now(UTC).isoformat()}
     delivery = WebhookDelivery(
         id=str(uuid.uuid4()), tenant_id=webhook.tenant_id, webhook_id=webhook.id,
-        event_type="webhook.test", status="queued", created_at=datetime.now(UTC),
+        event_type="webhook.test", payload=json.dumps(payload, sort_keys=True),
+        status="queued", attempt_count=0, next_attempt_at=datetime.now(UTC), created_at=datetime.now(UTC),
     )
     db.add(delivery)
     db.commit()
@@ -106,4 +117,5 @@ async def get_webhook_logs(
         WebhookDelivery.tenant_id == tenant_id(request)
     ).order_by(WebhookDelivery.created_at.desc()).limit(limit).all()
     return [{"id": d.id, "webhook_id": d.webhook_id, "event_type": d.event_type,
-             "status": d.status, "response_code": d.response_code, "created_at": d.created_at.isoformat()} for d in deliveries]
+             "status": d.status, "response_code": d.response_code, "attempt_count": d.attempt_count,
+             "last_error": d.last_error, "created_at": d.created_at.isoformat()} for d in deliveries]
