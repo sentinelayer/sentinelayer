@@ -20,6 +20,7 @@ services:
       SL_AUTO_CREATE_SCHEMA: "0"
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      KMS_KEY: ${KMS_KEY:?set KMS_KEY}
     restart: unless-stopped
 
   maintenance-worker:
