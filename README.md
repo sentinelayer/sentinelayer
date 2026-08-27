@@ -53,7 +53,7 @@
 
 ## 👨‍💻 About Me
 
-**EX-SECURITY ANALYST ENGINEER — 4+ YEARS**
+**EX-SECURITY ANALYST -- SOFTWARE ENGINEER**
 
 Ex-Security Analyst Engineer with of experience securing enterprise systems across **JPMorgan Chase**, **BEI**, and **Sinarmas**. Bridging red team tactics and blue team defense — from IAM (RBAC/MFA) and API Security (SSRF/BOLA) to security automation. Certified **ETF Cyber Security Analyst**, **Software Engineer**, and **Web Developer**. Currently building **SentinelLayer** — because zero-trust shouldn't be a buzzword, it should be the baseline.
 
