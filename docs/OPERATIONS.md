@@ -4,7 +4,7 @@ Dokumen ini menjelaskan operasi yang harus dilakukan setelah branch perbaikan di
 
 ## Preflight production
 
-Set `DATABASE_URL`, `POSTGRES_PASSWORD`, `JWT_SECRET` dengan minimal 32 karakter acak, `METRICS_TOKEN`, dan `WEBHOOK_SECRET` dari secret manager. Set `SL_ENV=production` dan `SL_AUTO_CREATE_SCHEMA=0`. Gateway production juga membutuhkan `SL_APPROVED_ARTIFACT_HASH` dan `SL_RUNNING_ARTIFACT_HASH` yang sama-sama berasal dari artefak yang telah diverifikasi.
+Set `DATABASE_URL`, `POSTGRES_PASSWORD`, `JWT_SECRET` dengan minimal 32 karakter acak, `METRICS_TOKEN`, dan `KMS_KEY` dari secret manager. `KMS_KEY` wajib tersedia pada control-plane dan maintenance worker; secret webhook dikirim saat registrasi lalu disimpan terenkripsi, bukan melalui `WEBHOOK_SECRET` environment variable. Set `SL_ENV=production` dan `SL_AUTO_CREATE_SCHEMA=0`. Gateway production juga membutuhkan `SL_APPROVED_ARTIFACT_HASH` dan `SL_RUNNING_ARTIFACT_HASH` yang sama-sama berasal dari artefak yang telah diverifikasi.
 
 Jalankan migration hanya dari control-plane deployment:
 
@@ -22,7 +22,7 @@ Worker dijalankan sebagai service terpisah menggunakan:
 PYTHONPATH=/app python -m control_plane.app.workers.runner --loop
 ```
 
-`WORKER_INTERVAL_SECONDS` minimal 10 detik dan default 300 detik. Worker menjalankan evidence expiry dan offboarding purge. File lock mencegah dua worker pada instance yang sama berjalan bersamaan. Untuk HA multi-instance, gunakan distributed lock/leader election di deployment platform; file lock saja tidak cukup lintas host.
+`WORKER_INTERVAL_SECONDS` minimal 10 detik dan default 300 detik. `WEBHOOK_DELIVERY_MAX_ATTEMPTS` default 5 dan `WEBHOOK_DELIVERY_TIMEOUT_SECONDS` default 5 dapat dituning melalui secret/config management. Worker menjalankan evidence expiry, offboarding purge, key rotation, dan delivery webhook. File lock mencegah dua worker pada instance yang sama berjalan bersamaan. Untuk HA multi-instance, gunakan distributed lock/leader election di deployment platform; file lock saja tidak cukup lintas host.
 
 ## Backup dan restore
 
@@ -51,4 +51,4 @@ Soft offboarding menandai aplikasi dan membuat retention schedule. Hard offboard
 
 ## Remaining production evidence
 
-Repository sekarang memiliki code path dan automated tests untuk fitur-fitur di atas, tetapi bukti environment nyata masih harus dikumpulkan: PostgreSQL RLS cross-tenant test, restore drill, load/chaos test, signed runtime attestation dengan credential nyata, multi-region failover, dan independent security review.
+Repository sekarang memiliki code path dan automated tests untuk fitur-fitur di atas. CI juga menjalankan PostgreSQL RLS isolation evidence dengan role non-superuser dan `FORCE ROW LEVEL SECURITY`. Bukti environment produksi yang masih harus dikumpulkan mencakup restore drill nyata dengan RTO/RPO terukur, load/chaos test pada topology produksi, signed runtime attestation dengan registry/image credential nyata, KMS/cloud/HA multi-region failover, customer pilot outcomes, dan independent security review.
