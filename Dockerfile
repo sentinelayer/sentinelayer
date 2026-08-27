@@ -15,7 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY control_plane ./control_plane
 COPY engine ./engine
 COPY security ./security
+COPY scripts ./scripts
 COPY alembic.ini ./
+RUN python scripts/generate_runtime_provenance.py
 COPY --from=gateway-builder /gateway/gateway /usr/local/bin/gateway
 RUN chown -R sentinel:sentinel /app
 USER sentinel
