@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
+import re
+import uuid
 
-from fastapi import FastAPI, Header, HTTPException, Response
+from fastapi import FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from prometheus_client import CONTENT_TYPE_LATEST
@@ -17,11 +19,17 @@ from control_plane.app.middleware.rbac import RBACMiddleware
 from control_plane.app.middleware.tenant import TenantMiddleware
 
 app = FastAPI(title="SentinelLayer Control Plane", version="0.1.0", lifespan=lifespan)
+_REQUEST_ID = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID", "")
+        if not _REQUEST_ID.fullmatch(request_id):
+            request_id = uuid.uuid4().hex
+        request.state.request_id = request_id
         response = await call_next(request)
+        response.headers.setdefault("X-Request-ID", request_id)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
