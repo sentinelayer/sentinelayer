@@ -22,6 +22,7 @@ import SLAPage from "../pages/sla/SLAPage";
 import BreakGlassPage from "../pages/admin/break-glass/BreakGlassPage";
 import HighRiskActionsPage from "../pages/admin/high-risk/HighRiskActionsPage";
 import LiveProtectionPage from "../pages/live-protection/LiveProtectionPage";
+import DemoPage from "../pages/demo/DemoPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   if (!isLoggedIn()) return <Navigate to="/login" replace />;
@@ -33,6 +34,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage onSuccess={() => (window.location.href = "/")} />} />
+        <Route path="/demo" element={<DemoPage />} />
         <Route path="/" element={<RequireAuth><OverviewPage /></RequireAuth>} />
         <Route path="/applications" element={<RequireAuth><ApplicationsPage /></RequireAuth>} />
         <Route path="/live-protection" element={<RequireAuth><LiveProtectionPage /></RequireAuth>} />
