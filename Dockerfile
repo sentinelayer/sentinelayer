@@ -34,4 +34,4 @@ USER sentinel
 ENV PYTHONPATH=/app
 ENV CRS_RULES_DIR=/app/waf/rules
 EXPOSE 8080 8005 8090
-CMD ["/app/scripts/start_single_service.sh"]
+ENTRYPOINT ["/app/scripts/start_single_service.sh"]

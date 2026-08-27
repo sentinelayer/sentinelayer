@@ -5,6 +5,7 @@ export default function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
+  const [bootstrapToken, setBootstrapToken] = useState("");
   const [tenantId] = useState<string>(() => crypto.randomUUID());
   const [mode, setMode] = useState<"login" | "register">("login");
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +22,7 @@ export default function LoginPage({ onSuccess }: { onSuccess: () => void }) {
     setLoading(true);
     try {
       if (mode === "register") {
-        await register(email.trim(), password, fullName.trim(), tenantId);
+        await register(email.trim(), password, fullName.trim(), tenantId, bootstrapToken);
       }
       await login(email.trim(), password);
       onSuccess();
@@ -86,6 +87,20 @@ export default function LoginPage({ onSuccess }: { onSuccess: () => void }) {
             />
             <span className="field-help">Use at least 12 characters.</span>
           </label>
+
+          {isRegister && (
+            <label>
+              Bootstrap admin token <span className="muted">(optional)</span>
+              <input
+                type="password"
+                value={bootstrapToken}
+                onChange={(e) => setBootstrapToken(e.target.value)}
+                autoComplete="off"
+                placeholder="Only for initial admin setup"
+              />
+              <span className="field-help">Use this only if your organization configured first-admin onboarding.</span>
+            </label>
+          )}
 
           {error && <p className="auth-error" role="alert">{error}</p>}
 

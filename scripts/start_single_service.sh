@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+printf '%s\n' "SentinelLayer single-service launcher active; gateway entrypoint enforced" >&2
 
 # Railway's pre-deploy hook is the normal migration path. Repeat the idempotent
 # migration here as a startup safety net so a service never becomes healthy with

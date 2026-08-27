@@ -65,10 +65,13 @@ export async function register(
   email: string,
   password: string,
   full_name: string,
-  tenant_id: string
+  tenant_id: string,
+  bootstrap_token?: string
 ): Promise<unknown> {
   localStorage.setItem("sl_tenant_id", tenant_id);
-  return apiPost("/auth/register", { email, password, full_name, tenant_id });
+  const body: Record<string, string> = { email, password, full_name, tenant_id };
+  if (bootstrap_token?.trim()) body.bootstrap_token = bootstrap_token.trim();
+  return apiPost("/auth/register", body);
 }
 
 export function logout(): void {
