@@ -313,3 +313,44 @@ def test_privacy_export_and_legal_hold_lifecycle():
     assert listed.status_code == 200 and listed.json()[0]["status"] == "COMPLETED"
     released = client.post(f"/api/v1/privacy/legal-holds/{hold.json()['id']}/release", headers=h)
     assert released.status_code == 200 and released.json()["status"] == "released"
+
+
+def test_bootstrap_admin_grant_is_one_use(monkeypatch):
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+    bootstrap = "bootstrap-token-for-test-32-characters-minimum"
+    monkeypatch.setenv("BOOTSTRAP_ADMIN_TOKEN", bootstrap)
+    monkeypatch.setenv("BOOTSTRAP_ADMIN_EMAIL", "owner@example.com")
+    client = TestClient(app)
+    payload = {
+        "email": "owner@example.com",
+        "password": "correct-horse-battery-staple-123",
+        "full_name": "Owner",
+        "tenant_id": "tenant-owner",
+        "bootstrap_token": bootstrap,
+    }
+    first = client.post("/api/v1/auth/register", json=payload)
+    assert first.status_code == 200, first.text
+    db = TestingSession()
+    try:
+        owner = db.query(User).filter(User.email == "owner@example.com").one()
+        assert owner.is_admin is True
+    finally:
+        db.close()
+
+    second = client.post("/api/v1/auth/register", json=payload)
+    assert second.status_code == 400
+
+    normal = client.post("/api/v1/auth/register", json={
+        "email": "member@example.com",
+        "password": "correct-horse-battery-staple-456",
+        "full_name": "Member",
+        "tenant_id": "tenant-member",
+    })
+    assert normal.status_code == 200, normal.text
+    db = TestingSession()
+    try:
+        member = db.query(User).filter(User.email == "member@example.com").one()
+        assert member.is_admin is False
+    finally:
+        db.close()

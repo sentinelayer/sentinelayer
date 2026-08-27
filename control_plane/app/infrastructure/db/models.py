@@ -17,6 +17,15 @@ class Tenant(Base):
     created_at = Column(DateTime, default=_utcnow)
 
 
+class BootstrapAdminGrant(Base):
+    __tablename__ = "bootstrap_admin_grants"
+    token_hash = Column(String(64), primary_key=True)
+    email = Column(String, nullable=False)
+    used_at = Column(DateTime, nullable=True)
+    used_by = Column(String, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
 class Application(Base):
     __tablename__ = "applications"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))

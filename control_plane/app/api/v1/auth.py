@@ -9,10 +9,10 @@ import bcrypt
 import jwt
 import pyotp
 from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
-from control_plane.app.infrastructure.db.models import ApiKeyRecord, AuthSession, Tenant, User
+from control_plane.app.infrastructure.db.models import ApiKeyRecord, AuthSession, BootstrapAdminGrant, Tenant, User
 from control_plane.app.infrastructure.db.session import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -30,6 +30,7 @@ class RegisterRequest(BaseModel):
     password: str
     full_name: str
     tenant_id: str
+    bootstrap_token: str | None = Field(default=None, min_length=32, max_length=256)
 
 
 class LoginRequest(BaseModel):
@@ -124,6 +125,20 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == req.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+
+    bootstrap_token = os.getenv("BOOTSTRAP_ADMIN_TOKEN")
+    bootstrap_email = os.getenv("BOOTSTRAP_ADMIN_EMAIL", "").strip().lower()
+    bootstrap_hash = hashlib.sha256(req.bootstrap_token.encode("utf-8")).hexdigest() if req.bootstrap_token else None
+    bootstrap_grant = None
+    if req.bootstrap_token:
+        if not bootstrap_token or not bootstrap_email or req.email.lower() != bootstrap_email:
+            raise HTTPException(status_code=403, detail="Invalid bootstrap grant")
+        if not secrets.compare_digest(req.bootstrap_token, bootstrap_token):
+            raise HTTPException(status_code=403, detail="Invalid bootstrap grant")
+        bootstrap_grant = db.query(BootstrapAdminGrant).filter(BootstrapAdminGrant.token_hash == bootstrap_hash).first()
+        if bootstrap_grant and bootstrap_grant.used_at is not None:
+            raise HTTPException(status_code=409, detail="Bootstrap grant already used")
+
     tenant = db.query(Tenant).filter(Tenant.id == req.tenant_id).first()
     if not tenant:
         tenant = Tenant(id=req.tenant_id, name=f"tenant-{req.tenant_id[:8]}")
@@ -136,8 +151,18 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
         hashed_password=hashed.decode("utf-8"),
         full_name=req.full_name,
         tenant_id=req.tenant_id,
+        is_admin=bootstrap_grant is not None or bool(req.bootstrap_token),
     )
     db.add(user)
+    db.flush()
+    if req.bootstrap_token and bootstrap_hash:
+        if bootstrap_grant is None:
+            bootstrap_grant = BootstrapAdminGrant(
+                token_hash=bootstrap_hash, email=req.email.lower(), created_at=datetime.now(UTC)
+            )
+            db.add(bootstrap_grant)
+        bootstrap_grant.used_at = datetime.now(UTC)
+        bootstrap_grant.used_by = user.id
     db.commit()
     db.refresh(user)
     return {"id": user.id, "email": user.email, "full_name": user.full_name, "tenant_id": user.tenant_id}
