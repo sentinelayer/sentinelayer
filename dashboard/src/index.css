@@ -605,3 +605,14 @@ td {
 .policy-card code { display: block; overflow: hidden; color: #72879b; font-size: 0.62rem; text-overflow: ellipsis; white-space: nowrap; }
 .policy-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid rgba(157, 177, 207, 0.09); }
 .policy-card-footer span { color: #6f8298; font-size: 0.65rem; }
+
+.alert-list { display: grid; }
+.alert-row { display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.9rem 0.5rem; border-bottom: 1px solid rgba(157, 177, 207, 0.1); }
+.alert-row:last-child { border-bottom: 0; }
+.alert-main { min-width: 0; flex: 1; }
+.alert-title-row { display: flex; gap: 0.7rem; align-items: flex-start; justify-content: space-between; }
+.alert-title-row b { color: #e3edf3; font-size: 0.82rem; line-height: 1.45; }
+.alert-main small, .alert-main code { display: block; margin-top: 0.3rem; color: #7c91a6; font-size: 0.68rem; }
+.alert-main code { overflow: hidden; color: #687d91; font-size: 0.61rem; text-overflow: ellipsis; white-space: nowrap; }
+.alert-action { min-height: 34px; flex: 0 0 auto; padding: 0.4rem 0.65rem; font-size: 0.68rem; }
+@media (max-width: 620px) { .alert-row { align-items: stretch; flex-wrap: wrap; } .alert-action { margin-left: 1.5rem; } }
