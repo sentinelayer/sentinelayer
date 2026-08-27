@@ -12,7 +12,7 @@ export const HighRiskActionsPage: React.FC = () => {
             body: JSON.stringify({ action, reason })
         })
             .then(res => res.json())
-            .then(data => setResult(JSON.stringify(data, null, 2)))
+            .then((data: any) => setResult(JSON.stringify(data, null, 2)))
             .catch(e => setResult('Error: ' + e.message))
     }
 
@@ -35,3 +35,5 @@ export const HighRiskActionsPage: React.FC = () => {
         </div>
     )
 }
+
+export default HighRiskActionsPage;

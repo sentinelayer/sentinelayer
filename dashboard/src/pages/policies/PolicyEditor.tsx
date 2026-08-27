@@ -14,7 +14,7 @@ export const PolicyEditor: React.FC = () => {
     useEffect(() => {
         if (id) {
             api.get(`/policies/${id}`)
-                .then(data => {
+                .then((data: any) => {
                     setName(data.name || '')
                     setRules(JSON.stringify(data.rules || {}, null, 2))
                     setVersion(data.version || 1)

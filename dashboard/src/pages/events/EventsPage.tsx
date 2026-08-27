@@ -8,7 +8,7 @@ export const EventsPage: React.FC = () => {
 
     useEffect(() => {
         api.get('/events')
-            .then(data => { setEvents(data); setLoading(false) })
+            .then((data: any) => { setEvents(data); setLoading(false) })
             .catch(() => { setError('Failed to load events'); setLoading(false) })
     }, [])
 
@@ -40,3 +40,5 @@ export const EventsPage: React.FC = () => {
         </div>
     )
 }
+
+export default EventsPage;

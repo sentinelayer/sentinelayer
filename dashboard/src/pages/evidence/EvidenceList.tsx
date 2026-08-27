@@ -7,7 +7,7 @@ export const EvidenceList: React.FC = () => {
 
     useEffect(() => {
         api.get('/evidence')
-            .then(data => { setEvidence(data); setLoading(false) })
+            .then((data: any) => { setEvidence(data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])
 
@@ -37,3 +37,5 @@ export const EvidenceList: React.FC = () => {
         </div>
     )
 }
+
+export default EvidenceList;

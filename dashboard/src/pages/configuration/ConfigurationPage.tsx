@@ -7,7 +7,7 @@ export const ConfigurationPage: React.FC = () => {
     useEffect(() => {
         fetch('/api/v1/configuration')
             .then(res => res.json())
-            .then(data => { setConfig(data); setLoading(false) })
+            .then((data: any) => { setConfig(data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])
 
@@ -27,3 +27,5 @@ export const ConfigurationPage: React.FC = () => {
         </div>
     )
 }
+
+export default ConfigurationPage;

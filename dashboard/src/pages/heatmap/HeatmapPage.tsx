@@ -7,7 +7,7 @@ export const HeatmapPage: React.FC = () => {
 
     useEffect(() => {
         api.get('/heatmap')
-            .then(data => { setData(data); setLoading(false) })
+            .then((data: any) => { setData(data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])
 
@@ -31,3 +31,5 @@ export const HeatmapPage: React.FC = () => {
         </div>
     )
 }
+
+export default HeatmapPage;

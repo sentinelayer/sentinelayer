@@ -7,7 +7,7 @@ export const SLAPage: React.FC = () => {
     useEffect(() => {
         fetch('/api/v1/sla/report')
             .then(res => res.json())
-            .then(data => { setSla(data); setLoading(false) })
+            .then((data: any) => { setSla(data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])
 
@@ -26,3 +26,5 @@ export const SLAPage: React.FC = () => {
         </div>
     )
 }
+
+export default SLAPage;

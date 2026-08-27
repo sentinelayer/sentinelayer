@@ -7,7 +7,7 @@ export const AlertsPage: React.FC = () => {
 
     useEffect(() => {
         api.get('/alerts')
-            .then(data => { setAlerts(data); setLoading(false) })
+            .then((data: any) => { setAlerts(data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])
 
@@ -37,3 +37,5 @@ export const AlertsPage: React.FC = () => {
         </div>
     )
 }
+
+export default AlertsPage;

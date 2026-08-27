@@ -17,8 +17,8 @@ import HeatmapPage from "../pages/heatmap/HeatmapPage";
 import UserRiskPage from "../pages/user-risk/UserRiskPage";
 import ExplainabilityPage from "../pages/explainability/ExplainabilityPage";
 import SLAPage from "../pages/sla/SLAPage";
-import BreakGlassPage from "../pages/admin/BreakGlassPage";
-import HighRiskActionsPage from "../pages/admin/HighRiskActionsPage";
+import BreakGlassPage from "../pages/admin/break-glass/BreakGlassPage";
+import HighRiskActionsPage from "../pages/admin/high-risk/HighRiskActionsPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   if (!isLoggedIn()) return <Navigate to="/login" replace />;

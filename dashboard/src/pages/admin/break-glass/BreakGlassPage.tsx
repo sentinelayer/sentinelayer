@@ -7,7 +7,7 @@ export const BreakGlassPage: React.FC = () => {
     useEffect(() => {
         fetch('/api/v1/admin/breakglass')
             .then(res => res.json())
-            .then(data => { setSessions(data); setLoading(false) })
+            .then((data: any) => { setSessions(data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])
 
@@ -35,3 +35,5 @@ export const BreakGlassPage: React.FC = () => {
         </div>
     )
 }
+
+export default BreakGlassPage;

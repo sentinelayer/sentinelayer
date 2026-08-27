@@ -8,7 +8,7 @@ export const AttackGraphPage: React.FC = () => {
 
     useEffect(() => {
         api.get('/attack-graph')
-            .then(data => { setNodes(data.nodes || []); setEdges(data.edges || []); setLoading(false) })
+            .then((data: any) => { setNodes(data.nodes || []); setEdges(data.edges || []); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])
 
@@ -37,3 +37,5 @@ export const AttackGraphPage: React.FC = () => {
         </div>
     )
 }
+
+export default AttackGraphPage;

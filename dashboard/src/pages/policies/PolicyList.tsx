@@ -13,7 +13,7 @@ export const PolicyList: React.FC = () => {
 
     useEffect(() => {
         api.get('/policies')
-            .then(data => { setPolicies(data); setLoading(false) })
+            .then((data: any) => { setPolicies(data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])
 

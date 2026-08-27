@@ -7,7 +7,7 @@ export const UserRiskPage: React.FC = () => {
 
     useEffect(() => {
         api.get('/user-risk')
-            .then(data => { setUsers(data); setLoading(false) })
+            .then((data: any) => { setUsers(data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])
 
@@ -40,3 +40,5 @@ export const UserRiskPage: React.FC = () => {
         </div>
     )
 }
+
+export default UserRiskPage;

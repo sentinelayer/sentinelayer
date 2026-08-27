@@ -7,7 +7,7 @@ export const RiskPage: React.FC = () => {
 
     useEffect(() => {
         api.get('/risk/calculate')
-            .then(data => { setRisk(data); setLoading(false) })
+            .then((data: any) => { setRisk(data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])
 
@@ -34,3 +34,5 @@ export const RiskPage: React.FC = () => {
         </div>
     )
 }
+
+export default RiskPage;

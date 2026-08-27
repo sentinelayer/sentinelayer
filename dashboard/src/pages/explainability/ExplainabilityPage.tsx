@@ -7,7 +7,7 @@ export const ExplainabilityPage: React.FC = () => {
 
     useEffect(() => {
         api.get('/explainability/latest')
-            .then(data => {
+            .then((data: any) => {
                 setDecision({
                     ...data,
                     what: `Decision was ${data.action}`,
@@ -57,3 +57,5 @@ export const ExplainabilityPage: React.FC = () => {
         </div>
     )
 }
+
+export default ExplainabilityPage;

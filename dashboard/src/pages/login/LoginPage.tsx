@@ -4,7 +4,7 @@ import { login, register } from "../../api/client";
 export default function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [tenantId, setTenantId] = useState(() => crypto.randomUUID());
+  const [tenantId, setTenantId] = useState<string>(() => crypto.randomUUID());
   const [mode, setMode] = useState<"login" | "register">("login");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

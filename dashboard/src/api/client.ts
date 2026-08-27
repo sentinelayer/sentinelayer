@@ -12,7 +12,7 @@ function authHeaders(): HeadersInit {
 }
 
 export async function apiGet<T = unknown>(path: string): Promise<T> {
-  const res = await fetch(`\( {BASE} \){path}`, { headers: authHeaders() });
+  const res = await fetch(`${BASE}${path}`, { headers: authHeaders() });
   if (!res.ok) {
     const body = await res.text();
     throw { status: res.status, message: body || res.statusText } as ApiError;
@@ -21,7 +21,7 @@ export async function apiGet<T = unknown>(path: string): Promise<T> {
 }
 
 export async function apiPost<T = unknown>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`\( {BASE} \){path}`, {
+  const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(body),
@@ -63,3 +63,10 @@ export function logout(): void {
 export function isLoggedIn(): boolean {
   return !!localStorage.getItem("sl_access_token");
 }
+
+// Shim object so pages written as `api.get(...)` / `api.post(...)` keep working
+// alongside the apiGet/apiPost function style used elsewhere.
+export const api = {
+  get: <T = unknown>(path: string): Promise<T> => apiGet<T>(path),
+  post: <T = unknown>(path: string, body: unknown): Promise<T> => apiPost<T>(path, body),
+};
