@@ -63,6 +63,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 request.state.is_admin = False
                 request.state.roles = []
                 request.state.auth_method = "api_key"
+                request.state.mfa_verified = False
             finally:
                 db.close()
             return await call_next(request)
@@ -85,6 +86,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             request.state.is_admin = bool(payload.get("is_admin", False))
             request.state.roles = payload.get("roles", []) or []
             request.state.auth_method = "jwt"
+            request.state.mfa_verified = bool(payload.get("mfa_verified", False))
             if not request.state.user_id or not request.state.tenant_id:
                 return JSONResponse(status_code=401, content={"error": "Invalid token claims"})
             token_id = payload.get("jti")
@@ -101,6 +103,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
                         AuthSession.expires_at > now,
                     ).first()
                     user = db.query(User).filter(User.id == request.state.user_id).first()
+                    if user is not None and not user.mfa_enabled:
+                        request.state.mfa_verified = True
                     if not session or (user is not None and not user.is_active):
                         return JSONResponse(status_code=401, content={"error": "Session revoked or expired"})
                 finally:

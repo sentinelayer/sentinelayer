@@ -60,7 +60,7 @@ class MFAVerifyRequest(BaseModel):
     code: str
 
 
-def _make_token(user: User, db: Session) -> TokenResponse:
+def _make_token(user: User, db: Session, *, mfa_verified: bool = True) -> TokenResponse:
     now = datetime.now(UTC)
     expiry = now + timedelta(minutes=JWT_EXPIRY_MINUTES)
     token_id = uuid.uuid4().hex
@@ -73,6 +73,7 @@ def _make_token(user: User, db: Session) -> TokenResponse:
             "full_name": user.full_name,
             "is_admin": user.is_admin,
             "mfa_enabled": bool(user.mfa_enabled),
+            "mfa_verified": bool(mfa_verified),
             "iat": now,
             "exp": expiry,
         },
@@ -170,7 +171,7 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
         if not ok:
             raise HTTPException(status_code=401, detail="Invalid MFA code")
 
-    return _make_token(user, db)
+    return _make_token(user, db, mfa_verified=not user.mfa_enabled or bool(req.mfa_code))
 
 
 @router.post("/logout")

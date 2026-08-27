@@ -15,10 +15,24 @@ class RBACMiddleware(BaseHTTPMiddleware):
         "/api/v1/offboarding",
         "/api/v1/webhooks",
     )
+    MUTATING_TENANT_PREFIXES = (
+        "/api/v1/policies",
+        "/api/v1/risk/calibrations",
+    )
+    SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+
+    @classmethod
+    def requires_admin(cls, request: Request) -> bool:
+        path = request.url.path.rstrip("/") or "/"
+        if any(path == prefix or path.startswith(prefix + "/") for prefix in cls.ADMIN_PREFIXES):
+            return True
+        return (
+            request.method.upper() not in cls.SAFE_METHODS
+            and any(path == prefix or path.startswith(prefix + "/") for prefix in cls.MUTATING_TENANT_PREFIXES)
+        )
 
     async def dispatch(self, request: Request, call_next):
-        path = request.url.path.rstrip("/") or "/"
-        if any(path == prefix or path.startswith(prefix + "/") for prefix in self.ADMIN_PREFIXES):
+        if self.requires_admin(request):
             is_admin = bool(getattr(request.state, "is_admin", False))
             roles = getattr(request.state, "roles", []) or []
             if not is_admin and "admin" not in roles:

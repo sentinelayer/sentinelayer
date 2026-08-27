@@ -12,6 +12,7 @@ from control_plane.app.api.v1.router import router
 from control_plane.app.lifespan import lifespan
 from control_plane.app.infrastructure.observability.metrics import MetricsMiddleware, get_metrics
 from control_plane.app.middleware.auth import AuthMiddleware
+from control_plane.app.middleware.mfa_gate import MFAGateMiddleware
 from control_plane.app.middleware.rbac import RBACMiddleware
 from control_plane.app.middleware.tenant import TenantMiddleware
 
@@ -47,6 +48,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(MetricsMiddleware)
 app.add_middleware(TenantMiddleware)
 app.add_middleware(RBACMiddleware)
+app.add_middleware(MFAGateMiddleware)
 app.add_middleware(AuthMiddleware)
 
 app.include_router(router, prefix="/api/v1")
