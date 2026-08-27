@@ -7,10 +7,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -100,16 +102,35 @@ func jsonFloat(f float64) string {
 	return string(b)
 }
 
+func clientAddress(r *http.Request) string {
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return strings.TrimSpace(r.RemoteAddr)
+}
+
 func rateLimitKey(r *http.Request, ctx RequestContext) string {
 	hash := sha256.New()
 	for _, part := range []string{
 		ctx.TenantID, ctx.UserID, ctx.SessionID, r.Header.Get("X-API-Key"),
-		r.RemoteAddr, r.Method, r.URL.Path,
+		clientAddress(r), r.Method, r.URL.Path,
 	} {
 		_, _ = hash.Write([]byte(part))
 		_, _ = hash.Write([]byte{0})
 	}
 	return "sl:gateway:rate:" + hex.EncodeToString(hash.Sum(nil))
+}
+
+func listenAddress() (string, error) {
+	port := strings.TrimSpace(os.Getenv("PORT"))
+	if port == "" {
+		port = "8080"
+	}
+	value, err := strconv.Atoi(port)
+	if err != nil || value < 1 || value > 65535 {
+		return "", fmt.Errorf("PORT must be an integer between 1 and 65535")
+	}
+	return ":" + strconv.Itoa(value), nil
 }
 
 func main() {
@@ -345,13 +366,17 @@ func main() {
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
 	})
 
+	addr, err := listenAddress()
+	if err != nil {
+		log.Fatal(err)
+	}
 	server := &http.Server{
-		Addr:         ":8080",
+		Addr:         addr,
 		Handler:      mux,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
-	log.Println("Gateway :8080 — full pipeline + risk HTTP client")
+	log.Printf("Gateway %s — full pipeline + risk HTTP client", addr)
 	log.Fatal(server.ListenAndServe())
 }
