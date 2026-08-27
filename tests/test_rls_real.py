@@ -1,8 +1,10 @@
 import os
 import uuid
 
-import pytest
 import psycopg2
+from psycopg2 import sql
+import pytest
+
 from control_plane.app.infrastructure.db.session import engine
 
 
@@ -21,12 +23,14 @@ def test_postgres_rls_isolation_with_unprivileged_role():
     hold_b = str(uuid.uuid4())
     database_url = os.environ["DATABASE_URL"]
     admin = engine.raw_connection()
+    role_identifier = sql.Identifier(role)
     try:
         admin.autocommit = True
         with admin.cursor() as cur:
-            cur.execute("CREATE ROLE \"%s\" LOGIN PASSWORD %%s" % role, (role_password,))
-            cur.execute("GRANT USAGE ON SCHEMA public TO \"%s\"" % role)
-            cur.execute("GRANT SELECT, INSERT ON legal_holds TO \"%s\"" % role)
+            cur.execute(sql.SQL("CREATE ROLE {} LOGIN").format(role_identifier))
+            cur.execute(sql.SQL("ALTER ROLE {} PASSWORD %s").format(role_identifier), (role_password,))
+            cur.execute(sql.SQL("GRANT USAGE ON SCHEMA public TO {}").format(role_identifier))
+            cur.execute(sql.SQL("GRANT SELECT, INSERT ON legal_holds TO {}").format(role_identifier))
             cur.execute("ALTER TABLE legal_holds FORCE ROW LEVEL SECURITY")
             cur.execute(
                 "INSERT INTO tenants (id, name) VALUES (%s, %s), (%s, %s)",
@@ -38,7 +42,7 @@ def test_postgres_rls_isolation_with_unprivileged_role():
                 (hold_a, tenant_a, "test-a", "{}", "active", hold_b, tenant_b, "test-b", "{}", "active"),
             )
 
-        user = psycopg2.connect(database_url, user=role, password=role_password)
+        user = psycopg2.connect(database_url, user=role, password=role_password, connect_timeout=5)
         try:
             with user.cursor() as cur:
                 cur.execute("SELECT set_config('app.tenant_id', %s, false)", (tenant_a,))
@@ -58,11 +62,6 @@ def test_postgres_rls_isolation_with_unprivileged_role():
             cur.execute("ALTER TABLE legal_holds NO FORCE ROW LEVEL SECURITY")
             cur.execute("DELETE FROM legal_holds WHERE id IN (%s, %s)", (hold_a, hold_b))
             cur.execute("DELETE FROM tenants WHERE id IN (%s, %s)", (tenant_a, tenant_b))
-            cur.execute("DROP ROLE IF EXISTS \"%s\"" % role)
+            cur.execute(sql.SQL("DROP OWNED BY {}").format(role_identifier))
+            cur.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(role_identifier))
         admin.close()
-
-
-def test_rls_probe_is_explicitly_skipped_without_postgres():
-    if engine.dialect.name != "postgresql":
-        pytest.skip("requires PostgreSQL")
-    assert os.getenv("TEST_POSTGRES_RLS") != "1"
