@@ -1,19 +1,25 @@
+from math import isfinite
+
+
 class DecisionMatrix:
-    def __init__(self):
-        self.matrix = [
-            {"risk": [0, 30], "confidence": [0.7, 1.0], "action": "ALLOW"},
-            {"risk": [30, 60], "confidence": [0.5, 0.7], "action": "MONITOR"},
-            {"risk": [60, 80], "confidence": [0.3, 0.7], "action": "CHALLENGE"},
-            {"risk": [80, 100], "confidence": [0.0, 1.0], "action": "BLOCK"},
-        ]
+    """Deterministic risk/confidence policy with no permissive fallback."""
 
     def get_action(self, risk_score: float, confidence: float) -> str:
-        for entry in self.matrix:
-            risk_min, risk_max = entry["risk"]
-            conf_min, conf_max = entry["confidence"]
-            if risk_min <= risk_score <= risk_max and conf_min <= confidence <= conf_max:
-                return entry["action"]
-        return "ALLOW"
+        if not isfinite(risk_score) or not isfinite(confidence):
+            return "BLOCK"
 
-    def get_all_actions(self) -> list:
-        return [entry["action"] for entry in self.matrix]
+        risk = min(100.0, max(0.0, risk_score))
+        confidence_level = "low" if confidence < 0.4 else "medium" if confidence < 0.7 else "high"
+
+        if risk < 30:
+            return "ALLOW"
+        if risk < 60:
+            return "CHALLENGE" if confidence_level == "high" else "MONITOR"
+        if confidence_level == "high":
+            return "BLOCK"
+        if confidence_level == "medium":
+            return "CHALLENGE"
+        return "MONITOR"
+
+    def get_all_actions(self) -> list[str]:
+        return ["ALLOW", "MONITOR", "CHALLENGE", "BLOCK"]

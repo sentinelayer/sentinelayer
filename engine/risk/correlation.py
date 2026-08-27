@@ -29,10 +29,10 @@ class RiskCorrelation:
 
         types = set(s["type"] for s in signals)
         multiplier = 1.0
-        if len(types) >= 3:
-            multiplier = 1.5
-        elif len(types) >= 5:
+        if len(types) >= 5:
             multiplier = 2.0
+        elif len(types) >= 3:
+            multiplier = 1.5
 
         # Dedup: unique types only
         return {

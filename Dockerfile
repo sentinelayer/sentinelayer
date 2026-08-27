@@ -22,13 +22,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY control_plane ./control_plane
 COPY engine ./engine
 COPY security ./security
+COPY waf ./waf
 COPY scripts ./scripts
 COPY --from=dashboard-builder /dashboard/dist ./dashboard/dist
 COPY alembic.ini ./
 RUN python scripts/generate_runtime_provenance.py
 COPY --from=gateway-builder /gateway/gateway /usr/local/bin/gateway
+RUN chmod 0555 /app/scripts/start_single_service.sh /usr/local/bin/gateway
 RUN chown -R sentinel:sentinel /app
 USER sentinel
 ENV PYTHONPATH=/app
-EXPOSE 8005 8090
-CMD ["uvicorn", "control_plane.app.main:app", "--host", "0.0.0.0", "--port", "8005"]
+ENV CRS_RULES_DIR=/app/waf/rules
+EXPOSE 8080 8005 8090
+CMD ["/app/scripts/start_single_service.sh"]

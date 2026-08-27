@@ -1,7 +1,9 @@
 package waf
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -23,9 +25,11 @@ SecRequestBodyAccess On
 SecResponseBodyAccess Off
 SecDefaultAction "phase:1,log,auditlog,pass"
 SecDefaultAction "phase:2,log,auditlog,pass"
-`
+SecRule REQUEST_HEADERS:Content-Type "@rx (?i)^application/json" "id:1000,phase:1,pass,nolog,ctl:requestBodyProcessor=JSON"
+	`
+
 	if crsRulesDir != "" {
-		directives += fmt.Sprintf("\nInclude %s/*.conf\n", crsRulesDir)
+		directives += fmt.Sprintf("\nSecDataDir %s\nInclude %s/*.conf\n", crsRulesDir, crsRulesDir)
 	}
 
 	// Baseline rules always on. Libinjection handles common SQLi/XSS payloads;
@@ -83,7 +87,25 @@ func (e *Engine) ProcessRequest(r *http.Request) (blocked bool, ruleID int, msg 
 		return true, it.RuleID, it.Data
 	}
 
-	// Body: caller may have already read; we process URI/headers/args primarily here.
+	// Buffer the body once, feed the exact bytes to Coraza, and restore the
+	// body for the upstream proxy. Oversized inspection is rejected rather than
+	// silently forwarding an uninspected payload.
+	const maxInspectionBody = 2 * 1024 * 1024
+	if r.Body != nil && r.Body != http.NoBody {
+		body, err := io.ReadAll(io.LimitReader(r.Body, maxInspectionBody+1))
+		if err != nil {
+			return true, 1007, "Request body could not be inspected"
+		}
+		r.Body = io.NopCloser(bytes.NewReader(body))
+		if len(body) > maxInspectionBody {
+			return true, 1007, "Request body exceeds inspection limit"
+		}
+		if it, _, err := tx.ReadRequestBodyFrom(bytes.NewReader(body)); err != nil {
+			return true, 1007, "Request body could not be inspected"
+		} else if it != nil {
+			return true, it.RuleID, it.Data
+		}
+	}
 	_, _ = tx.ProcessRequestBody()
 	it = tx.Interruption()
 	if it != nil {

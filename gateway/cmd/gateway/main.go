@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -15,6 +18,7 @@ import (
 	"github.com/sentinelayer/gateway/internal/decision"
 	"github.com/sentinelayer/gateway/internal/desync"
 	"github.com/sentinelayer/gateway/internal/engine"
+	"github.com/sentinelayer/gateway/internal/normalize"
 	"github.com/sentinelayer/gateway/internal/observability"
 	"github.com/sentinelayer/gateway/internal/ratelimit"
 	"github.com/sentinelayer/gateway/internal/ssrf"
@@ -96,6 +100,18 @@ func jsonFloat(f float64) string {
 	return string(b)
 }
 
+func rateLimitKey(r *http.Request, ctx RequestContext) string {
+	hash := sha256.New()
+	for _, part := range []string{
+		ctx.TenantID, ctx.UserID, ctx.SessionID, r.Header.Get("X-API-Key"),
+		r.RemoteAddr, r.Method, r.URL.Path,
+	} {
+		_, _ = hash.Write([]byte(part))
+		_, _ = hash.Write([]byte{0})
+	}
+	return "sl:gateway:rate:" + hex.EncodeToString(hash.Sum(nil))
+}
+
 func main() {
 	if os.Getenv("SL_ENFORCE_PROVENANCE") == "1" {
 		expected := os.Getenv("SL_APPROVED_ARTIFACT_HASH")
@@ -107,6 +123,9 @@ func main() {
 	}
 
 	crsDir := os.Getenv("CRS_RULES_DIR")
+	if crsDir == "" {
+		crsDir = "/app/waf/rules"
+	}
 	wafEngine, err := waf.NewEngine(crsDir)
 	if err != nil {
 		log.Fatalf("WAF init failed: %v", err)
@@ -177,7 +196,8 @@ func main() {
 					observability.IncBlocked("auth")
 					return
 				}
-				signals = append(signals, "auth_invalid")
+				signals = append(signals, "auth_failure")
+
 			} else {
 				claims = c
 			}
@@ -190,32 +210,42 @@ func main() {
 		}
 
 		reqCtx := extractContext(r, claims)
+		normalize.NormalizeRequest(r)
+		if _, err := normalize.NormalizeBody(r); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "request body normalization failed", "code": "BODY"})
+			observability.IncBlocked("body")
+			return
+		}
 
 		blocked, ruleID, msg := wafEngine.ProcessRequest(r)
+		wafBlocked := blocked
 		if blocked {
-			if failMatrix.ShouldFailClosed("waf", endpointClass) || endpointClass == "critical" {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusForbidden)
-				_ = json.NewEncoder(w).Encode(map[string]interface{}{"error": "WAF Blocked", "rule_id": ruleID, "msg": msg, "code": "WAF"})
-				observability.IncBlocked("waf")
-				return
-			}
-			signals = append(signals, "waf_hit")
+			// Keep the request in the decision path for risk/audit telemetry,
+			// but never let a matched WAF violation become an ALLOW.
+			signals = append(signals, "waf_block")
 		}
 
-		allowed := true
 		if rateLimiter != nil {
-			allowed = rateLimiter.Allow(r.RemoteAddr)
-		}
-		if !allowed {
-			if !failMatrix.ShouldFailOpen("redis", endpointClass) {
+			allowed, rateErr := rateLimiter.Allow(rateLimitKey(r, reqCtx))
+			if rateErr != nil {
+				if failMatrix.ShouldFailClosed("redis", endpointClass) {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusServiceUnavailable)
+					_ = json.NewEncoder(w).Encode(map[string]string{"error": "rate limiter unavailable", "code": "RATE_DEPENDENCY"})
+					observability.IncBlocked("rate_dependency")
+					return
+				}
+				signals = append(signals, "rate_limiter_unavailable")
+			} else if !allowed {
+				w.Header().Set("Retry-After", "60")
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusTooManyRequests)
 				_ = json.NewEncoder(w).Encode(map[string]string{"error": "Rate limit exceeded", "code": "RATE"})
 				observability.IncBlocked("rate")
 				return
 			}
-			signals = append(signals, "rate_limit_exceeded")
 		}
 
 		score := 0.0
@@ -269,7 +299,11 @@ func main() {
 			}
 		}
 
-		if action == "BLOCK" && endpointClass == "public" {
+		if wafBlocked {
+			action = "BLOCK"
+			reason = fmt.Sprintf("waf_block rule=%d: %s", ruleID, msg)
+		}
+		if action == "BLOCK" && endpointClass == "public" && !wafBlocked {
 			action = "MONITOR"
 		}
 
