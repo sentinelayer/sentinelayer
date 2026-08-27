@@ -1,6 +1,18 @@
 #!/bin/sh
 set -eu
 
+# Railway's pre-deploy hook is the normal migration path. Repeat the idempotent
+# migration here as a startup safety net so a service never becomes healthy with
+# an empty schema when the platform hook is skipped or misconfigured.
+if [ "${SL_RUN_STARTUP_MIGRATION:-1}" = "1" ]; then
+  if [ -z "${DATABASE_URL:-}" ]; then
+    echo "DATABASE_URL is required for startup migration" >&2
+    exit 1
+  fi
+  echo "running database migrations before starting security services"
+  PYTHONPATH=/app alembic -c /app/alembic.ini upgrade head
+fi
+
 python -m uvicorn control_plane.app.main:app --host 127.0.0.1 --port 8005 &
 CONTROL_PID=$!
 python -m uvicorn engine.risk.server:app --host 127.0.0.1 --port 8090 &
