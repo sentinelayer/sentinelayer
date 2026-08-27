@@ -6,6 +6,10 @@ class SignalCatalog:
             "auth_failure": {"weight": 15, "description": "Authentication failure"},
             "suspicious_ip": {"weight": 25, "description": "Suspicious IP detected"},
             "xss_attempt": {"weight": 35, "description": "XSS attempt detected"},
+            "freq_elevated": {"weight": 15, "description": "Elevated request frequency detected"},
+            "freq_critical": {"weight": 30, "description": "Critical request frequency detected"},
+            "sequence_fraud": {"weight": 35, "description": "Suspicious business-flow sequence detected"},
+            "behavior_engine_unavailable": {"weight": 0, "description": "Behavior engine was unavailable"},
         }
 
     def get_weight(self, signal_type: str) -> int:

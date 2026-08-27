@@ -161,6 +161,7 @@ func main() {
 	failMatrix := decision.NewFailMatrix()
 	lkg := decision.NewLastKnownGood()
 	riskClient := engine.NewClient(os.Getenv("RISK_ENGINE_URL"))
+	behaviorClient := engine.NewBehaviorClient(os.Getenv("BEHAVIOR_ENGINE_URL"))
 
 	jwtSecret := []byte(os.Getenv("JWT_SECRET"))
 	if len(jwtSecret) < 32 {
@@ -269,6 +270,22 @@ func main() {
 			}
 		}
 
+		behaviorCtx, behaviorCancel := context.WithTimeout(r.Context(), 80*time.Millisecond)
+		behaviorResp, behaviorErr := behaviorClient.Analyze(behaviorCtx, engine.BehaviorRequest{
+			TenantID: reqCtx.TenantID, ApplicationID: reqCtx.ApplicationID, Environment: reqCtx.Environment,
+			Endpoint: reqCtx.Endpoint, UserID: reqCtx.UserID, SessionID: reqCtx.SessionID,
+			ClientID: clientAddress(r), ResourceType: reqCtx.ResourceType, ResourceID: reqCtx.ResourceID,
+			BusinessOp: reqCtx.BusinessOperation, Sensitivity: reqCtx.Sensitivity, Criticality: reqCtx.Criticality,
+		})
+		behaviorCancel()
+		behaviorBlocked := false
+		if behaviorErr != nil {
+			signals = append(signals, "behavior_engine_unavailable")
+			behaviorBlocked = failMatrix.ShouldFailClosed("behavior_engine", endpointClass)
+		} else {
+			signals = append(signals, behaviorResp.Signals...)
+		}
+
 		score := 0.0
 		confidence := 0.85
 		var action string
@@ -320,6 +337,12 @@ func main() {
 			}
 		}
 
+		if behaviorBlocked {
+			action = "BLOCK"
+			score = 100
+			confidence = 0
+			reason = "behavior_engine_unavailable_fail_closed"
+		}
 		if wafBlocked {
 			action = "BLOCK"
 			reason = fmt.Sprintf("waf_block rule=%d: %s", ruleID, msg)

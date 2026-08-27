@@ -19,6 +19,11 @@ func NewFailMatrix() *FailMatrix {
 				"normal":   "monitor",
 				"public":   "monitor",
 			},
+			"behavior_engine": {
+				"critical": "fail-closed",
+				"normal":   "monitor",
+				"public":   "monitor",
+			},
 			"redis": {
 				"critical": "fail-closed",
 				"normal":   "monitor",
