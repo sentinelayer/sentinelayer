@@ -28,9 +28,12 @@ def run_once() -> dict[str, Any]:
     jobs: dict[str, Callable[[], dict[str, Any]]] = {
         "evidence_expiry": expire_old_evidence,
         "offboarding_purge": purge_offboarded,
-        "key_rotation": rotate_if_due,
         "webhook_delivery": deliver_pending_webhooks,
     }
+    # The legacy file-local key rotation is intentionally opt-in until it is
+    # backed by the same external key lifecycle used by policy signatures.
+    if os.getenv("POLICY_KEY_ROTATION_ENABLED", "0") == "1":
+        jobs["key_rotation"] = rotate_if_due
     result: dict[str, Any] = {}
     for name, job in jobs.items():
         try:

@@ -7,9 +7,11 @@ python -m uvicorn engine.risk.server:app --host 127.0.0.1 --port 8090 &
 RISK_PID=$!
 python -m uvicorn engine.behavior.server:app --host 127.0.0.1 --port 8091 &
 BEHAVIOR_PID=$!
+python -m control_plane.app.workers.runner --loop &
+WORKER_PID=$!
 
 cleanup() {
-  kill "$CONTROL_PID" "$RISK_PID" "$BEHAVIOR_PID" 2>/dev/null || true
+  kill "$CONTROL_PID" "$RISK_PID" "$BEHAVIOR_PID" "$WORKER_PID" 2>/dev/null || true
 }
 trap cleanup INT TERM EXIT
 
