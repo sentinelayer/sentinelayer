@@ -82,6 +82,9 @@ func (e *Engine) ProcessRequest(r *http.Request) (blocked bool, ruleID int, msg 
 		requestURI = r.URL.RequestURI()
 	}
 	tx.ProcessURI(requestURI, r.Method, r.Proto)
+	if r.Host != "" {
+		tx.AddRequestHeader("Host", r.Host)
+	}
 	for k, vv := range r.Header {
 		for _, v := range vv {
 			tx.AddRequestHeader(k, v)

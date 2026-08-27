@@ -82,3 +82,17 @@ func TestProcessRequestBlocksPathTraversal(t *testing.T) {
 		t.Fatalf("expected path traversal block with rule 1003, blocked=%v rule=%d", blocked, ruleID)
 	}
 }
+
+func TestProcessRequestPreservesHostForCRS(t *testing.T) {
+	engine, err := NewEngine("../../../waf/rules")
+	if err != nil {
+		t.Fatalf("create WAF with official CRS: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "http://example.test/safe", nil)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "SentinelLayer-test/1.0")
+	blocked, ruleID, msg := engine.ProcessRequest(req)
+	if blocked {
+		t.Fatalf("safe request blocked by rule %d (%s)", ruleID, msg)
+	}
+}
