@@ -97,7 +97,7 @@ def test_high_risk_and_breakglass_require_separate_persistent_approver():
     requester = headers("admin-a", "tenant-a", True)
     approver = headers("admin-b", "tenant-a", True)
     action = client.post("/api/v1/admin/high-risk-actions", headers=requester,
-                         json={"action": "force_rotation", "reason": "scheduled security operation"})
+                         json={"action": "revoke_all_tokens", "reason": "scheduled security operation"})
     assert action.status_code == 200
     action_id = action.json()["id"]
     self_approval = client.post(f"/api/v1/admin/high-risk-actions/{action_id}/approve", headers=requester)
@@ -108,6 +108,9 @@ def test_high_risk_and_breakglass_require_separate_persistent_approver():
     listed = client.get("/api/v1/admin/high-risk-actions", headers=approver)
     assert listed.status_code == 200
     assert listed.json()[0]["approved_by"] == "admin-b"
+    executed = client.post(f"/api/v1/admin/high-risk-actions/{action_id}/execute", headers=approver)
+    assert executed.status_code == 200, executed.text
+    assert executed.json()["status"] == "EXECUTED"
 
     session = client.post("/api/v1/admin/breakglass", headers=requester,
                           json={"user_id": "target", "reason": "incident response"})

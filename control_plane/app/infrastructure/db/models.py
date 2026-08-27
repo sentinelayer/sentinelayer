@@ -91,6 +91,8 @@ class HighRiskActionRecord(Base):
     requested_at = Column(DateTime, default=_utcnow, nullable=False)
     approved_at = Column(DateTime, nullable=True)
     rejected_at = Column(DateTime, nullable=True)
+    executed_by = Column(String, ForeignKey("users.id"), nullable=True)
+    executed_at = Column(DateTime, nullable=True)
 
 
 class BreakGlassSession(Base):

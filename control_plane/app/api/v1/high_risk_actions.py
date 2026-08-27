@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from control_plane.app.api.deps import db_with_tenant
-from control_plane.app.infrastructure.db.models import AuditEvent, HighRiskActionRecord
+from control_plane.app.infrastructure.db.models import AuditEvent, AuthSession, HighRiskActionRecord
 
 router = APIRouter(prefix="/admin/high-risk-actions", tags=["admin"])
 
@@ -19,7 +19,7 @@ class HighRiskAction(BaseModel):
     reason: str = Field(min_length=1, max_length=2000)
 
 
-ALLOWED_ACTIONS = {"block_tenant", "revoke_all_tokens", "disable_waf", "force_rotation"}
+ALLOWED_ACTIONS = {"revoke_all_tokens"}
 
 
 def _require_admin(request: Request) -> tuple[str, str]:
@@ -61,6 +61,8 @@ def _serialize(record: HighRiskActionRecord) -> dict[str, Any]:
         "requested_at": record.requested_at.isoformat(),
         "approved_at": record.approved_at.isoformat() if record.approved_at else None,
         "rejected_at": record.rejected_at.isoformat() if record.rejected_at else None,
+        "executed_by": record.executed_by,
+        "executed_at": record.executed_at.isoformat() if record.executed_at else None,
         "requires_approval": True,
     }
 
@@ -116,6 +118,31 @@ async def approve_high_risk_action(id: str, request: Request, db: Session = Depe
     db.commit()
     db.refresh(record)
     return _serialize(record)
+
+
+@router.post("/{id}/execute")
+async def execute_approved_action(id: str, request: Request, db: Session = Depends(db_with_tenant)):
+    actor, tenant = _require_admin(request)
+    record = db.query(HighRiskActionRecord).filter(
+        HighRiskActionRecord.id == id, HighRiskActionRecord.tenant_id == tenant
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Action not found")
+    if record.status != "APPROVED":
+        raise HTTPException(status_code=409, detail="Action must be approved before execution")
+    if record.action != "revoke_all_tokens":
+        raise HTTPException(status_code=400, detail="No execution capability is registered for this action")
+    now = datetime.now(UTC)
+    revoked = db.query(AuthSession).filter(
+        AuthSession.tenant_id == tenant, AuthSession.revoked_at.is_(None)
+    ).update({AuthSession.revoked_at: now, AuthSession.revoke_reason: "approved_high_risk_action"}, synchronize_session=False)
+    record.status = "EXECUTED"
+    record.executed_by = actor
+    record.executed_at = now
+    _audit(db, tenant, actor, "high_risk_action.executed", record.id, {"action": record.action, "revoked_sessions": revoked})
+    db.commit()
+    db.refresh(record)
+    return {**_serialize(record), "revoked_sessions": revoked}
 
 
 @router.post("/{id}/reject")
