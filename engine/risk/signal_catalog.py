@@ -10,6 +10,7 @@ class SignalCatalog:
             "freq_critical": {"weight": 30, "description": "Critical request frequency detected"},
             "sequence_fraud": {"weight": 35, "description": "Suspicious business-flow sequence detected"},
             "behavior_engine_unavailable": {"weight": 0, "description": "Behavior engine was unavailable"},
+            "correlation_unavailable": {"weight": 0, "description": "Shared risk correlation state was unavailable"},
         }
 
     def get_weight(self, signal_type: str) -> int:

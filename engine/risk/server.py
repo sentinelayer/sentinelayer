@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from engine.decision.safety_layer import SafetyLayer
 from engine.risk.calibration import Calibration
-from engine.risk.correlation import RiskCorrelation
+from engine.risk.correlation import CorrelationUnavailable, RiskCorrelation
 from engine.risk.decision_matrix import DecisionMatrix
 from engine.risk.engine import RiskEngine
 from engine.risk.signal_catalog import SignalCatalog
@@ -16,7 +16,10 @@ from engine.risk.signal_catalog import SignalCatalog
 app = FastAPI(title="SentinelLayer Risk Engine", version="1.1.0")
 engine = RiskEngine()
 matrix = DecisionMatrix()
-correlation = RiskCorrelation()
+correlation = RiskCorrelation(
+    redis_url=os.getenv("REDIS_URL"),
+    require_shared=os.getenv("SL_ENV", "development").lower() in {"production", "prod"},
+)
 catalog = SignalCatalog()
 calibration = Calibration()
 safety = SafetyLayer(mode=os.getenv("RISK_SAFETY_MODE", "production"))
@@ -90,10 +93,21 @@ def score(req: RiskRequest):
 
     correlation_data: dict[str, Any] = {"risk_multiplier": 1.0, "signal_count": 0}
     if req.tenant_id:
-        for signal in dict.fromkeys(req.signals):
-            correlation.add_signal(req.tenant_id, signal, {"endpoint": req.endpoint})
-        correlation_data = correlation.correlate(req.tenant_id)
-        raw_score = min(100.0, raw_score * float(correlation_data["risk_multiplier"]))
+        try:
+            for signal in dict.fromkeys(req.signals):
+                correlation.add_signal(req.tenant_id, signal, {"endpoint": req.endpoint})
+            correlation_data = correlation.correlate(req.tenant_id)
+            raw_score = min(100.0, raw_score * float(correlation_data["risk_multiplier"]))
+        except CorrelationUnavailable:
+            correlation_data = {"risk_multiplier": 1.0, "signal_count": 0, "unavailable": True}
+            if req.context.get("criticality") == "critical":
+                return RiskResponse(
+                    action="BLOCK", score=100.0, confidence=0.0,
+                    signals=list(dict.fromkeys([*req.signals, "correlation_unavailable"])),
+                    factors={"correlation": correlation_data, "safety_reason": "shared_correlation_unavailable"},
+                    explanation="shared correlation unavailable for critical request",
+                )
+            req.signals = list(dict.fromkeys([*req.signals, "correlation_unavailable"]))
 
     calibrated_score = calibration.calibrate(raw_score)
     action = matrix.get_action(calibrated_score, confidence)
