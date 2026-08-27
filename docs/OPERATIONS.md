@@ -4,7 +4,7 @@ Dokumen ini menjelaskan operasi yang harus dilakukan setelah branch perbaikan di
 
 ## Preflight production
 
-Set `DATABASE_URL`, `POSTGRES_PASSWORD`, `JWT_SECRET` dengan minimal 32 karakter acak, `METRICS_TOKEN`, dan `KMS_KEY` dari secret manager. `KMS_KEY` wajib tersedia pada control-plane dan maintenance worker; secret webhook dikirim saat registrasi lalu disimpan terenkripsi, bukan melalui `WEBHOOK_SECRET` environment variable. Set `SL_ENV=production` dan `SL_AUTO_CREATE_SCHEMA=0`. Gateway production juga membutuhkan `SL_APPROVED_ARTIFACT_HASH` dan `SL_RUNNING_ARTIFACT_HASH` yang sama-sama berasal dari artefak yang telah diverifikasi.
+Set `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET` dengan minimal 32 karakter acak, `METRICS_TOKEN`, dan `KMS_KEY` dari secret manager. Tambahkan `BOOTSTRAP_ADMIN_EMAIL` dan `BOOTSTRAP_ADMIN_TOKEN` hanya untuk pembuatan admin pertama; token harus dinonaktifkan setelah berhasil dipakai. `KMS_KEY` wajib tersedia pada control-plane dan maintenance worker; secret webhook dikirim saat registrasi lalu disimpan terenkripsi, bukan melalui `WEBHOOK_SECRET` environment variable. Set `SL_ENV=production` dan `SL_AUTO_CREATE_SCHEMA=0`. `SL_ENFORCE_PROVENANCE=0` pada tahap awal. Hash `SL_APPROVED_ARTIFACT_HASH` dan `SL_RUNNING_ARTIFACT_HASH` hanya wajib ketika provenance enforcement diaktifkan dan harus berasal dari artefak signed yang sama.
 
 Jalankan migration hanya dari control-plane deployment:
 
@@ -16,13 +16,13 @@ Aplikasi production tidak boleh memakai `Base.metadata.create_all`; migration ad
 
 ## Maintenance worker
 
-Worker dijalankan sebagai service terpisah menggunakan:
+Pada topology terpisah, worker dijalankan sebagai service tersendiri. Pada topology Railway single-service, launcher menjalankan worker sebagai child process:
 
 ```sh
 PYTHONPATH=/app python -m control_plane.app.workers.runner --loop
 ```
 
-`WORKER_INTERVAL_SECONDS` minimal 10 detik dan default 300 detik. `WEBHOOK_DELIVERY_MAX_ATTEMPTS` default 5 dan `WEBHOOK_DELIVERY_TIMEOUT_SECONDS` default 5 dapat dituning melalui secret/config management. Worker menjalankan evidence expiry, offboarding purge, key rotation, dan delivery webhook. File lock mencegah dua worker pada instance yang sama berjalan bersamaan. Untuk HA multi-instance, gunakan distributed lock/leader election di deployment platform; file lock saja tidak cukup lintas host.
+`WORKER_INTERVAL_SECONDS` minimal 10 detik dan default 300 detik. `WEBHOOK_DELIVERY_MAX_ATTEMPTS` default 5 dan `WEBHOOK_DELIVERY_TIMEOUT_SECONDS` default 5 dapat dituning melalui secret/config management. Worker menjalankan evidence expiry, offboarding purge, dan delivery webhook. Legacy file-local key rotation hanya berjalan bila `POLICY_KEY_ROTATION_ENABLED=1`; jangan aktifkan itu sebagai pengganti external KMS lifecycle. File lock mencegah dua worker pada instance yang sama berjalan bersamaan. Untuk HA multi-instance, gunakan distributed lock/leader election di deployment platform; file lock saja tidak cukup lintas host.
 
 ## Backup dan restore
 
@@ -41,7 +41,7 @@ Lakukan restore drill berkala pada database sementara, ukur RTO/RPO, verifikasi 
 
 ## Monitoring dan alerting
 
-Scrape `/metrics` menggunakan `X-Metrics-Token: $METRICS_TOKEN`. Endpoint mengembalikan 503 di production apabila `METRICS_TOKEN` belum dikonfigurasi. Endpoint `/health` hanya liveness; `/api/v1/health/readiness` memeriksa koneksi database dan mengembalikan 503 apabila database belum siap.
+Scrape `/metrics` menggunakan `X-Metrics-Token: $METRICS_TOKEN`. Endpoint mengembalikan 503 di production apabila `METRICS_TOKEN` belum dikonfigurasi. Control-plane `/health` adalah liveness; `/api/v1/health/readiness` memeriksa koneksi database. Gateway `/health` memeriksa control-plane, risk engine, dan behavior engine internal sehingga Railway tidak menerima deployment ketika security dependency belum siap.
 
 Runtime security events dikirim ke `POST /api/v1/events` dengan `event_type`, `source`, `severity`, `risk_score`, `outcome`, serta data terstruktur. Metrics, heatmap, user risk, dan SLA report hanya membaca event milik tenant caller dalam bounded time window.
 
