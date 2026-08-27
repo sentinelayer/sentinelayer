@@ -60,6 +60,8 @@ def test_postgres_rls_isolation_with_unprivileged_role():
             cur.execute("ALTER TABLE legal_holds NO FORCE ROW LEVEL SECURITY")
             cur.execute("DELETE FROM legal_holds WHERE id IN (%s, %s)", (hold_a, hold_b))
             cur.execute("DELETE FROM tenants WHERE id IN (%s, %s)", (tenant_a, tenant_b))
-            cur.execute(sql.SQL("DROP OWNED BY {}").format(role_identifier))
-            cur.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(role_identifier))
+            cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (role,))
+            if cur.fetchone():
+                cur.execute(sql.SQL("DROP OWNED BY {}").format(role_identifier))
+                cur.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(role_identifier))
         admin.close()
