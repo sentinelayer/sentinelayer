@@ -236,3 +236,62 @@ def test_api_key_lifecycle_is_hashed_and_revocable():
     revoked = client.post(f"/api/v1/auth/api-keys/{key_id}/revoke", headers=h)
     assert revoked.status_code == 200
     assert revoked.json()["revoked"] is True
+
+
+def test_runtime_event_persists_risk_decision_record():
+    seed_users()
+    client = TestClient(app)
+    h = headers("admin-a", "tenant-a", True)
+    created = client.post("/api/v1/events", headers=h, json={
+        "event_type": "risk.decision", "source": "gateway", "risk_score": 91,
+        "outcome": "BLOCK", "data": {"confidence": 0.92, "factors": {"suspicious_ip": True}},
+    })
+    assert created.status_code == 200
+    decisions = client.get("/api/v1/events/decisions", headers=h)
+    assert decisions.status_code == 200
+    assert decisions.json()[0]["score"] == 91
+    assert decisions.json()[0]["confidence"] == 92
+    assert decisions.json()[0]["action"] == "BLOCK"
+    assert decisions.json()[0]["factors"]["suspicious_ip"] is True
+
+
+def test_behavior_baseline_versioning_and_rollback():
+    seed_users()
+    client = TestClient(app)
+    h = headers("admin-a", "tenant-a", True)
+    first = client.post("/api/v1/behavior/baselines", headers=h, json={
+        "baseline_key": "/api/orders", "baseline_type": "endpoint", "stats": {"mean": 10},
+    })
+    second = client.post("/api/v1/behavior/baselines", headers=h, json={
+        "baseline_key": "/api/orders", "baseline_type": "endpoint", "stats": {"mean": 12},
+    })
+    assert first.status_code == 200 and second.status_code == 200
+    assert first.json()["version"] == 1 and second.json()["version"] == 2
+    assert second.json()["status"] == "active"
+    rolled = client.post(f"/api/v1/behavior/baselines/{first.json()['id']}/rollback", headers=h)
+    assert rolled.status_code == 200
+    assert rolled.json()["status"] == "active"
+    versions = client.get("/api/v1/behavior/baselines", headers=h)
+    assert [row["status"] for row in versions.json()] == ["rolled_back", "active"]
+
+
+def test_risk_calibration_is_versioned_and_tenant_scoped():
+    seed_users()
+    client = TestClient(app)
+    h = headers("admin-a", "tenant-a", True)
+    digest = "a" * 64
+    first = client.post("/api/v1/risk/calibrations", headers=h, json={
+        "factor": 100, "dataset_hash": digest, "sample_count": 100, "fp_rate": 2, "fn_rate": 1,
+    })
+    second = client.post("/api/v1/risk/calibrations", headers=h, json={
+        "factor": 110, "dataset_hash": "b" * 64, "sample_count": 200, "fp_rate": 3, "fn_rate": 2,
+    })
+    assert first.status_code == 200 and second.status_code == 200
+    assert first.json()["version"] == 1 and second.json()["version"] == 2
+    assert second.json()["status"] == "active"
+    activated = client.post(f"/api/v1/risk/calibrations/{first.json()['id']}/activate", headers=h)
+    assert activated.status_code == 200
+    assert activated.json()["status"] == "active"
+    rows = client.get("/api/v1/risk/calibrations", headers=h)
+    assert rows.status_code == 200
+    assert rows.json()[0]["version"] == 2 and rows.json()[1]["version"] == 1

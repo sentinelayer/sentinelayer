@@ -9,6 +9,8 @@ from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from control_plane.app.infrastructure.db.models import RiskDecisionRecord
+
 from control_plane.app.api.deps import db_with_tenant, tenant_id
 from control_plane.app.infrastructure.db.models import RuntimeEvent
 
@@ -65,6 +67,35 @@ async def create_event(body: EventCreate, request: Request, db: Session = Depend
         risk_score=body.risk_score, outcome=body.outcome, occurred_at=datetime.now(UTC),
     )
     db.add(event)
+    db.flush()
+    if body.risk_score is not None:
+        confidence = body.data.get("confidence", 0)
+        try:
+            confidence_value = max(0, min(100, int(float(confidence) * 100 if float(confidence) <= 1 else float(confidence))))
+        except (TypeError, ValueError):
+            confidence_value = 0
+        db.add(RiskDecisionRecord(
+            id=str(uuid.uuid4()), tenant_id=tid, event_id=event.id, score=body.risk_score,
+            confidence=confidence_value, action=body.outcome or "UNKNOWN",
+            factors=json.dumps(body.data.get("factors", {}), sort_keys=True),
+            model_version=str(body.data.get("model_version", "rule-v1")), created_at=datetime.now(UTC),
+        ))
     db.commit()
     db.refresh(event)
     return _serialize(event)
+
+
+@router.get("/decisions")
+async def get_decisions(
+    request: Request,
+    limit: int = Query(default=100, ge=1, le=500),
+    db: Session = Depends(db_with_tenant),
+):
+    rows = db.query(RiskDecisionRecord).filter(
+        RiskDecisionRecord.tenant_id == tenant_id(request)
+    ).order_by(RiskDecisionRecord.created_at.desc()).limit(limit).all()
+    return [{
+        "id": row.id, "event_id": row.event_id, "score": row.score, "confidence": row.confidence,
+        "action": row.action, "factors": json.loads(row.factors or "{}"),
+        "model_version": row.model_version, "created_at": row.created_at.isoformat(),
+    } for row in rows]

@@ -205,3 +205,101 @@ paths:
         200: {description: Success}
         401: {description: Invalid metrics token}
         503: {description: Metrics token is not configured in production}
+  /api/v1/gates/requirements:
+    get:
+      summary: List tenant acceptance requirements
+      responses:
+        200: {description: Success}
+    post:
+      summary: Register a tenant acceptance requirement
+      responses:
+        200: {description: Created}
+        409: {description: Requirement already exists}
+  /api/v1/gates/requirements/{req_id}/checks:
+    patch:
+      summary: Update machine check inputs; status is derived only by evaluation
+      responses:
+        200: {description: Updated}
+  /api/v1/gates/requirements/{req_id}/evaluate:
+    post:
+      summary: Evaluate and persist an immutable acceptance result
+      responses:
+        200: {description: Evaluated}
+  /api/v1/gates/production-ready:
+    get:
+      summary: Evaluate P0/P1 production readiness for the tenant
+      responses:
+        200: {description: Readiness result}
+  /api/v1/compliance/applicability/evaluate:
+    post:
+      summary: Evaluate and persist applicable framework obligations
+      responses:
+        200: {description: Applicability result}
+  /api/v1/compliance/applicability/latest:
+    get:
+      summary: Read the latest tenant applicability decision
+      responses:
+        200: {description: Decision}
+        404: {description: No decision recorded}
+  /api/v1/auth/api-keys:
+    get:
+      summary: List API key metadata without secret material
+      responses:
+        200: {description: Success}
+    post:
+      summary: Create a hashed, expiring API key; plaintext returned once
+      responses:
+        200: {description: Created}
+  /api/v1/auth/api-keys/{key_id}/revoke:
+    post:
+      summary: Revoke an API key
+      responses:
+        200: {description: Revoked}
+  /api/v1/auth/sessions:
+    get:
+      summary: List current user sessions
+      responses:
+        200: {description: Success}
+  /api/v1/auth/sessions/{session_id}/revoke:
+    post:
+      summary: Revoke one current user session
+      responses:
+        200: {description: Revoked}
+  /api/v1/behavior/baselines:
+    get:
+      summary: List tenant behavior baseline versions
+      responses:
+        200: {description: Success}
+    post:
+      summary: Create a new tenant behavior baseline version
+      responses:
+        200: {description: Created}
+  /api/v1/behavior/baselines/{baseline_id}/rollback:
+    post:
+      summary: Roll back a behavior baseline version
+      responses:
+        200: {description: Rolled back}
+  /api/v1/risk/calibrations:
+    get:
+      summary: List tenant risk calibration versions
+      responses:
+        200: {description: Success}
+    post:
+      summary: Create a risk calibration record with dataset hash
+      responses:
+        200: {description: Created}
+  /api/v1/risk/calibrations/{calibration_id}/activate:
+    post:
+      summary: Activate a prior risk calibration version
+      responses:
+        200: {description: Activated}
+  /api/v1/events/decisions:
+    get:
+      summary: List persisted tenant risk decisions
+      responses:
+        200: {description: Success}
+  /api/v1/webhooks/logs:
+    get:
+      summary: List durable webhook delivery attempts
+      responses:
+        200: {description: Success}

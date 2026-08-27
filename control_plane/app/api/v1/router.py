@@ -8,6 +8,7 @@ from control_plane.app.api.v1 import (
     audit,
     auth,
     configuration,
+    behavior,
     compliance,
     events,
     events_ws,
@@ -22,6 +23,7 @@ from control_plane.app.api.v1 import (
     offboarding,
     policies,
     residency,
+    risk_calibration,
     schema,
     sla,
     tenants,
@@ -57,7 +59,9 @@ router.include_router(compliance.router)
 router.include_router(explainability.router)
 router.include_router(high_risk_actions.router)
 router.include_router(breakglass.router)
+router.include_router(behavior.router)
 router.include_router(residency.router)
+router.include_router(risk_calibration.router)
 router.include_router(events.router)
 router.include_router(events_ws.router)
 router.include_router(offboarding.router)

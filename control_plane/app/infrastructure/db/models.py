@@ -202,6 +202,46 @@ class ThreatIntelIndicator(Base):
     updated_at = Column(DateTime, default=_utcnow, nullable=False)
 
 
+class BehaviorBaselineRecord(Base):
+    __tablename__ = "behavior_baselines"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    baseline_key = Column(String(256), nullable=False, index=True)
+    baseline_type = Column(String(64), nullable=False)
+    version = Column(Integer, nullable=False)
+    stats = Column(Text, nullable=False, default="{}")
+    status = Column(String(16), nullable=False, default="active", index=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class RiskCalibrationRecord(Base):
+    __tablename__ = "risk_calibrations"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    version = Column(Integer, nullable=False)
+    factor = Column(Integer, nullable=False, default=100)
+    dataset_hash = Column(String(64), nullable=False)
+    sample_count = Column(Integer, nullable=False, default=0)
+    fp_rate = Column(Integer, nullable=True)
+    fn_rate = Column(Integer, nullable=True)
+    status = Column(String(16), nullable=False, default="active", index=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class RiskDecisionRecord(Base):
+    __tablename__ = "risk_decisions"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    event_id = Column(String, ForeignKey("runtime_events.id"), nullable=True, index=True)
+    score = Column(Integer, nullable=False)
+    confidence = Column(Integer, nullable=False)
+    action = Column(String(16), nullable=False)
+    factors = Column(Text, nullable=False, default="{}")
+    model_version = Column(String(64), nullable=False, default="rule-v1")
+    created_at = Column(DateTime, default=_utcnow, nullable=False, index=True)
+
+
 class RuntimeEvent(Base):
     __tablename__ = "runtime_events"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
