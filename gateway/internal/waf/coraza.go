@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
@@ -23,13 +25,18 @@ func NewEngine(crsRulesDir string) (*Engine, error) {
 SecRuleEngine On
 SecRequestBodyAccess On
 SecResponseBodyAccess Off
-SecDefaultAction "phase:1,log,auditlog,pass"
-SecDefaultAction "phase:2,log,auditlog,pass"
 SecRule REQUEST_HEADERS:Content-Type "@rx (?i)^application/json" "id:1000,phase:1,pass,nolog,ctl:requestBodyProcessor=JSON"
 	`
 
 	if crsRulesDir != "" {
-		directives += fmt.Sprintf("\nSecDataDir %s\nInclude %s/*.conf\n", crsRulesDir, crsRulesDir)
+		setupFile := os.Getenv("CRS_SETUP_FILE")
+		if setupFile == "" {
+			setupFile = filepath.Join(filepath.Dir(crsRulesDir), "crs-setup.conf.example")
+		}
+		if _, err := os.Stat(setupFile); err != nil {
+			return nil, fmt.Errorf("CRS setup file is required: %s: %w", setupFile, err)
+		}
+		directives += fmt.Sprintf("\nSecDataDir %s\nInclude %s\nInclude %s/*.conf\n", crsRulesDir, setupFile, crsRulesDir)
 	}
 
 	// Baseline rules always on. Libinjection handles common SQLi/XSS payloads;
