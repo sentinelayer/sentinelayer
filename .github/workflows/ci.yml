@@ -80,6 +80,14 @@ jobs:
           JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
         run: |
           pytest tests/test_bola_real.py tests/test_tenant_matrix.py -v --tb=short
+      - name: PostgreSQL RLS isolation evidence
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sentinelayer
+          TEST_POSTGRES_RLS: "1"
+          JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
+          SL_ENV: test
+          PYTHONPATH: .
+        run: pytest tests/test_rls_real.py -v --tb=short
       - name: Generate repository GRC evidence
         run: |
           set -euo pipefail
