@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { logout } from "../api/client";
+import { apiGet, logout } from "../api/client";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -8,6 +8,7 @@ interface LayoutProps {
 
 type NavItem = { to: string; label: string; code: string };
 type NavGroup = { label: string; items: NavItem[] };
+type CurrentUser = { email?: string; full_name?: string; tenant_id?: string; is_admin?: boolean; mfa_enabled?: boolean };
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -70,7 +71,18 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [user, setUser] = useState<CurrentUser | null>(null);
   const isAdmin = useMemo(readAdminClaim, []);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    apiGet<CurrentUser>("/auth/me").then((currentUser) => {
+      if (!cancelled) setUser(currentUser);
+    }).catch(() => {
+      // Navigation remains usable when the optional profile lookup is unavailable.
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -97,7 +109,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
         <div className="workspace-switcher" aria-label="Current workspace">
           <span className="workspace-dot" />
-          <span><b>Primary workspace</b><small>Production</small></span>
+          <span><b>{user?.tenant_id ? `Workspace ${user.tenant_id.slice(0, 8)}` : "Current workspace"}</b><small>Production · tenant-scoped</small></span>
           <span className="chevron">⌄</span>
         </div>
         <nav className="side-nav" aria-label="Primary navigation">
@@ -132,7 +144,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="main-shell">
         <header className="topbar">
           <div className="breadcrumb"><span className="breadcrumb-muted">SentinelLayer</span><span>/</span><strong>{location.pathname === "/" ? "Overview" : location.pathname.split("/").filter(Boolean).pop()?.replace(/-/g, " ")}</strong></div>
-          <div className="topbar-actions"><span className="environment-badge"><span className="status-dot status-dot-good" />Production</span><button className="topbar-button" type="button" aria-label="Open notifications">Notifications <span className="notification-count">0</span></button></div>
+          <div className="topbar-actions"><span className="environment-badge"><span className="status-dot status-dot-good" />Production</span><span className="user-pill"><span className="user-avatar">{(user?.full_name || user?.email || "S").slice(0, 1).toUpperCase()}</span><span><b>{user?.full_name || user?.email || "Session user"}</b><small>{user?.is_admin || isAdmin ? "Administrator" : "Viewer"}</small></span></span><button className="topbar-button" type="button" aria-label="Open notifications">Notifications <span className="notification-count">0</span></button></div>
         </header>
         <main className="content-area">{children}</main>
       </div>

@@ -695,3 +695,10 @@ td {
 .demo-footnote strong { flex: 0 0 auto; color: #b7d5d1; }
 @media (max-width: 780px) { .demo-layout { grid-template-columns: 1fr; } .demo-scenarios { order: 2; } .demo-request { flex-direction: column; } .demo-request .compact-button { width: 100%; } .demo-pipeline-step b { font-size: 0.58rem; } .demo-meta { min-width: 95px; } }
 @media (max-width: 520px) { .demo-nav { align-items: flex-start; flex-direction: column; } .demo-nav-actions { width: 100%; justify-content: space-between; } .demo-hero h1 { font-size: 2.55rem; } .demo-pipeline { align-items: stretch; flex-direction: column; } .demo-pipeline-line { width: 1px; height: 15px; flex: none; margin: 0 auto; } .demo-decision { align-items: flex-start; flex-wrap: wrap; } .demo-meta { width: 100%; grid-template-columns: repeat(2, 1fr); margin-left: 2.4rem; } }
+
+.user-pill { display: inline-flex; gap: 0.45rem; align-items: center; max-width: 190px; }
+.user-avatar { display: grid; width: 27px; height: 27px; flex: 0 0 27px; place-items: center; border-radius: 8px; color: #07151b; background: linear-gradient(135deg, #72e2ce, #79aefb); font-size: 0.68rem; font-weight: 900; }
+.user-pill b, .user-pill small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-pill b { color: #dbe8f1; font-size: 0.68rem; }
+.user-pill small { margin-top: 0.12rem; color: #71879c; font-size: 0.6rem; }
+@media (max-width: 620px) { .user-pill { max-width: 145px; } .user-pill b { max-width: 95px; } }
