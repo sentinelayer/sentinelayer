@@ -1,6 +1,9 @@
 import os
+from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, Response
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from prometheus_client import CONTENT_TYPE_LATEST
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -48,6 +51,11 @@ app.add_middleware(AuthMiddleware)
 
 app.include_router(router, prefix="/api/v1")
 
+DASHBOARD_DIST = Path(os.getenv("DASHBOARD_DIST", "dashboard/dist"))
+DASHBOARD_INDEX = DASHBOARD_DIST / "index.html"
+if (DASHBOARD_DIST / "assets").is_dir():
+    app.mount("/assets", StaticFiles(directory=DASHBOARD_DIST / "assets"), name="dashboard-assets")
+
 
 @app.get("/metrics")
 async def metrics_endpoint(x_metrics_token: str | None = Header(default=None)):
@@ -59,11 +67,25 @@ async def metrics_endpoint(x_metrics_token: str | None = Header(default=None)):
     return Response(content=get_metrics(), media_type=CONTENT_TYPE_LATEST)
 
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 async def root():
+    if DASHBOARD_INDEX.is_file():
+        return FileResponse(DASHBOARD_INDEX)
     return {"status": "ok", "service": "SentinelLayer Control Plane"}
 
 
 @app.get("/health")
 async def root_health():
     return {"status": "healthy", "service": "control-plane"}
+
+
+@app.get("/{path:path}", include_in_schema=False)
+async def dashboard_fallback(path: str):
+    if path.startswith("api/") or path in {"metrics", "health", "docs", "redoc", "openapi.json"}:
+        raise HTTPException(status_code=404, detail="Not found")
+    candidate = DASHBOARD_DIST / path
+    if candidate.is_file() and DASHBOARD_DIST in candidate.parents:
+        return FileResponse(candidate)
+    if DASHBOARD_INDEX.is_file():
+        return FileResponse(DASHBOARD_INDEX)
+    raise HTTPException(status_code=404, detail="Dashboard is not built")

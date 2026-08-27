@@ -16,7 +16,7 @@ SECRET = "audit-secret-minimum-32-characters"
 def make_client(session_factory=None) -> TestClient:
     app = FastAPI()
 
-    @app.get("/protected")
+    @app.get("/api/v1/protected")
     async def protected(request: Request):
         return {"tenant_id": request.state.tenant_id}
 
@@ -49,14 +49,14 @@ def token(*, tenant_id: str = "tenant-a", is_admin: bool = False, jti: str | Non
 
 def test_protected_path_requires_jwt(monkeypatch):
     monkeypatch.setenv("JWT_SECRET", SECRET)
-    response = make_client().get("/protected")
+    response = make_client().get("/api/v1/protected")
     assert response.status_code == 401
 
 
 def test_tenant_header_must_match_jwt(monkeypatch):
     monkeypatch.setenv("JWT_SECRET", SECRET)
     response = make_client().get(
-        "/protected",
+        "/api/v1/protected",
         headers={"Authorization": f"Bearer {token()}", "X-Tenant-ID": "tenant-b"},
     )
     assert response.status_code == 403
@@ -73,7 +73,7 @@ def test_admin_path_rejects_normal_user(monkeypatch):
 
 def test_authenticated_tenant_context_is_available_without_header(monkeypatch):
     monkeypatch.setenv("JWT_SECRET", SECRET)
-    response = make_client().get("/protected", headers={"Authorization": f"Bearer {token()}"})
+    response = make_client().get("/api/v1/protected", headers={"Authorization": f"Bearer {token()}"})
     assert response.status_code == 200
     assert response.json() == {"tenant_id": "tenant-a"}
 
@@ -108,7 +108,7 @@ def test_revoked_jwt_session_is_rejected(monkeypatch):
             pass
 
     response = make_client(lambda: DB()).get(
-        "/protected",
+        "/api/v1/protected",
         headers={"Authorization": f"Bearer {token(jti='session-1')}"},
     )
     assert response.status_code == 401

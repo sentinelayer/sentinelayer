@@ -21,6 +21,10 @@ class TenantMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         if path in PUBLIC_PATHS or path.startswith("/docs") or path.startswith("/openapi"):
             return await call_next(request)
+        # Frontend documents and assets are same-origin and do not carry tenant
+        # context; tenant enforcement applies to the API surface only.
+        if not path.startswith("/api/"):
+            return await call_next(request)
 
         jwt_tenant = getattr(request.state, "tenant_id", None)
         header_tenant = request.headers.get("X-Tenant-ID")

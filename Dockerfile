@@ -1,3 +1,10 @@
+FROM node:22-alpine AS dashboard-builder
+WORKDIR /dashboard
+COPY dashboard/package.json dashboard/package-lock.json* ./
+RUN npm ci --ignore-scripts
+COPY dashboard/ ./
+RUN npm run build
+
 FROM golang:1.25-alpine AS gateway-builder
 WORKDIR /gateway
 COPY gateway/go.mod gateway/go.sum ./
@@ -16,6 +23,7 @@ COPY control_plane ./control_plane
 COPY engine ./engine
 COPY security ./security
 COPY scripts ./scripts
+COPY --from=dashboard-builder /dashboard/dist ./dashboard/dist
 COPY alembic.ini ./
 RUN python scripts/generate_runtime_provenance.py
 COPY --from=gateway-builder /gateway/gateway /usr/local/bin/gateway

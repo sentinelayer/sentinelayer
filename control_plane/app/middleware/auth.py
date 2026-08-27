@@ -33,6 +33,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         if path in PUBLIC_PATHS or path.startswith("/docs") or path.startswith("/openapi"):
             return await call_next(request)
+        # The dashboard is a client-side SPA. Its document and asset routes must
+        # reach the static/fallback handlers; authentication is enforced by the
+        # API routes under /api/* after the dashboard has loaded.
+        if not path.startswith("/api/"):
+            return await call_next(request)
 
         api_key = request.headers.get("X-API-Key")
         if api_key:
