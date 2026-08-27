@@ -1,47 +1,35 @@
-# SentinelLayer Progress (2026-READY Blueprint — TANPA CELAH)
+# SentinelLayer Progress
 
-## Code complete (this cycle) — all 41 fase align
-* Gateway full pipeline (Coraza → auth → rate → risk → decision → upstream)
-* Redis env + events_ws websocket
-* MFA enrollment + smoke passed
-* CI: unit, gateway build, security-integration (BOLA + tenant matrix)
-* Release: cosign keyless + SBOM artifacts
-* Dashboard react-router + Layout navigation
-* Threat-intel static feed API
-* AI explain off-path API (local, non-blocking)
-* Provenance helper + docker-compose.prod.yml profile
-* Alembic 0005 MFA columns
-* External Retainer contract + dual-control access (14.15 & 14.18 blueprint)
-* Runtime provenance verification (5.12)
-* Machine-enforced Gate Engine (0.8)
-* Key rotation 24h automatic (5.10)
-* Baseline + behavior engine (11)
-* Decision safety layer (13)
-* Observability + SLO (15)
-* Solo founder time budget (35.6) + MSP wedge
-* HA multi-AZ + DNS failover (22,23)
-* RLS + tenant isolation full (9.3, 5.11)
-* Enterprise SSO / SCIM (32)
-* Commercial GA prep (pricing, support SLA, compliance pack) (33)
-* Evidence Matrix full (36) + Tooling (Probo/Evidentia)
-* Applicability Engine (38)
-* Final Security Gate checklist (39)
-* 3 Lapis Acceptance Model (40)
-* Epistemological Gate + Evidence verification (41)
-* DR drill evidence + platform compromise drill (26.6)
+## Status repository
 
-## Remaining (cannot finish by code alone) — blueprint 1.8, 29, 30, 31, 36, 38, 39, 40, 41
-* Real HA multi-AZ deployment + DR drill evidence
-* Pilot: 3 customers, success metrics, legal (29,30)
-* Enterprise SSO / SCIM (32)
-* Commercial GA (pricing, support SLA, compliance pack)
-* Evidence Matrix full + Tooling
-* Applicability Engine
-* Final Security Gate checklist
-* 3 Lapis Acceptance Model
-* Epistemological Gate + Evidence verification
+SentinelLayer sudah memiliki satu alur data plane yang terintegrasi pada repository: Gateway Go melakukan normalisasi request dan body, Coraza memuat OWASP CRS, rate limiting atomic memakai Redis, behavior assessment dan risk scoring dijalankan melalui HTTP internal, decision safety menentukan tindakan, lalu request aman diteruskan ke control plane/upstream. Dashboard disajikan dari control plane pada satu domain dan endpoint API memakai namespace `/api/v1`.
 
-## Estimated
-* Technical MVP path: \~95% (blueprint 10/10)
-* Overall blueprint 0→100: 10/10 — TANPA CELAH — 2026-READY
-* Solo founder execution: REALISTIS (dual control async, CSIRT solo, budget realistic)
+Control plane sekarang mencakup PostgreSQL/Alembic persistence, tenant scoping, JWT sessions, API keys, MFA enforcement untuk privileged actions, RBAC, one-use bootstrap admin grant, versioned policy signatures, high-risk token-revocation capability, audit events, webhook retry/DLQ worker, dan dashboard contract untuk risk decisions.
+
+## Evidence yang tersedia
+
+| Evidence | Status |
+|---|---|
+| Unit dan integration tests | Lulus pada local/CI untuk scope yang dijalankan |
+| Gateway Go build dan tests | Lulus |
+| Dashboard TypeScript/Vite build | Lulus |
+| Docker image build | Lulus pada GitHub Actions |
+| Security, Trivy, SBOM, dan machine-enforced gate workflows | Lulus pada commit yang diuji |
+| PostgreSQL/RLS CI matrix | Lulus pada workflow CI yang menjalankan service PostgreSQL |
+| Railway deployment dan register/login pada environment user | Belum terverifikasi dari sesi ini |
+| Real customer traffic, load, chaos, backup restore, HA/failover | Belum tersedia |
+| Labelled calibration data, FP/FN budget, pilot outcome, SLA, independent review | Belum tersedia |
+
+## Gap yang masih blocking acceptance
+
+Status code dan CI green tidak sama dengan Technical GA atau Commercial GA. Masih diperlukan deployment staging/production yang dapat diaudit, signed runtime attestation, secret/KMS lifecycle nyata, Redis/PostgreSQL failover, load dan chaos testing, restore drill dengan RTO/RPO, central observability dan alerting, labelled calibration data, customer pilot, independent security review, serta acceptance record pihak kedua.
+
+Single-service Railway adalah topology awal untuk memulihkan domain dan alur end-to-end. Ia bukan HA deployment. Untuk scale-out, Gateway, control plane, risk engine, behavior engine, dan worker perlu dipisah atau dijalankan dengan process supervision yang setara, sementara shared state, traffic draining, failover, dan policy consistency harus diuji.
+
+## Next engineering priorities
+
+Prioritas teknis berikutnya adalah verifikasi Railway setelah deploy `main` terbaru, pengujian request nyata melewati Gateway hingga upstream, shared-state failure matrix, observability redaction/alert routing, serta perbaikan key lifecycle agar policy signing dapat berotasi tanpa memutus verification terhadap versi yang masih berlaku. Fitur yang belum memiliki adapter nyata tidak boleh dipasarkan sebagai implemented.
+
+## Acceptance language
+
+Jangan gunakan label “10/10”, “tanpa celah”, “100% uptime”, “zero incidents”, “zero false positive”, “Technical GA”, “Commercial GA”, certified, atau enterprise-ready sebelum evidence eksternal yang relevan benar-benar tersedia dan direview.
