@@ -74,6 +74,8 @@ class PolicyVersion(Base):
     created_at = Column(DateTime, default=_utcnow, nullable=False)
     superseded_at = Column(DateTime, nullable=True)
     rollback_of_version = Column(Integer, nullable=True)
+    signature = Column(Text, nullable=True)
+    signing_key_id = Column(String(128), nullable=True)
 
 
 class HighRiskActionRecord(Base):
