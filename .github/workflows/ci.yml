@@ -3,9 +3,12 @@ on: [push, pull_request]
 jobs:
   unit:
     runs-on: ubuntu-latest
+    env:
+      JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
+      PYTHONPATH: .
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.11"
       - name: Install deps
@@ -23,8 +26,8 @@ jobs:
   gateway:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
           go-version: "1.22"
       - name: Build gateway
@@ -50,8 +53,8 @@ jobs:
         image: redis:7-alpine
         ports: ["6379:6379"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.11"
       - name: Install deps
@@ -64,10 +67,10 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
           SL_ENV: test
+          SL_AUTO_CREATE_SCHEMA: "0"
           PYTHONPATH: .
         run: |
-          python -c "from control_plane.app.bootstrap_db import ensure_schema; ensure_schema()" || true
-          alembic -c alembic.ini upgrade head || true
+          alembic -c alembic.ini upgrade head
           nohup uvicorn control_plane.app.main:app --host 0.0.0.0 --port 8005 > /tmp/cp.log 2>&1 &
           sleep 5
           curl -sf http://localhost:8005/health || (cat /tmp/cp.log; exit 1)
@@ -77,9 +80,16 @@ jobs:
           JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
         run: |
           pytest tests/test_bola_real.py tests/test_tenant_matrix.py -v --tb=short
-      - name: Run Probo + Evidentia GRC (Section 0.9)
+      - name: Generate repository GRC evidence
         run: |
-          pip install probo evidential
-          probo --generate-evidence --output-dir ./evidence
-          evidential --oscal --sigstore --gpg
-          echo "GRC evidence generated"
+          set -euo pipefail
+          mkdir -p evidence
+          cp security/manifests/runtime-provenance.json evidence/runtime-provenance.json
+          git diff --check
+          printf '%s\n' 'Repository GRC evidence generated from the reviewed provenance manifest and blocking CI/security checks.' > evidence/README.md
+      - name: Upload repository GRC evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: repository-grc-evidence
+          path: evidence/
+          if-no-files-found: error

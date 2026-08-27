@@ -1,12 +1,13 @@
-from engine.behavior.engine import behavior_engine
-
-from engine.risk.engine import risk_engine
+from engine.behavior import behavior_engine
+from engine.risk.engine import RiskEngine
 
 
 def test_risk_engine():
     context = {"failed_attempts": 5}
-    score = risk_engine.calculate(context)
-    assert score > 0
+    result = RiskEngine().calculate(context)
+    assert result["score"] > 0
+    assert result["action"] in ("ALLOW", "MONITOR", "CHALLENGE", "BLOCK")
+
 
 def test_behavior_engine():
     context = {"user_id": "test-user"}

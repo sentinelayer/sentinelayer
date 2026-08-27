@@ -1,6 +1,14 @@
-const BASE = process.env.REACT_APP_API_URL || "http://localhost:8005";
+const BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+const API_PREFIX = "/api/v1";
 
 export type ApiError = { status: number; message: string };
+
+function apiPath(path: string): string {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return normalized === API_PREFIX || normalized.startsWith(`${API_PREFIX}/`)
+    ? normalized
+    : `${API_PREFIX}${normalized}`;
+}
 
 function authHeaders(): HeadersInit {
   const token = localStorage.getItem("sl_access_token");
@@ -12,7 +20,7 @@ function authHeaders(): HeadersInit {
 }
 
 export async function apiGet<T = unknown>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { headers: authHeaders() });
+  const res = await fetch(`${BASE}${apiPath(path)}`, { headers: authHeaders() });
   if (!res.ok) {
     const body = await res.text();
     throw { status: res.status, message: body || res.statusText } as ApiError;
@@ -21,7 +29,7 @@ export async function apiGet<T = unknown>(path: string): Promise<T> {
 }
 
 export async function apiPost<T = unknown>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${BASE}${apiPath(path)}`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(body),
@@ -34,13 +42,15 @@ export async function apiPost<T = unknown>(path: string, body: unknown): Promise
 }
 
 export async function login(email: string, password: string): Promise<{ access_token: string }> {
-  const data = await apiPost<{ access_token: string }>("/api/v1/auth/login", { email, password });
-  localStorage.setItem("sl_access_token", data.access_token);
-  try {
-    const payload = JSON.parse(atob(data.access_token.split(".")[1]));
-    if (payload.tenant_id) localStorage.setItem("sl_tenant_id", payload.tenant_id);
-  } catch {
-    /* ignore */
+  const data = await apiPost<{ access_token: string }>("/auth/login", { email, password });
+  if (data.access_token) {
+    localStorage.setItem("sl_access_token", data.access_token);
+    try {
+      const payload = JSON.parse(atob(data.access_token.split(".")[1]));
+      if (payload.tenant_id) localStorage.setItem("sl_tenant_id", payload.tenant_id);
+    } catch {
+      // Token validation remains server-side; payload decoding only supplies tenant context.
+    }
   }
   return data;
 }
@@ -52,7 +62,7 @@ export async function register(
   tenant_id: string
 ): Promise<unknown> {
   localStorage.setItem("sl_tenant_id", tenant_id);
-  return apiPost("/api/v1/auth/register", { email, password, full_name, tenant_id });
+  return apiPost("/auth/register", { email, password, full_name, tenant_id });
 }
 
 export function logout(): void {
@@ -64,8 +74,6 @@ export function isLoggedIn(): boolean {
   return !!localStorage.getItem("sl_access_token");
 }
 
-// Shim object so pages written as `api.get(...)` / `api.post(...)` keep working
-// alongside the apiGet/apiPost function style used elsewhere.
 export const api = {
   get: <T = unknown>(path: string): Promise<T> => apiGet<T>(path),
   post: <T = unknown>(path: string, body: unknown): Promise<T> => apiPost<T>(path, body),

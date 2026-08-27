@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
+import { apiGet } from '../../api/client'
 
 export const SLAPage: React.FC = () => {
     const [sla, setSla] = useState<any>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch('/api/v1/sla/report')
-            .then(res => res.json())
+        apiGet('/sla/report')
             .then((data: any) => { setSla(data); setLoading(false) })
             .catch(() => setLoading(false))
     }, [])

@@ -43,3 +43,7 @@ sentinel-layer = "control_plane.app.main:app"
 testpaths = ["tests"]
 python_files = "test_*.py"
 asyncio_mode = "auto"
+
+[tool.setuptools.packages.find]
+include = ["control_plane*", "engine*"]
+exclude = ["tests*", "dashboard*", "gateway*", "infra*", "waf*", "security*"]

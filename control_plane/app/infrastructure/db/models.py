@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 
 from control_plane.app.infrastructure.db.session import Base
 
@@ -48,7 +48,165 @@ class Policy(Base):
     rules = Column(String, nullable=False)
     application_id = Column(String, ForeignKey("applications.id"), nullable=True)
     tenant_id = Column(String, ForeignKey("tenants.id"), index=True, nullable=True)
+    current_version = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, default=_utcnow)
+
+
+class PolicyVersion(Base):
+    __tablename__ = "policy_versions"
+    __table_args__ = (UniqueConstraint("policy_id", "version", name="uq_policy_versions_policy_version"),)
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    policy_id = Column(String, ForeignKey("policies.id", ondelete="CASCADE"), nullable=False, index=True)
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    version = Column(Integer, nullable=False)
+    rules = Column(Text, nullable=False)
+    created_by = Column(String, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    superseded_at = Column(DateTime, nullable=True)
+    rollback_of_version = Column(Integer, nullable=True)
+
+
+class HighRiskActionRecord(Base):
+    __tablename__ = "high_risk_actions"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    action = Column(String(64), nullable=False)
+    reason = Column(Text, nullable=False)
+    requested_by = Column(String, ForeignKey("users.id"), nullable=False)
+    approved_by = Column(String, ForeignKey("users.id"), nullable=True)
+    rejected_by = Column(String, ForeignKey("users.id"), nullable=True)
+    status = Column(String(32), nullable=False, default="PENDING_APPROVAL", index=True)
+    requested_at = Column(DateTime, default=_utcnow, nullable=False)
+    approved_at = Column(DateTime, nullable=True)
+    rejected_at = Column(DateTime, nullable=True)
+
+
+class BreakGlassSession(Base):
+    __tablename__ = "breakglass_sessions"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    requested_by = Column(String, ForeignKey("users.id"), nullable=False)
+    reason = Column(Text, nullable=False)
+    status = Column(String(32), nullable=False, default="PENDING", index=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    approved_by = Column(String, ForeignKey("users.id"), nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    revoked_at = Column(DateTime, nullable=True)
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    actor_id = Column(String, nullable=True)
+    action = Column(String(128), nullable=False)
+    resource_type = Column(String(64), nullable=False)
+    resource_id = Column(String(128), nullable=True)
+    detail = Column(Text, nullable=False, default="{}")
+    previous_hash = Column(String(64), nullable=True)
+    event_hash = Column(String(64), nullable=False, unique=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False, index=True)
+
+
+class ConfigurationEntry(Base):
+    __tablename__ = "configuration_entries"
+    __table_args__ = (UniqueConstraint("tenant_id", "key", name="uq_configuration_tenant_key"),)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    key = Column(String(128), nullable=False)
+    value = Column(Text, nullable=False)
+    updated_by = Column(String, nullable=True)
+    updated_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class SchemaRecord(Base):
+    __tablename__ = "schema_records"
+    __table_args__ = (UniqueConstraint("tenant_id", "schema_id", "version", name="uq_schema_tenant_id_version"),)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    schema_id = Column(String(128), nullable=False, index=True)
+    version = Column(String(64), nullable=False)
+    schema_body = Column(Text, nullable=False)
+    hash_value = Column(String(64), nullable=False)
+    registered_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class ResidencyRuleRecord(Base):
+    __tablename__ = "residency_rules"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    data_type = Column(String(128), nullable=False, index=True)
+    primary_region = Column(String(64), nullable=False)
+    backup_region = Column(String(64), nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class WebhookRegistration(Base):
+    __tablename__ = "webhook_registrations"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    url = Column(String(2048), nullable=False)
+    events = Column(Text, nullable=False, default="[]")
+    secret_hash = Column(String(64), nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class WebhookDelivery(Base):
+    __tablename__ = "webhook_deliveries"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    webhook_id = Column(String, ForeignKey("webhook_registrations.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_type = Column(String(128), nullable=False)
+    status = Column(String(32), nullable=False, default="queued")
+    response_code = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    severity = Column(String(16), nullable=False, index=True)
+    message = Column(Text, nullable=False)
+    source = Column(String(128), nullable=False, default="system")
+    status = Column(String(16), nullable=False, default="active", index=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False, index=True)
+    resolved_at = Column(DateTime, nullable=True)
+    resolved_by = Column(String, nullable=True)
+
+
+class ThreatIntelIndicator(Base):
+    __tablename__ = "threat_intel_indicators"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=True, index=True)
+    indicator_type = Column(String(32), nullable=False, index=True)
+    value = Column(String(512), nullable=False, index=True)
+    severity = Column(String(16), nullable=False, default="medium")
+    source = Column(String(128), nullable=False)
+    tags = Column(Text, nullable=False, default="[]")
+    confidence = Column(Integer, nullable=False, default=50)
+    reliability = Column(Integer, nullable=False, default=50)
+    first_seen = Column(DateTime, default=_utcnow, nullable=False)
+    last_seen = Column(DateTime, default=_utcnow, nullable=False)
+    expires_at = Column(DateTime, nullable=True, index=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class RuntimeEvent(Base):
+    __tablename__ = "runtime_events"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    event_type = Column(String(128), nullable=False, index=True)
+    source = Column(String(128), nullable=False, default="system")
+    data = Column(Text, nullable=False, default="{}")
+    severity = Column(String(16), nullable=True, index=True)
+    risk_score = Column(Integer, nullable=True, index=True)
+    outcome = Column(String(32), nullable=True, index=True)
+    occurred_at = Column(DateTime, default=_utcnow, nullable=False, index=True)
 
 
 class Incident(Base):
@@ -65,6 +223,7 @@ class Evidence(Base):
     __tablename__ = "evidence"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=True, index=True)
     requirement_id = Column(String(64), nullable=False, index=True)
     control_id = Column(String(64), nullable=False, index=True)
     artifact = Column(Text, nullable=False)
@@ -121,3 +280,17 @@ class Requirement(Base):
     drift_detected = Column(Boolean, default=False)
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow)
+
+
+class OffboardingRequest(Base):
+    __tablename__ = "offboarding_requests"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    requested_by = Column(String, ForeignKey("users.id"), nullable=True)
+    mode = Column(String(16), nullable=False, default="soft")
+    status = Column(String(32), nullable=False, default="REQUESTED", index=True)
+    before_hash = Column(String(64), nullable=True)
+    after_hash = Column(String(64), nullable=True)
+    requested_at = Column(DateTime, default=_utcnow, nullable=False)
+    hard_delete_at = Column(DateTime, nullable=True, index=True)
+    completed_at = Column(DateTime, nullable=True)

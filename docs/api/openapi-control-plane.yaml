@@ -108,3 +108,100 @@ paths:
                 control_id: {type: string}
       responses:
         200: {description: Success}
+  /api/v1/policies/{policy_id}/versions:
+    get:
+      summary: List immutable policy versions
+      responses:
+        200: {description: Success}
+    post:
+      summary: Create a new immutable policy version
+      responses:
+        200: {description: Success}
+  /api/v1/policies/{policy_id}/versions/{version}:
+    get:
+      summary: Retrieve one policy version
+      responses:
+        200: {description: Success}
+        404: {description: Not found}
+  /api/v1/policies/{policy_id}/diff:
+    get:
+      summary: Compare two policy versions
+      parameters:
+        - {name: from_version, in: query, required: true, schema: {type: integer}}
+        - {name: to_version, in: query, required: true, schema: {type: integer}}
+      responses:
+        200: {description: Success}
+  /api/v1/policies/{policy_id}/rollback/{version}:
+    post:
+      summary: Restore a prior policy as a new version
+      responses:
+        200: {description: Success}
+  /api/v1/events:
+    get:
+      summary: List tenant runtime events
+      responses:
+        200: {description: Success}
+    post:
+      summary: Record a tenant runtime event
+      responses:
+        200: {description: Success}
+  /api/v1/metrics/security:
+    get:
+      summary: Aggregate security metrics for a bounded time window
+      responses:
+        200: {description: Success}
+  /api/v1/alerts:
+    get:
+      summary: List tenant alerts
+      responses:
+        200: {description: Success}
+    post:
+      summary: Create a tenant alert
+      responses:
+        200: {description: Success}
+  /api/v1/audit:
+    get:
+      summary: List immutable tenant audit events
+      responses:
+        200: {description: Success}
+  /api/v1/offboarding/request:
+    post:
+      summary: Start a confirmed soft or scheduled hard offboarding
+      responses:
+        200: {description: Success}
+  /api/v1/offboarding/status:
+    get:
+      summary: Read tenant offboarding status
+      responses:
+        200: {description: Success}
+  /api/v1/threat-intel/indicators:
+    get:
+      summary: List active tenant threat indicators
+      responses:
+        200: {description: Success}
+    post:
+      summary: Register a tenant threat indicator with optional TTL
+      responses:
+        200: {description: Success}
+  /api/v1/schemas/{schema_id}/{version}:
+    get:
+      summary: Retrieve a tenant schema version
+      responses:
+        200: {description: Success}
+  /api/v1/residency/enforce/{data_type}/{region}:
+    get:
+      summary: Evaluate tenant data residency rule
+      responses:
+        200: {description: Success}
+  /api/v1/webhooks/register:
+    post:
+      summary: Register a tenant webhook without returning its secret
+      responses:
+        200: {description: Success}
+  /metrics:
+    get:
+      summary: Prometheus metrics endpoint
+      responses:
+        200: {description: Success}
+        401: {description: Invalid metrics token}
+        503: {description: Metrics token is not configured in production}
