@@ -34,6 +34,13 @@ jobs:
         working-directory: gateway
         run: go build -o /tmp/gateway-bin ./cmd/gateway
 
+  docker-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Build Railway image
+        run: docker build --tag sentinelayer-ci:${{ github.sha }} .
+
   security-integration:
     runs-on: ubuntu-latest
     services:
