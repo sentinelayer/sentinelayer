@@ -645,3 +645,5 @@ td {
 .danger-button { min-height: 34px; padding: 0.4rem 0.65rem; border: 1px solid rgba(255, 120, 136, 0.35); border-radius: 9px; color: #ffacb6; background: rgba(143, 40, 60, 0.15); font-size: 0.68rem; font-weight: 700; }
 .danger-button:hover { background: rgba(143, 40, 60, 0.3); }
 @media (max-width: 620px) { .admin-record { align-items: stretch; flex-direction: column; } .admin-record-actions { justify-content: flex-end; } }
+
+.warning-panel { border-color: rgba(242, 195, 107, 0.25); background: linear-gradient(120deg, rgba(242, 195, 107, 0.08), rgba(16, 25, 35, 0.82)); }
