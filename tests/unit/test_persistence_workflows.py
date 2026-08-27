@@ -40,6 +40,7 @@ app.state.session_factory = TestingSession
 def token(user_id: str, tenant_id: str, is_admin: bool = False) -> str:
     return jwt.encode(
         {"sub": user_id, "tenant_id": tenant_id, "is_admin": is_admin,
+         "mfa_verified": is_admin,
          "exp": datetime.now(UTC) + timedelta(minutes=5)},
         SECRET,
         algorithm="HS256",
