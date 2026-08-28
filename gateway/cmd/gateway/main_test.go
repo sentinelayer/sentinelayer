@@ -50,3 +50,24 @@ func TestClientAddressStripsEphemeralPort(t *testing.T) {
 		t.Fatalf("clientAddress() = %q; want stable host", got)
 	}
 }
+
+func TestClassifyEndpointAuthBootstrapRoutes(t *testing.T) {
+	for _, test := range []struct {
+		path string
+		want string
+	}{
+		{path: "/api/v1/auth/login", want: "public"},
+		{path: "/api/v1/auth/register", want: "public"},
+		{path: "/api/v1/auth/logout", want: "critical"},
+		{path: "/api/v1/auth/change-password", want: "critical"},
+		{path: "/api/v1/auth/login/extra", want: "critical"},
+		{path: "/api/v1/admin/users", want: "critical"},
+	} {
+		t.Run(test.path, func(t *testing.T) {
+			req := httptest.NewRequest("POST", "http://gateway.test"+test.path, nil)
+			if got := classifyEndpoint(req); got != test.want {
+				t.Fatalf("classifyEndpoint(%q) = %q; want %q", test.path, got, test.want)
+			}
+		})
+	}
+}

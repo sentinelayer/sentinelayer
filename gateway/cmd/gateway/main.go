@@ -57,6 +57,14 @@ func classifyEndpoint(r *http.Request) string {
 	if strings.HasPrefix(path, "/health") || strings.HasPrefix(path, "/ready") || path == "/" {
 		return "public"
 	}
+
+	// Login and registration must be reachable before a JWT exists. Keep
+	// every other auth endpoint critical so logout, token changes, and
+	// account mutations remain protected by the gateway.
+	if path == "/api/v1/auth/login" || path == "/api/v1/auth/register" {
+		return "public"
+	}
+
 	for _, p := range []string{"/api/v1/payments", "/api/v1/checkout", "/api/v1/admin", "/api/v1/keys", "/api/v1/auth"} {
 		if strings.HasPrefix(path, p) {
 			return "critical"
