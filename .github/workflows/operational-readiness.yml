@@ -1,0 +1,40 @@
+name: Operational Readiness
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scripts-and-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+      - name: Validate shell scripts
+        run: |
+          set -euo pipefail
+          bash -n scripts/backup_postgres.sh scripts/restore_postgres.sh
+      - name: Validate runtime configuration guard
+        env:
+          SL_ENV: test
+          JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
+        run: python scripts/validate_runtime_config.py
+      - name: Reject unsafe production configuration
+        env:
+          SL_ENV: production
+          JWT_SECRET: short
+          SL_AUTO_CREATE_SCHEMA: "1"
+          SL_ENFORCE_PROVENANCE: "1"
+        run: |
+          if python scripts/validate_runtime_config.py; then
+            echo "unsafe production configuration was accepted" >&2
+            exit 1
+          fi
+      - name: Check tracked files for whitespace errors
+        run: git diff --check
