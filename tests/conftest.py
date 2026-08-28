@@ -1,3 +1,10 @@
+import os
+
+# The application intentionally fails closed when JWT_SECRET is absent. Tests
+# need a deterministic non-production secret before modules are collected.
+os.environ.setdefault("JWT_SECRET", "test-only-jwt-secret-do-not-use-in-production-32")
+os.environ.setdefault("SL_ENV", "test")
+
 import pytest
 
 
