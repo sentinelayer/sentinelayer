@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../../api/client'
+import { canMutate, roleLabel } from '../../app/permissions'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton'
 
 export const PolicyEditor: React.FC = () => {
     const { id } = useParams()
@@ -11,18 +13,21 @@ export const PolicyEditor: React.FC = () => {
     const [signature, setSignature] = useState('')
     const [loading, setLoading] = useState(Boolean(id))
     const [error, setError] = useState<string | null>(null)
+    const canEdit = canMutate()
 
     useEffect(() => {
         if (!id) return
-        api.get(`/policies/${id}`)
+        const controller = new AbortController()
+        api.get(`/policies/${id}`, { signal: controller.signal })
             .then((data: any) => {
                 setName(data.name || '')
                 setRules(JSON.stringify(data.rules || {}, null, 2))
                 setVersion(data.version || 1)
                 setSignature(data.signature || '')
             })
-            .catch(() => setError('Failed to load policy'))
-            .finally(() => setLoading(false))
+            .catch(() => { if (!controller.signal.aborted) setError('Failed to load policy') })
+            .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+        return () => controller.abort()
     }, [id])
 
     const handleSave = async () => {
@@ -40,7 +45,8 @@ export const PolicyEditor: React.FC = () => {
         }
     }
 
-    if (loading) return <div>Loading...</div>
+    if (loading) return <LoadingSkeleton label="Loading policy" />
+    if (!canEdit) return <div className="permission-note" role="note"><strong>Viewer access</strong><span>Your {roleLabel()} role can inspect this policy but cannot save changes.</span></div>
 
     return (
         <div className="policy-editor">

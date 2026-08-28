@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../../api/client'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton'
+
+type UserRisk = { user_id?: string; email?: string; risk_score?: number; status?: string; last_activity?: string }
 
 export const UserRiskPage: React.FC = () => {
-    const [users, setUsers] = useState([])
+    const [users, setUsers] = useState<UserRisk[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        api.get('/user-risk')
-            .then((data: any) => { setUsers(data); setLoading(false) })
-            .catch(() => setLoading(false))
+        const controller = new AbortController()
+        api.get<UserRisk[]>('/user-risk', { signal: controller.signal })
+            .then((data) => { if (!controller.signal.aborted) setUsers(Array.isArray(data) ? data : []) })
+            .catch(() => undefined)
+            .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+        return () => controller.abort()
     }, [])
 
-    if (loading) return <div>Loading...</div>
+    if (loading) return <LoadingSkeleton label="Loading user risk" />
 
     return (
         <div className="user-risk-page">

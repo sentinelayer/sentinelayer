@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from 'react'
 import { apiGet } from '../../api/client'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton'
 
 export const SLAPage: React.FC = () => {
     const [sla, setSla] = useState<any>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        apiGet('/sla/report')
-            .then((data: any) => { setSla(data); setLoading(false) })
-            .catch(() => setLoading(false))
+        const controller = new AbortController()
+        apiGet('/sla/report', { signal: controller.signal })
+            .then((data: any) => { if (!controller.signal.aborted) setSla(data) })
+            .catch(() => undefined)
+            .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+        return () => controller.abort()
     }, [])
 
-    if (loading) return <div>Loading SLA...</div>
+    if (loading) return <LoadingSkeleton label="Loading SLA report" />
     return (
         <div>
             <h1>SLA Report</h1>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api, type ApiError } from "../../api/client";
+import { LoadingSkeleton } from "../../components/LoadingSkeleton";
 
 type RiskDecision = {
   id: string;
@@ -25,20 +26,18 @@ export const RiskPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let active = true;
-    api.get<RiskDecision[]>("/events/decisions?limit=100")
+    const controller = new AbortController();
+    api.get<RiskDecision[]>("/events/decisions?limit=100", { signal: controller.signal })
       .then((data) => {
-        if (active) setDecisions(data);
+        if (!controller.signal.aborted) setDecisions(Array.isArray(data) ? data : []);
       })
       .catch((err: unknown) => {
-        if (active) setError(errorMessage(err));
+        if (!controller.signal.aborted) setError(errorMessage(err));
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       });
-    return () => {
-      active = false;
-    };
+    return () => controller.abort();
   }, []);
 
   const summary = useMemo(() => {
@@ -60,7 +59,7 @@ export const RiskPage: React.FC = () => {
         </div>
       </div>
 
-      {loading && <p className="muted">Loading risk decisions…</p>}
+      {loading && <LoadingSkeleton label="Loading risk decisions" />}
       {error && <p className="error" role="alert">{error}</p>}
 
       {!loading && !error && (
