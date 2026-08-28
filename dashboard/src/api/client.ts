@@ -1,18 +1,53 @@
 const BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 const API_PREFIX = "/api/v1";
 
-export type ApiError = { status: number; message: string };
+export type ApiError = { status: number; message: string; code?: string };
+export type RequestOptions = { signal?: AbortSignal };
+
+const SAFE_MESSAGES: Record<number, string> = {
+  400: "The request could not be processed.",
+  401: "Your session is invalid or has expired. Please sign in again.",
+  403: "You do not have permission to perform this action.",
+  404: "The requested resource was not found.",
+  409: "This action conflicts with the current resource state.",
+  422: "Some submitted fields are invalid.",
+  429: "Too many requests. Please try again shortly.",
+  500: "The service encountered an internal error.",
+  502: "The upstream service is temporarily unavailable.",
+  503: "The service is temporarily unavailable.",
+};
+
+function safeDetail(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.replace(/[\r\n\t]+/g, " ").trim();
+  if (!normalized || normalized.length > 180) return undefined;
+  return normalized;
+}
 
 async function errorFromResponse(res: Response): Promise<ApiError> {
-  const raw = await res.text();
-  let message = raw || res.statusText;
+  let body: unknown = null;
   try {
-    const body = JSON.parse(raw) as { detail?: string; error?: string; message?: string };
-    message = body.detail || body.error || body.message || message;
+    body = await res.json();
   } catch {
-    // Keep the plain response when the backend does not return JSON.
+    // Discard non-JSON response bodies; upstream text may contain secrets.
   }
-  return { status: res.status, message };
+  const payload = body && typeof body === "object" ? body as Record<string, unknown> : {};
+  const code = safeDetail(payload.code);
+  const detail = safeDetail(payload.detail) || safeDetail(payload.error) || safeDetail(payload.message);
+  return { status: res.status, code, message: detail || SAFE_MESSAGES[res.status] || "The request could not be completed." };
+}
+
+export function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+export function errorMessage(error: unknown): string {
+  if (isAbortError(error)) return "";
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.length <= 180) return message;
+  }
+  return "The request could not be completed. Please try again.";
 }
 
 function apiPath(path: string): string {
@@ -31,27 +66,29 @@ function authHeaders(): HeadersInit {
   return h;
 }
 
-export async function apiGet<T = unknown>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${apiPath(path)}`, { headers: authHeaders() });
+export async function apiGet<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
+  const res = await fetch(`${BASE}${apiPath(path)}`, { headers: authHeaders(), signal: options.signal });
   if (!res.ok) throw await errorFromResponse(res);
   return res.json() as Promise<T>;
 }
 
-export async function apiPost<T = unknown>(path: string, body: unknown): Promise<T> {
+export async function apiPost<T = unknown>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {
   const res = await fetch(`${BASE}${apiPath(path)}`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify(body),
+    signal: options.signal,
   });
   if (!res.ok) throw await errorFromResponse(res);
   return res.json() as Promise<T>;
 }
 
-export async function apiPut<T = unknown>(path: string, body: unknown): Promise<T> {
+export async function apiPut<T = unknown>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {
   const res = await fetch(`${BASE}${apiPath(path)}`, {
     method: "PUT",
     headers: authHeaders(),
     body: JSON.stringify(body),
+    signal: options.signal,
   });
   if (!res.ok) throw await errorFromResponse(res);
   return res.json() as Promise<T>;
@@ -94,6 +131,7 @@ export function isLoggedIn(): boolean {
 }
 
 export const api = {
-  get: <T = unknown>(path: string): Promise<T> => apiGet<T>(path),
-  post: <T = unknown>(path: string, body: unknown): Promise<T> => apiPost<T>(path, body),
+  get: <T = unknown>(path: string, options?: RequestOptions): Promise<T> => apiGet<T>(path, options),
+  post: <T = unknown>(path: string, body: unknown, options?: RequestOptions): Promise<T> => apiPost<T>(path, body, options),
+  put: <T = unknown>(path: string, body: unknown, options?: RequestOptions): Promise<T> => apiPut<T>(path, body, options),
 };

@@ -702,3 +702,33 @@ td {
 .user-pill b { color: #dbe8f1; font-size: 0.68rem; }
 .user-pill small { margin-top: 0.12rem; color: #71879c; font-size: 0.6rem; }
 @media (max-width: 620px) { .user-pill { max-width: 145px; } .user-pill b { max-width: 95px; } }
+
+/* Product hardening: keep narrow screens from moving the whole document. */
+html, body, #root { max-width: 100%; overflow-x: hidden; }
+.page, .content-area { width: 100%; min-width: 0; }
+.page > *, .content-area > * { min-width: 0; }
+.table-scroll, .data-table-wrapper, .panel-table { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+.metric-grid, .dashboard-grid, .config-card-grid, .policy-grid, .evidence-grid { min-width: 0; }
+select { min-height: 44px; padding: 0.65rem 2.3rem 0.65rem 0.8rem; border: 1px solid #32445a; border-radius: 10px; color: #e8eef5; background-color: #0d1520; color-scheme: dark; }
+select:focus { border-color: #61d8c5; outline: 3px solid rgba(97, 216, 197, 0.16); outline-offset: 1px; }
+.permission-note { display: grid; gap: 0.4rem; padding: 1rem; border: 1px solid rgba(157, 177, 207, 0.18); border-radius: 12px; color: #9aabc0; background: rgba(13, 21, 32, 0.72); line-height: 1.5; }
+.permission-note strong { color: #e8eef5; }
+@media (max-width: 860px) {
+  .page { padding: 1rem; }
+  .metric-grid, .metric-grid-four, .metric-grid-five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hero-row, .page-heading, .panel-heading { flex-wrap: wrap; }
+}
+@media (max-width: 520px) {
+  .metric-grid, .metric-grid-four, .metric-grid-five { grid-template-columns: minmax(0, 1fr); }
+  .page, .content-area { padding-inline: 0.85rem; }
+  .panel, .metric-card, .table-card { border-radius: 13px; }
+  table { min-width: 560px; }
+  .filter-tabs { width: 100%; max-width: 100%; overflow-x: auto; padding-bottom: 0.25rem; }
+}
+@media (min-width: 521px) and (max-width: 720px) { .dashboard-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.skeleton { display: block; min-height: 0.8rem; border-radius: 6px; background: linear-gradient(90deg, rgba(157,177,207,0.08), rgba(157,177,207,0.2), rgba(157,177,207,0.08)); background-size: 220% 100%; animation: skeleton-shimmer 1.4s ease-in-out infinite; }
+.skeleton-line { width: min(100%, 22rem); height: 0.8rem; }
+.skeleton-card { min-height: 120px; padding: 1rem; border: 1px solid var(--sl-line); border-radius: var(--sl-radius); background: rgba(16,25,35,0.72); }
+@keyframes skeleton-shimmer { 0% { background-position: 180% 0; } 100% { background-position: -20% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }

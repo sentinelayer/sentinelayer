@@ -16,7 +16,8 @@ export const PolicyDiff: React.FC = () => {
 
     useEffect(() => {
         if (!id) return
-        apiGet<Version[]>(`/policies/${id}/versions`)
+        const controller = new AbortController()
+        apiGet<Version[]>(`/policies/${id}/versions`, { signal: controller.signal })
             .then((items) => {
                 const ordered = [...items].sort((a, b) => a.version - b.version)
                 setVersions(ordered)
@@ -28,15 +29,18 @@ export const PolicyDiff: React.FC = () => {
                     setToVersion(ordered[0].version)
                 }
             })
-            .catch(() => setError('Policy versions are not available'))
-            .finally(() => setLoading(false))
+            .catch(() => { if (!controller.signal.aborted) setError('Policy versions are not available') })
+            .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+        return () => controller.abort()
     }, [id])
 
     useEffect(() => {
         if (!id || !versions.length) return
-        apiGet<DiffResponse>(`/policies/${id}/diff?from_version=${fromVersion}&to_version=${toVersion}`)
-            .then(setDiff)
-            .catch(() => setDiff(null))
+        const controller = new AbortController()
+        apiGet<DiffResponse>(`/policies/${id}/diff?from_version=${fromVersion}&to_version=${toVersion}`, { signal: controller.signal })
+            .then((data) => { if (!controller.signal.aborted) setDiff(data) })
+            .catch(() => { if (!controller.signal.aborted) setDiff(null) })
+        return () => controller.abort()
     }, [id, versions, fromVersion, toVersion])
 
     if (loading) return <div>Loading...</div>
