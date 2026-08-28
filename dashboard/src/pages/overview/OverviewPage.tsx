@@ -1,16 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { apiGet, ApiError } from "../../api/client";
+import { apiGet, errorMessage, isAbortError } from "../../api/client";
 
 type Application = { id?: string; name?: string; status?: string; domain?: string; upstream_url?: string };
 type Policy = { id?: string; name?: string; status?: string; version?: number };
 type Incident = { id?: string; title?: string; severity?: string; status?: string; created_at?: string; updated_at?: string };
 type Event = { id?: string; type?: string; source?: string; severity?: string; risk_score?: number | null; outcome?: string | null; timestamp?: string; data?: Record<string, unknown> };
 type Counts = { applications: Application[]; policies: Policy[]; incidents: Incident[]; events: Event[] };
-
-function errorMessage(error: unknown): string {
-  return (error as ApiError)?.message || (error instanceof Error ? error.message : "Unable to load workspace data");
-}
 
 function relativeTime(value?: string): string {
   if (!value) return "Unknown time";
@@ -34,24 +30,26 @@ export default function OverviewPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     (async () => {
       setLoading(true);
       try {
+        const request = { signal: controller.signal };
         const [applications, policies, incidents, events] = await Promise.all([
-          apiGet<Application[]>("/applications"),
-          apiGet<Policy[]>("/policies"),
-          apiGet<Incident[]>("/incidents"),
-          apiGet<Event[]>("/events?limit=8"),
+          apiGet<Application[]>("/applications", request),
+          apiGet<Policy[]>("/policies", request),
+          apiGet<Incident[]>("/incidents", request),
+          apiGet<Event[]>("/events?limit=8", request),
         ]);
-        if (!cancelled) setData({ applications: applications || [], policies: policies || [], incidents: incidents || [], events: events || [] });
+        setData({ applications: applications || [], policies: policies || [], incidents: incidents || [], events: events || [] });
+        setError(null);
       } catch (currentError) {
-        if (!cancelled) setError(errorMessage(currentError));
+        if (!isAbortError(currentError)) setError(errorMessage(currentError));
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => controller.abort();
   }, []);
 
   const openIncidents = useMemo(() => (data?.incidents || []).filter((incident) => !["resolved", "closed"].includes(String(incident.status || "").toLowerCase())), [data]);

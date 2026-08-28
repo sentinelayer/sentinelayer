@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { apiGet, ApiError } from "../../api/client";
+import { apiGet, errorMessage, isAbortError } from "../../api/client";
 
 type EventRecord = { id?: string; type?: string; source?: string; severity?: string; risk_score?: number | null; outcome?: string | null; timestamp?: string; data?: Record<string, unknown> };
 type Filter = "all" | "allowed" | "blocked" | "challenged";
@@ -16,7 +16,6 @@ function relativeTime(value?: string): string {
   const minutes = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 60000));
   return minutes < 1 ? "Just now" : minutes < 60 ? `${minutes}m ago` : `${Math.round(minutes / 60)}h ago`;
 }
-function errorMessage(error: unknown): string { return (error as ApiError)?.message || (error instanceof Error ? error.message : "Unable to load live events"); }
 
 export default function LiveProtectionPage() {
   const [events, setEvents] = useState<EventRecord[]>([]);
@@ -26,25 +25,29 @@ export default function LiveProtectionPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const load = useCallback(async (background = false) => {
+  const load = useCallback(async (background = false, signal?: AbortSignal) => {
     if (background) setRefreshing(true); else setLoading(true);
     try {
-      const next = await apiGet<EventRecord[]>("/events?limit=50");
+      const next = await apiGet<EventRecord[]>("/events?limit=50", { signal });
       setEvents(Array.isArray(next) ? next : []);
       setError(null);
       setLastUpdated(new Date());
     } catch (currentError) {
-      setError(errorMessage(currentError));
+      if (!isAbortError(currentError)) setError(errorMessage(currentError));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!signal?.aborted) { setLoading(false); setRefreshing(false); }
     }
   }, []);
 
   useEffect(() => {
-    void load();
-    const timer = window.setInterval(() => void load(true), 10000);
-    return () => window.clearInterval(timer);
+    let activeController: AbortController | null = new AbortController();
+    void load(false, activeController.signal);
+    const timer = window.setInterval(() => {
+      activeController?.abort();
+      activeController = new AbortController();
+      void load(true, activeController.signal);
+    }, 10000);
+    return () => { window.clearInterval(timer); activeController?.abort(); };
   }, [load]);
 
   const visibleEvents = useMemo(() => events.filter((event) => filter === "all" || (filter === "blocked" && isBlocked(event)) || (filter === "challenged" && isChallenged(event)) || (filter === "allowed" && isAllowed(event))), [events, filter]);

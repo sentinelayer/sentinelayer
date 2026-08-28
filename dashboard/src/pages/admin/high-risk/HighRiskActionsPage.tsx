@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { apiGet, apiPost, ApiError } from "../../../api/client";
+import { apiGet, apiPost, errorMessage, isAbortError } from "../../../api/client";
 
 type Action = { id: string; action: string; reason: string; requested_by?: string; approved_by?: string | null; status: string; requested_at?: string; approved_at?: string | null; executed_at?: string | null; requires_approval?: boolean; revoked_sessions?: number };
-function errorMessage(error: unknown): string { return (error as ApiError)?.message || (error instanceof Error ? error.message : "Unable to load high-risk actions"); }
 function date(value?: string | null): string { if (!value) return "Not recorded"; const current = new Date(value); return Number.isNaN(current.getTime()) ? "Not recorded" : current.toLocaleString(); }
 
 export default function HighRiskActionsPage() {
@@ -12,8 +11,20 @@ export default function HighRiskActionsPage() {
   const [creating, setCreating] = useState(false);
   const [working, setWorking] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  async function load() { try { const data = await apiGet<Action[]>("/admin/high-risk-actions"); setItems(Array.isArray(data) ? data : []); setError(null); } catch (currentError) { setError(errorMessage(currentError)); } }
-  useEffect(() => { void load(); }, []);
+  async function load(signal?: AbortSignal) {
+    try {
+      const data = await apiGet<Action[]>("/admin/high-risk-actions", { signal });
+      setItems(Array.isArray(data) ? data : []);
+      setError(null);
+    } catch (currentError) {
+      if (!isAbortError(currentError)) setError(errorMessage(currentError));
+    }
+  }
+  useEffect(() => {
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
+  }, []);
   async function requestAction(event: React.FormEvent) { event.preventDefault(); setCreating(true); setError(null); try { await apiPost("/admin/high-risk-actions", { action, reason: reason.trim() }); setReason(""); await load(); } catch (currentError) { setError(errorMessage(currentError)); } finally { setCreating(false); } }
   async function transition(id: string, verb: "approve" | "execute" | "reject") { setWorking(`${verb}:${id}`); setError(null); try { await apiPost(`/admin/high-risk-actions/${id}/${verb}`, {}); await load(); } catch (currentError) { setError(errorMessage(currentError)); } finally { setWorking(null); } }
   const pending = items.filter((item) => item.status === "PENDING_APPROVAL").length;

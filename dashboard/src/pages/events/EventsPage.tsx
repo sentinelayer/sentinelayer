@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { apiGet, ApiError } from "../../api/client";
+import { apiGet, errorMessage, isAbortError } from "../../api/client";
 
 type EventRecord = { id?: string; type?: string; source?: string; severity?: string; risk_score?: number | null; outcome?: string | null; timestamp?: string; data?: Record<string, unknown> };
 type DecisionFilter = "all" | "allowed" | "challenged" | "blocked";
@@ -8,7 +8,6 @@ function textFor(event: EventRecord): string { return String(event.outcome || ev
 function blocked(event: EventRecord): boolean { return /block|deny|reject/i.test(textFor(event)); }
 function challenged(event: EventRecord): boolean { return /challenge|step.?up|mfa/i.test(textFor(event)); }
 function relativeTime(value?: string): string { if (!value) return "Unknown"; const ms = new Date(value).getTime(); if (!Number.isFinite(ms)) return "Unknown"; const minutes = Math.max(0, Math.round((Date.now() - ms) / 60000)); return minutes < 1 ? "Just now" : minutes < 60 ? `${minutes}m ago` : `${Math.round(minutes / 60)}h ago`; }
-function errorMessage(error: unknown): string { return (error as ApiError)?.message || (error instanceof Error ? error.message : "Unable to load events"); }
 
 export default function EventsPage() {
   const [events, setEvents] = useState<EventRecord[]>([]);
@@ -19,7 +18,14 @@ export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { let cancelled = false; apiGet<EventRecord[]>("/events?limit=200").then((data) => { if (!cancelled) setEvents(Array.isArray(data) ? data : []); }).catch((currentError) => { if (!cancelled) setError(errorMessage(currentError)); }).finally(() => { if (!cancelled) setLoading(false); }); return () => { cancelled = true; }; }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    apiGet<EventRecord[]>("/events?limit=200", { signal: controller.signal })
+      .then((data) => { setEvents(Array.isArray(data) ? data : []); setError(null); })
+      .catch((currentError) => { if (!isAbortError(currentError)) setError(errorMessage(currentError)); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, []);
 
   const visible = useMemo(() => events.filter((event) => {
     const haystack = JSON.stringify(event).toLowerCase();
