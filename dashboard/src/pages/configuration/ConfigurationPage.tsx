@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { apiGet, apiPut, ApiError } from "../../api/client";
+import { apiGet, apiPut, errorMessage, isAbortError } from "../../api/client";
 import { canMutate, roleLabel } from "../../app/permissions";
 import { LoadingSkeleton } from "../../components/LoadingSkeleton";
 
 type ConfigValue = string | number | boolean | null;
 type Config = Record<string, ConfigValue>;
 const DESCRIPTIONS: Record<string, string> = { environment: "Runtime environment reported by the control plane.", rate_limit: "Default request rate limit used by the configured runtime.", jwt_expiry_minutes: "Access token lifetime in minutes.", mfa_enabled: "Whether MFA is enabled in the control plane.", waf_enabled: "Whether WAF protection is enabled by configuration.", threat_intel_enabled: "Whether threat intelligence checks are enabled.", log_level: "Application logging verbosity.", version: "Control plane application version." };
-function errorMessage(error: unknown): string { return (error as ApiError)?.message || (error instanceof Error ? error.message : "Unable to load configuration"); }
 
 export default function ConfigurationPage() {
   const [config, setConfig] = useState<Config>({});
@@ -16,8 +15,8 @@ export default function ConfigurationPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const canEdit = canMutate();
-  const load = async () => { try { const data = await apiGet<Config>("/configuration"); setConfig(data || {}); setDraft(String(data?.[selected] ?? "")); setError(null); } catch (currentError) { setError(errorMessage(currentError)); } finally { setLoading(false); } };
-  useEffect(() => { void load(); }, []);
+  const load = async (signal?: AbortSignal) => { try { const data = await apiGet<Config>("/configuration", { signal }); setConfig(data || {}); setDraft(String(data?.[selected] ?? "")); setError(null); } catch (currentError) { if (!isAbortError(currentError)) setError(errorMessage(currentError)); } finally { if (!signal?.aborted) setLoading(false); } };
+  useEffect(() => { const controller = new AbortController(); void load(controller.signal); return () => controller.abort(); }, []);
   const entries = useMemo(() => Object.entries(config), [config]);
   function choose(key: string) { setSelected(key); setDraft(String(config[key] ?? "")); }
   async function save(event: React.FormEvent) { event.preventDefault(); setSaving(true); setError(null); let value: ConfigValue = draft; if (draft === "true" || draft === "false") value = draft === "true"; else if (draft.trim() !== "" && Number.isFinite(Number(draft))) value = Number(draft); try { const response = await apiPut<{ key: string; value: ConfigValue }>("/configuration", { key: selected, value }); setConfig((current) => ({ ...current, [response.key]: response.value })); } catch (currentError) { setError(errorMessage(currentError)); } finally { setSaving(false); } }

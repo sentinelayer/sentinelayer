@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { apiGet, apiPost, ApiError } from "../../api/client";
+import { apiGet, apiPost, errorMessage, isAbortError } from "../../api/client";
 
 type App = { id: string; name: string; tenant_id?: string; environment?: string; status?: string };
-function errorMessage(error: unknown): string { return (error as ApiError)?.message || (error instanceof Error ? error.message : "Unable to load applications"); }
 
 export default function ApplicationsPage() {
   const [apps, setApps] = useState<App[]>([]);
@@ -13,10 +12,14 @@ export default function ApplicationsPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
-    try { const data = await apiGet<App[]>("/applications"); setApps(Array.isArray(data) ? data : []); setError(null); } catch (currentError) { setError(errorMessage(currentError)); } finally { setLoading(false); }
+  async function load(signal?: AbortSignal) {
+    try { const data = await apiGet<App[]>("/applications", { signal }); setApps(Array.isArray(data) ? data : []); setError(null); } catch (currentError) { if (!isAbortError(currentError)) setError(errorMessage(currentError)); } finally { if (!signal?.aborted) setLoading(false); }
   }
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
+  }, []);
   async function create(event: React.FormEvent) {
     event.preventDefault(); setCreating(true); setError(null);
     try { await apiPost("/applications", { name: name.trim(), environment }); setName(""); await load(); } catch (currentError) { setError(errorMessage(currentError)); } finally { setCreating(false); }

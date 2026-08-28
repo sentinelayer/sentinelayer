@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { apiGet, apiPost, ApiError } from "../../api/client";
+import { apiGet, apiPost, errorMessage, isAbortError } from "../../api/client";
 
 type Incident = { id: string; severity: string; status: string; tenant_id?: string; description?: string; created_at?: string };
-function errorMessage(error: unknown): string { return (error as ApiError)?.message || (error instanceof Error ? error.message : "Unable to load incidents"); }
 function relativeTime(value?: string): string { if (!value) return "Recorded time unavailable"; const date = new Date(value); return Number.isNaN(date.getTime()) ? "Recorded time unavailable" : date.toLocaleString(); }
 
 export default function IncidentsPage() {
@@ -12,8 +11,8 @@ export default function IncidentsPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  async function load() { try { const data = await apiGet<Incident[]>("/incidents"); setItems(Array.isArray(data) ? data : []); setError(null); } catch (currentError) { setError(errorMessage(currentError)); } finally { setLoading(false); } }
-  useEffect(() => { void load(); }, []);
+  async function load(signal?: AbortSignal) { try { const data = await apiGet<Incident[]>("/incidents", { signal }); setItems(Array.isArray(data) ? data : []); setError(null); } catch (currentError) { if (!isAbortError(currentError)) setError(errorMessage(currentError)); } finally { if (!signal?.aborted) setLoading(false); } }
+  useEffect(() => { const controller = new AbortController(); void load(controller.signal); return () => controller.abort(); }, []);
   async function create(event: React.FormEvent) { event.preventDefault(); setCreating(true); setError(null); try { await apiPost("/incidents", { severity, description: description.trim() }); setDescription(""); await load(); } catch (currentError) { setError(errorMessage(currentError)); } finally { setCreating(false); } }
   const open = useMemo(() => items.filter((item) => !["resolved", "closed"].includes(String(item.status).toLowerCase())), [items]);
   const critical = items.filter((item) => /critical|high/i.test(item.severity)).length;
