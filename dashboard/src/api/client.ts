@@ -17,6 +17,15 @@ const SAFE_MESSAGES: Record<number, string> = {
   503: "The service is temporarily unavailable.",
 };
 
+const SAFE_CODE_MESSAGES: Record<string, string> = {
+  INVALID_CREDENTIALS: "The email or password is incorrect.",
+  INVALID_API_KEY: "The API key is invalid or expired.",
+  MFA_REQUIRED: "Multi-factor authentication is required.",
+  MFA_INVALID: "The multi-factor authentication code is invalid.",
+  FORBIDDEN: "You do not have permission to perform this action.",
+  RATE_LIMITED: "Too many requests. Please try again shortly.",
+};
+
 function safeDetail(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const normalized = value.replace(/[\r\n\t]+/g, " ").trim();
@@ -32,9 +41,9 @@ async function errorFromResponse(res: Response): Promise<ApiError> {
     // Discard non-JSON response bodies; upstream text may contain secrets.
   }
   const payload = body && typeof body === "object" ? body as Record<string, unknown> : {};
-  const code = safeDetail(payload.code);
-  const detail = safeDetail(payload.detail) || safeDetail(payload.error) || safeDetail(payload.message);
-  return { status: res.status, code, message: detail || SAFE_MESSAGES[res.status] || "The request could not be completed." };
+  const rawCode = safeDetail(payload.code)?.toUpperCase();
+  const code = rawCode && /^[A-Z][A-Z0-9_]{1,63}$/.test(rawCode) ? rawCode : undefined;
+  return { status: res.status, code, message: (code && SAFE_CODE_MESSAGES[code]) || SAFE_MESSAGES[res.status] || "The request could not be completed." };
 }
 
 export function isAbortError(error: unknown): boolean {

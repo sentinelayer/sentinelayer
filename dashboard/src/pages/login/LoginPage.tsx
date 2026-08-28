@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { login, register } from "../../api/client";
+import { errorMessage, login, register } from "../../api/client";
 
 export default function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = useState("");
@@ -27,8 +27,8 @@ export default function LoginPage({ onSuccess }: { onSuccess: () => void }) {
       await login(email.trim(), password);
       onSuccess();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : (err as { message?: string })?.message;
-      setError(message || "Permintaan gagal. Coba lagi.");
+      const message = errorMessage(err);
+      if (message) setError(message);
     } finally {
       setLoading(false);
     }
