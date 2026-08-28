@@ -32,7 +32,7 @@ jobs:
       - name: Skip deployment when credentials are not configured
         if: ${{ env.CLOUDFLARE_API_TOKEN == '' }}
         run: echo "::warning::CLOUDFLARE_API_TOKEN is not configured; Cloudflare deployment was intentionally skipped."
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
         with:
           node-version: 22
