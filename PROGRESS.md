@@ -33,3 +33,13 @@ Repository sekarang menyediakan backup PostgreSQL atomik dengan checksum dan ops
 ## Acceptance language
 
 Jangan gunakan label “10/10”, “tanpa celah”, “100% uptime”, “zero incidents”, “zero false positive”, “Technical GA”, “Commercial GA”, certified, atau enterprise-ready sebelum evidence eksternal yang relevan benar-benar tersedia dan direview.
+
+## Audit update — 2026-08-28
+
+Frontend API lifecycle audit selesai pada commit `6cf7114`. Seluruh halaman dashboard yang melakukan fetch dalam `useEffect` kini memakai `AbortController`; polling Live Protection membatalkan request sebelumnya sebelum refresh berikutnya; client error responses hanya menampilkan pesan yang dipetakan dari HTTP status atau safe error code; dan tiga halaman visual lama tidak lagi menggunakan loading mentah atau `any` untuk payload utama.
+
+Cloudflare workflow diubah menjadi manual-only pada commit berikutnya yang akan dicatat bersama perubahan ini, karena Railway tetap menjadi jalur utama dan rollout Cloudflare belum boleh dipicu otomatis.
+
+Bukti lokal terbaru: `npm --prefix dashboard run build` lulus setelah perubahan terakhir; `git diff --check` lulus; Python compile dan shell syntax check dijalankan. Pytest integration yang membutuhkan service pada `localhost:8005` tidak dapat membuktikan runtime karena service belum berjalan di sandbox. Docker Compose validation tidak dapat dijalankan karena binary Docker tidak terpasang di sandbox. Ini dicatat sebagai keterbatasan verifikasi, bukan dianggap lulus.
+
+Railway public networking, domain single-origin, database/Redis managed services, seeder staging, backup restore drill, dan Cloudflare deployment tetap membutuhkan verifikasi eksternal melalui environment pengguna. Repository hanya menyediakan implementasi dan runbook; tidak ada evidence eksternal yang dipalsukan.

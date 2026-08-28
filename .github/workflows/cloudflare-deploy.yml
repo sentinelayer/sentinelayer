@@ -2,18 +2,6 @@ name: Cloudflare Deploy
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "cloudflare/**"
-      - "Dockerfile"
-      - "gateway/**"
-      - "control_plane/**"
-      - "engine/**"
-      - "waf/**"
-      - "security/**"
-      - "scripts/**"
-      - ".github/workflows/cloudflare-deploy.yml"
 
 permissions:
   contents: read
