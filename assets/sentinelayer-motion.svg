@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 450" role="img" aria-label="SentinelLayer animated security data plane">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#020817"/><stop offset=".55" stop-color="#071426"/><stop offset="1" stop-color="#06243b"/></linearGradient>
+    <linearGradient id="line"><stop stop-color="#22d3ee" stop-opacity="0"/><stop offset=".45" stop-color="#67e8f9"/><stop offset="1" stop-color="#2563eb" stop-opacity="0"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <clipPath id="clip"><rect width="1200" height="450" rx="18"/></clipPath>
+  </defs>
+  <rect width="1200" height="450" rx="18" fill="url(#bg)"/>
+  <g clip-path="url(#clip)" fill="none" stroke-linecap="round">
+    <path d="M-80 345 C220 210 380 410 660 255 S1030 100 1300 180" stroke="#0e7490" stroke-opacity=".34" stroke-width="2"/>
+    <path d="M-80 370 C220 235 380 435 660 280 S1030 125 1300 205" stroke="url(#line)" stroke-width="3" stroke-dasharray="32 42">
+      <animate attributeName="stroke-dashoffset" from="0" to="-740" dur="5s" repeatCount="indefinite"/>
+    </path>
+    <path d="M70 95 H480 M720 95 H1130" stroke="#164e63" stroke-width="1"/>
+    <path d="M120 130 H500 M700 130 H1080" stroke="#0e7490" stroke-opacity=".45" stroke-width="1" stroke-dasharray="4 14"/>
+    <circle cx="600" cy="225" r="110" stroke="#0e7490" stroke-opacity=".3" stroke-width="1"/>
+    <circle cx="600" cy="225" r="84" stroke="#22d3ee" stroke-opacity=".35" stroke-width="2" stroke-dasharray="8 12">
+      <animateTransform attributeName="transform" type="rotate" from="0 600 225" to="360 600 225" dur="14s" repeatCount="indefinite"/>
+    </circle>
+    <path d="M600 105 690 138v62c0 58-36 96-90 122-54-26-90-64-90-122v-62l90-33Z" fill="#06192d" stroke="#67e8f9" stroke-width="4" filter="url(#glow)"/>
+    <path d="m555 224 29 29 62-67" stroke="#a5f3fc" stroke-width="12"/>
+    <g fill="#ef4444" stroke="none" opacity=".75">
+      <circle cx="875" cy="195" r="6"><animate attributeName="opacity" values=".15;.9;.15" dur="2s" repeatCount="indefinite"/></circle>
+      <circle cx="950" cy="250" r="4"><animate attributeName="opacity" values=".9;.15;.9" dur="2.8s" repeatCount="indefinite"/></circle>
+      <circle cx="1020" cy="170" r="5"><animate attributeName="opacity" values=".2;.8;.2" dur="2.4s" repeatCount="indefinite"/></circle>
+    </g>
+    <g fill="#22d3ee"><circle cx="170" cy="300" r="3"/><circle cx="260" cy="245" r="3"/><circle cx="1040" cy="320" r="3"/></g>
+  </g>
+  <text x="70" y="210" fill="#e0f2fe" font-family="Arial, sans-serif" font-size="36" font-weight="700">SENTINELLAYER</text>
+  <text x="70" y="250" fill="#67e8f9" font-family="Arial, sans-serif" font-size="17" letter-spacing="3">SECURITY DATA PLANE</text>
+</svg>

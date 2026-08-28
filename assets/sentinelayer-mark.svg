@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="SentinelLayer shield mark">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#67e8f9"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <path d="M64 7 111 24v32c0 30-19 51-47 65C36 107 17 86 17 56V24L64 7Z" fill="#071426" stroke="url(#g)" stroke-width="5"/>
+  <path d="M64 23 94 34v22c0 20-11 35-30 46-19-11-30-26-30-46V34l30-11Z" fill="none" stroke="#22d3ee" stroke-opacity=".7" stroke-width="3" filter="url(#glow)"/>
+  <path d="m42 62 14 14 30-32" fill="none" stroke="#a5f3fc" stroke-linecap="round" stroke-linejoin="round" stroke-width="7"/>
+</svg>

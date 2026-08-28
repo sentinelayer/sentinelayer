@@ -1,121 +1,124 @@
-# SentinelLayer
+<div align="center">
+  <img src="assets/sentinelayer-mark.svg" width="92" alt="SentinelLayer shield mark" />
+  <h1>SentinelLayer</h1>
+  <p><strong>Layered security for sensitive APIs and workflows.</strong></p>
+  <p>Multi-tenant API security platform dengan gateway, WAF, behavior intelligence, risk scoring, policy safety, dan audit-ready control plane.</p>
 
-**SentinelLayer** adalah security platform **multi-tenant** untuk melindungi API dan workflow sensitif melalui satu data plane terintegrasi. Platform ini menggabungkan normalisasi request, inspeksi body, WAF berbasis **OWASP CRS/Coraza**, rate limiting Redis, behavior assessment, risk scoring, decision safety, upstream proxy, control plane, dan dashboard.
+  <p>
+    <a href="https://github.com/sentinelayer/sentinelayer/actions"><img src="https://img.shields.io/github/actions/workflow/status/sentinelayer/sentinelayer/ci.yml?branch=main&label=CI&style=for-the-badge&logo=github" alt="CI status" /></a>
+    <a href="https://github.com/sentinelayer/sentinelayer/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-22d3ee?style=for-the-badge" alt="MIT license" /></a>
+    <a href="https://github.com/sentinelayer/sentinelayer"><img src="https://img.shields.io/github/last-commit/sentinelayer/sentinelayer?style=for-the-badge&color=2563eb" alt="Last commit" /></a>
+  </p>
+</div>
 
-> **Status proyek:** SentinelLayer masih berada pada tahap pengembangan dan pembuktian kesiapan operasional. Keberhasilan build atau test pada repository ini bukan bukti bahwa deployment production telah memiliki availability, kalibrasi, HA, atau kesiapan komersial tertentu.
+<p align="center">
+  <img src="assets/sentinelayer-motion.svg" alt="SentinelLayer animated security data plane" width="100%" />
+</p>
 
-## Mengapa SentinelLayer?
+> **Catatan kompatibilitas GitHub:** banner di atas menggunakan SVG animasi yang ringan, tanpa JavaScript atau CSS eksternal. Jika renderer tidak memutar animasi, gunakan [versi PNG statis](assets/sentinelayer-hero.png).
 
-SentinelLayer dirancang untuk membantu tim keamanan menerapkan pertahanan berlapis di depan API tanpa memisahkan telemetry, policy, risk decision, dan audit trail ke banyak komponen yang tidak terkoordinasi. Setiap request dapat dinormalisasi, diperiksa, diberi konteks risiko, lalu diteruskan atau ditolak berdasarkan policy yang dapat diaudit.
+## The security layer between traffic and trust
 
-## Kapabilitas utama
+SentinelLayer menyatukan enforcement dan konteks risiko dalam satu jalur request. Gateway menormalisasi traffic dan memeriksa payload; WAF, rate limiting, behavior assessment, serta risk engine membentuk keputusan; control plane menjaga tenant, policy, identity, dan audit trail.
 
-| Komponen | Yang tersedia di repository | Evidence lanjutan yang masih diperlukan |
+## What is inside
+
+| Layer | Tanggung jawab | Teknologi utama |
 |---|---|---|
-| **Gateway / data plane** | Request normalization, body inspection, Coraza + OWASP CRS, SSRF/desync guard, atomic rate limiting, behavior/risk/decision pipeline, dan upstream proxy | Traffic nyata, load test, failure drill, latency/error budget, dan upstream customer |
-| **Control plane** | FastAPI, PostgreSQL/Alembic, tenant scoping, session dan API-key lifecycle, MFA gate, RBAC, audit events, policy, risk records, dan dashboard SPA | Evidence PostgreSQL/RLS di production, backup/restore drill, HA, dan independent review |
-| **Policy safety** | Versioned policy records, Ed25519 signature metadata, verification saat rollback, approval workflow, dan capability execution terbatas | KMS/HSM lifecycle, key rotation, signed release admission, dan independent review |
-| **Runtime state** | Behavior frequency/sequence state dan risk correlation dengan Redis; memory fallback untuk development | Redis HA/failover, retention/eviction policy, konsistensi multi-region, dan chaos evidence |
-| **Integrasi** | Webhook registration, HMAC timestamp/nonce/attempt metadata, retry/DLQ worker, dan encrypted secret storage | Endpoint customer nyata, alert routing, secret rotation, dan operational SLA |
-| **Observability** | Prometheus endpoint, security metrics, runtime events, risk decisions, dan dashboard pages | Central logs, traces, alert escalation, retention, redaction, dan cardinality governance |
+| **Edge gateway** | Normalisasi request, body inspection, upstream proxy, dan enforcement | Go, Coraza, OWASP CRS |
+| **Threat controls** | SSRF/desync guard, rate limiting atomic, dan WAF rules | Redis, Coraza, OWASP CRS |
+| **Risk intelligence** | Behavior frequency/sequence state, correlation, scoring, dan decision safety | Redis, risk pipeline |
+| **Control plane** | Tenant scoping, RBAC, MFA gate, API key/session lifecycle, policy, audit events | FastAPI, PostgreSQL, Alembic |
+| **Policy safety** | Versioning, approval workflow, Ed25519 metadata, dan rollback verification | Ed25519, signed metadata |
+| **Operations** | Metrics, runtime events, webhook retry/DLQ, dashboard, dan maintenance worker | Prometheus, Redis, SPA |
 
-## Arsitektur singkat
+## Request path
 
-Pada deployment awal Railway, satu service menjalankan public Gateway dan komponen internal pada loopback: control plane di port `8005`, risk engine di `8090`, behavior engine di `8091`, serta maintenance worker. Dashboard disajikan oleh control plane pada domain yang sama, sedangkan API tersedia di bawah `/api/v1`.
-
-```text
-Client
-  │
-  ▼
-Gateway ──► Request normalization ──► WAF / rate limit
-  │                                      │
-  │                                      ▼
-  │                            Behavior + risk decision
-  │                                      │
-  └──────────────────────────────────────┴──► Upstream API
-
-Control plane ──► PostgreSQL     Runtime state ──► Redis
-       │
-       ├── Policies, tenants, RBAC, audit events
-       └── Dashboard + API (/api/v1)
+```mermaid
+flowchart LR
+    C[Client / API Consumer] --> G[SentinelLayer Gateway]
+    G --> N[Normalize + Inspect]
+    N --> W[Coraza WAF / OWASP CRS]
+    W --> R[Rate Limit]
+    R --> B[Behavior + Risk Engine]
+    B --> D{Decision}
+    D -->|Allow| U[Protected Upstream]
+    D -->|Block / Review| A[Audit + Risk Record]
+    CP[Control Plane] --> P[(PostgreSQL)]
+    CP --> S[(Redis)]
+    CP -. policies, tenants, audit .-> G
 ```
 
-Topology ini merupakan pilihan tahap awal untuk memulihkan alur end-to-end; **bukan klaim HA atau enterprise production readiness**. Untuk scale-out, service perlu dipisah dan state PostgreSQL/Redis perlu dibuktikan melalui failover, backup/restore, load, chaos, dan observability evidence.
+## Why this repository is honest about readiness
 
-## Quick start lokal
+Repository dan CI evidence menunjukkan code path yang diuji; keduanya tidak otomatis membuktikan kesiapan production. Status HA, availability, calibration, false-positive rate, backup/restore, failover, dan independent security review harus dibuktikan di environment nyata.
 
-### Prasyarat
+| Saat ini tersedia | Belum boleh diklaim tanpa evidence |
+|---|---|
+| Unit/integration tests, Go build, Docker build, security scans, SBOM, dan E2E security checks | Technical GA, Commercial GA, certification, uptime tertentu, atau bebas insiden/false positive |
+| Multi-tenant control plane dan security pipeline terintegrasi | Production HA, customer SLA, multi-region consistency, dan operational resilience |
+| Policy approval, signature metadata, rollback verification, dan audit records | KMS/HSM lifecycle penuh, key rotation tanpa invalidasi terkelola, dan independent review |
 
-Development membutuhkan **Python 3.11+**, **Node.js 22+**, **Go 1.25+**, PostgreSQL, dan Redis.
+## Run locally
 
-### Opsi A — menjalankan dengan Docker Compose
+### Requirements
+
+Development membutuhkan **Python 3.11+**, **Node.js 22+**, **Go 1.25+**, PostgreSQL, Redis, dan Docker bila memilih Compose.
+
+### Docker Compose
 
 ```bash
 git clone https://github.com/sentinelayer/sentinelayer.git
 cd sentinelayer
 cp .env.example .env
-# Sesuaikan secret development lokal di .env
-
+# Isi secret development lokal; jangan gunakan nilai contoh untuk production.
 docker compose up --build
 ```
 
-Setelah service aktif, gunakan URL dan port yang dipetakan oleh `docker-compose.yml`. Jangan gunakan secret dari file contoh untuk production.
-
-### Opsi B — menjalankan pipeline build dan test
+### Build dan test
 
 ```bash
-cp .env.example .env
-
 alembic -c alembic.ini upgrade head
 npm --prefix dashboard ci
 npm --prefix dashboard run build
-
 (cd gateway && go test ./... && go build ./...)
 pytest -q tests/unit
 ```
 
-Untuk menjalankan integration atau security test, lihat workflow CI di [`.github/workflows`](https://github.com/sentinelayer/sentinelayer/tree/main/.github/workflows) dan dokumentasi operasi di [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+Gateway production membutuhkan `JWT_SECRET` minimal 32 byte dan koneksi Redis. Schema production dimigrasikan melalui Railway pre-deploy command. Secret harus dibuat, disimpan, dan dirotasi melalui secret manager atau KMS yang sesuai.
 
-## Konfigurasi penting
+## Environment yang perlu diperhatikan
 
-| Variabel | Fungsi | Catatan |
-|---|---|---|
-| `DATABASE_URL` | Koneksi PostgreSQL | Gunakan database terkelola untuk deployment production |
-| `REDIS_URL` / `REDIS_ADDR` | Runtime state dan rate limiting | HA, failover, serta policy retention harus diuji |
-| `JWT_SECRET` | Signing session/token | Minimal 32 byte dan wajib berasal dari secret manager |
-| `METRICS_TOKEN` | Akses endpoint metrics | Jangan commit nilainya ke repository |
-| `KMS_KEY` | Proteksi secret atau material kriptografi | Production harus menggunakan secret-manager/KMS-backed key |
-| `SL_ENFORCE_PROVENANCE` | Enforcement image/attestation provenance | Aktifkan hanya jika signed artifact dan approved hash sudah diaudit |
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection |
+| `REDIS_URL` / `REDIS_ADDR` | Runtime state dan rate limiting |
+| `JWT_SECRET` | Session/token signing; minimal 32 byte |
+| `METRICS_TOKEN` | Proteksi endpoint metrics |
+| `KMS_KEY` | Proteksi secret/material kriptografi |
+| `SL_ENFORCE_PROVENANCE` | Enforcement signed image/attestation provenance |
 
-Untuk bootstrap admin, gunakan `BOOTSTRAP_ADMIN_EMAIL` dan `BOOTSTRAP_ADMIN_TOKEN` sebagai secret deployment. Token bootstrap hanya boleh digunakan satu kali dan tidak boleh dikirim melalui chat, issue, atau commit.
+## Documentation map
 
-## Dokumentasi
-
-| Topik | Dokumentasi |
+| Area | Link |
 |---|---|
 | API dan endpoint | [`docs/api.md`](docs/api.md) |
-| OpenAPI control plane | [`docs/api/openapi-control-plane.yaml`](docs/api/openapi-control-plane.yaml) |
-| Arsitektur dan data flow | [`docs/architecture/`](docs/architecture/) |
-| Operasional | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) |
+| OpenAPI specification | [`docs/api/openapi-control-plane.yaml`](docs/api/openapi-control-plane.yaml) |
+| Architecture | [`docs/architecture/`](docs/architecture/) |
+| Operations | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) |
 | Production readiness | [`docs/operations/production-readiness.md`](docs/operations/production-readiness.md) |
 | Webhook security | [`docs/api/webhook-security.md`](docs/api/webhook-security.md) |
 | Disaster recovery | [`docs/runbooks/dr-restore.md`](docs/runbooks/dr-restore.md) |
 | Pilot deployment | [`docs/pilot/PILOT.md`](docs/pilot/PILOT.md) |
 
-## Evidence dan batas klaim
-
-CI pada branch `main` menjalankan unit/integration tests, Go build, Docker image build, security scans, SBOM, dan E2E security checks. Semua hasil tersebut harus diperlakukan sebagai **repository/CI evidence**.
-
-SentinelLayer belum boleh disebut **Technical GA**, **Commercial GA**, certified, memiliki uptime tertentu, atau bebas insiden/false positive sebelum tersedia deployment production, labelled calibration data, customer pilot, restore/failover drill, independent security review, dan acceptance record yang sesuai.
-
 ## Security disclosure
 
-Jangan membuka kerentanan keamanan melalui issue publik. Sertakan detail secukupnya untuk reproduksi secara aman dan gunakan jalur disclosure privat yang disepakati oleh maintainer.
+Jangan membuka detail kerentanan di issue publik. Gunakan jalur disclosure privat yang disepakati maintainer dan sertakan langkah reproduksi secukupnya untuk verifikasi aman.
 
-## Kontribusi
+## Contributing
 
-Perubahan yang menyentuh gateway, policy, tenant isolation, authentication, secret handling, atau deployment harus disertai test dan dokumentasi yang relevan. Sebelum membuka pull request, jalankan setidaknya build dan test lokal pada bagian yang terdampak.
+Perubahan pada gateway, policy, tenant isolation, authentication, secret handling, atau deployment perlu disertai test dan dokumentasi yang relevan. Sebelum membuka pull request, jalankan setidaknya build dan test pada bagian yang terdampak.
 
-## Lisensi
+## License
 
 MIT © 2026 SentinelLayer.
