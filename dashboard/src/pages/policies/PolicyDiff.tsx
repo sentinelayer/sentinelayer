@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { apiGet } from '../../api/client'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton'
 
 type Version = { version: number; rules: Record<string, unknown>; active?: boolean }
 type DiffResponse = { changed: boolean; diff: string; from_version: number; to_version: number }
@@ -43,7 +44,7 @@ export const PolicyDiff: React.FC = () => {
         return () => controller.abort()
     }, [id, versions, fromVersion, toVersion])
 
-    if (loading) return <div>Loading...</div>
+    if (loading) return <LoadingSkeleton label="Loading policy versions" />
     if (error) return <div className="error">{error}</div>
     if (!versions.length) return <div className="error">No policy versions available</div>
 
