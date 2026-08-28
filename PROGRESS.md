@@ -28,7 +28,7 @@ Single-service Railway adalah topology awal untuk memulihkan domain dan alur end
 
 ## Next engineering priorities
 
-Repository sekarang menyediakan backup PostgreSQL atomik dengan checksum dan opsi enkripsi, restore validation/dry-run dengan konfirmasi eksplisit, runtime configuration guard, Makefile verification targets, serta operational-readiness CI. Prioritas berikutnya tetap verifikasi Railway setelah deploy `main` terbaru, pengujian request nyata melewati Gateway hingga upstream, shared-state failure matrix, observability redaction/alert routing, serta perbaikan key lifecycle agar policy signing dapat berotasi tanpa memutus verification terhadap versi yang masih berlaku. Fitur yang belum memiliki adapter nyata tidak boleh dipasarkan sebagai implemented.
+Repository sekarang menyediakan backup PostgreSQL atomik dengan checksum dan opsi enkripsi, restore validation/dry-run dengan konfirmasi eksplisit, job backup manual Docker Compose berprofil, runtime configuration guard, Makefile verification targets, serta operational-readiness CI. Prioritas berikutnya tetap verifikasi Railway setelah deploy `main` terbaru, pengujian request nyata melewati Gateway hingga upstream, shared-state failure matrix, observability redaction/alert routing, serta perbaikan key lifecycle agar policy signing dapat berotasi tanpa memutus verification terhadap versi yang masih berlaku. Fitur yang belum memiliki adapter nyata tidak boleh dipasarkan sebagai implemented.
 
 ## Acceptance language
 
