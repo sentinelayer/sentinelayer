@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from datetime import UTC, datetime
 from collections import defaultdict
@@ -14,6 +15,7 @@ from control_plane.app.infrastructure.db.session import SessionLocal
 router = APIRouter(prefix="/events-ws", tags=["events"])
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGORITHM = "HS256"
+SESSION_RECHECK_SECONDS = 30
 
 
 class ConnectionManager:
@@ -36,6 +38,11 @@ class ConnectionManager:
         stale: list[WebSocket] = []
         for connection in self.connections.get(tenant_id, set()).copy():
             try:
+                claims = _claims(connection)
+                if not claims or claims[1] != tenant_id:
+                    await connection.close(code=1008, reason="Session revoked or expired")
+                    stale.append(connection)
+                    continue
                 await connection.send_text(message)
             except Exception:  # noqa: BLE001 - remove dead sockets without breaking other subscribers
                 stale.append(connection)
@@ -93,7 +100,13 @@ async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket, tenant_id)
     try:
         while True:
-            data = await websocket.receive_text()
+            try:
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=SESSION_RECHECK_SECONDS)
+            except asyncio.TimeoutError:
+                if _claims(websocket) != claims:
+                    await websocket.close(code=1008, reason="Session revoked or expired")
+                    return
+                continue
             if _claims(websocket) != claims:
                 await websocket.close(code=1008, reason="Session revoked or expired")
                 return
