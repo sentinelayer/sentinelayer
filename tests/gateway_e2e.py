@@ -5,12 +5,15 @@ import json
 import os
 import signal
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# Direct script execution must support parent-process API imports without PYTHONPATH.
+sys.path.insert(0, str(ROOT))
 GATEWAY_PORT = int(os.getenv("E2E_GATEWAY_PORT", "18000"))
 UPSTREAM_PORT = int(os.getenv("E2E_UPSTREAM_PORT", "18080"))
 REDIS_URL = os.getenv("E2E_REDIS_URL", "redis://127.0.0.1:6379/0")
