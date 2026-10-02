@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import http.client
 import os
 import socket
 import uuid
@@ -9,7 +10,7 @@ from datetime import UTC, datetime, timedelta
 from ipaddress import ip_address
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPHandler, HTTPSHandler, HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 from sqlalchemy import or_
 
@@ -27,24 +28,80 @@ class _NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def _safe_addresses(host: str) -> bool:
+def _resolve_public_addresses(host: str) -> tuple[str, ...]:
     try:
         values = {info[4][0] for info in socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)}
     except socket.gaierror:
-        return False
+        return ()
     for raw in values:
         try:
             address = ip_address(raw)
         except ValueError:
-            return False
-        if address.is_private or address.is_loopback or address.is_link_local or address.is_reserved or address.is_multicast:
-            return False
-    return bool(values)
+            return ()
+        if not address.is_global or address.is_multicast:
+            return ()
+    return tuple(sorted(values))
+
+
+def _safe_addresses(host: str) -> bool:
+    return bool(_resolve_public_addresses(host))
+
+
+def _connect_pinned(addresses, destination, timeout, source_address=None):
+    """Connect only to validated numeric IPs; never resolve the hostname again."""
+    port = destination[1]
+    last_error = None
+    for raw in addresses:
+        family = socket.AF_INET6 if ip_address(raw).version == 6 else socket.AF_INET
+        sock = socket.socket(family, socket.SOCK_STREAM)
+        try:
+            sock.settimeout(timeout)
+            if source_address:
+                sock.bind(source_address)
+            sock.connect((raw, port))
+            return sock
+        except OSError as exc:
+            last_error = exc
+            sock.close()
+    raise last_error or OSError("No validated webhook addresses")
+
+
+def _connection(connection_type, addresses, host, **kwargs):
+    connection = connection_type(host, **kwargs)
+    # HTTPSConnection retains the original host for certificate checks and SNI.
+    connection._create_connection = lambda destination, timeout, source_address=None: _connect_pinned(
+        addresses, destination, timeout, source_address,
+    )
+    return connection
+
+
+class _PinnedHTTPHandler(HTTPHandler):
+    def __init__(self, addresses):
+        super().__init__()
+        self.addresses = addresses
+
+    def http_open(self, req):
+        return self.do_open(lambda host, **kwargs: _connection(
+            http.client.HTTPConnection, self.addresses, host, **kwargs,
+        ), req)
+
+
+class _PinnedHTTPSHandler(HTTPSHandler):
+    def __init__(self, addresses):
+        super().__init__()
+        self.addresses = addresses
+
+    def https_open(self, req):
+        return self.do_open(lambda host, **kwargs: _connection(
+            http.client.HTTPSConnection, self.addresses, host, **kwargs,
+        ), req, context=self._context)
 
 
 def _deliver(delivery: WebhookDelivery, webhook: WebhookRegistration) -> dict[str, object]:
-    host = (urlparse(webhook.url).hostname or "").lower()
-    if not host or not _safe_addresses(host):
+    parsed = urlparse(webhook.url)
+    host = (parsed.hostname or "").lower()
+    addresses = _resolve_public_addresses(host) if host and parsed.scheme in {"http", "https"} else ()
+    if not addresses:
         raise ValueError("webhook destination does not resolve to a public address")
     secret = _kms.decrypt(webhook.secret_ciphertext or "")
     body = delivery.payload or "{}"
@@ -64,7 +121,8 @@ def _deliver(delivery: WebhookDelivery, webhook: WebhookRegistration) -> dict[st
         },
     )
     try:
-        with build_opener(_NoRedirect()).open(req, timeout=TIMEOUT_SECONDS) as response:
+        with build_opener(ProxyHandler({}), _NoRedirect(), _PinnedHTTPHandler(addresses),
+                          _PinnedHTTPSHandler(addresses)).open(req, timeout=TIMEOUT_SECONDS) as response:
             status = response.status
     except HTTPError as exc:
         status = exc.code

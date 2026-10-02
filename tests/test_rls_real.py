@@ -65,3 +65,27 @@ def test_postgres_rls_isolation_with_unprivileged_role():
                 cur.execute(sql.SQL("DROP OWNED BY {}").format(role_identifier))
                 cur.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(role_identifier))
         admin.close()
+
+
+@pytest.mark.integration
+def test_tenant_session_context_survives_commit_and_rollback():
+    from sqlalchemy import text
+    from sqlalchemy.orm import Session
+    from control_plane.app.infrastructure.db.session import set_tenant_context
+
+    if engine.dialect.name != "postgresql" or os.getenv("TEST_POSTGRES_RLS") != "1":
+        pytest.skip("requires disposable PostgreSQL with TEST_POSTGRES_RLS=1")
+    with Session(engine) as db:
+        # Exact IDs, including punctuation, must not collapse into another ID.
+        set_tenant_context(db, "tenant.with.dots")
+        assert db.scalar(text("SELECT current_setting('app.tenant_id', true)")) == "tenant.with.dots"
+        db.commit()
+        assert db.scalar(text("SELECT current_setting('app.tenant_id', true)")) == "tenant.with.dots"
+        db.rollback()
+        assert db.scalar(text("SELECT current_setting('app.tenant_id', true)")) == "tenant.with.dots"
+        set_tenant_context(db, "another-tenant")
+        assert db.scalar(text("SELECT current_setting('app.tenant_id', true)")) == "another-tenant"
+        db.commit()
+        assert db.scalar(text("SELECT current_setting('app.tenant_id', true)")) == "another-tenant"
+    with Session(engine) as fresh:
+        assert fresh.scalar(text("SELECT current_setting('app.tenant_id', true)")) in (None, "")

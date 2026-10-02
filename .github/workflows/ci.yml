@@ -128,7 +128,7 @@ jobs:
           JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
           SL_ENV: test
           PYTHONPATH: .
-        run: pytest tests/test_rls_real.py -v --tb=short
+        run: pytest tests/test_rls_real.py tests/test_rls_enforcement.py -v --tb=short
       - name: Real PostgreSQL backup and restore
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sentinelayer

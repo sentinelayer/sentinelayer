@@ -1,13 +1,29 @@
+"""Verify migrated tenant tables have RLS and tenant-scoped read/write policies."""
+import os
+
 import pytest
 from sqlalchemy import text
 
-from control_plane.app.infrastructure.db.rls import enable_rls
+from control_plane.app.infrastructure.db.models import Base
 from control_plane.app.infrastructure.db.session import engine
 
 
-@pytest.mark.asyncio
-async def test_rls_enforcement():
-    enable_rls()
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT * FROM users"))
-        assert result is not None
+@pytest.mark.integration
+def test_migrated_tenant_tables_have_rls_policies():
+    if engine.dialect.name != "postgresql" or os.getenv("TEST_POSTGRES_RLS") != "1":
+        pytest.skip("requires disposable PostgreSQL with TEST_POSTGRES_RLS=1")
+    tenant_tables = {table.name for table in Base.metadata.tables.values() if "tenant_id" in table.c}
+    assert tenant_tables
+    with engine.connect() as connection:
+        for name in sorted(tenant_tables):
+            enabled = connection.scalar(text(
+                "SELECT relrowsecurity FROM pg_class WHERE oid = to_regclass(:name)"
+            ), {"name": name})
+            assert enabled is True, f"RLS missing for {name}"
+            policies = connection.execute(text(
+                "SELECT qual, with_check FROM pg_policies WHERE schemaname = 'public' AND tablename = :name"
+            ), {"name": name}).all()
+            assert policies, f"Tenant policy missing for {name}"
+            for read, write in policies:
+                assert "app.tenant_id" in (read or ""), f"Read policy unscoped for {name}"
+                assert "app.tenant_id" in (write or ""), f"Write policy unscoped for {name}"
