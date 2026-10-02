@@ -17,6 +17,12 @@ import psycopg2
 from psycopg2 import sql
 from control_plane.app.infrastructure.db.models import Base
 
+# SQL keywords are a closed set; identifiers and password literals are quoted by psycopg2.
+PRIVILEGE_SQL = {value: sql.SQL(value) for value in (
+    "SELECT", "SELECT, UPDATE", "SELECT, DELETE", "SELECT, INSERT",
+    "SELECT, INSERT, UPDATE", "SELECT, INSERT, UPDATE, DELETE",
+)}
+
 ROLES = {"runtime": "sentinel_app", "authentication": "sentinel_auth", "worker": "sentinel_worker"}
 AUTH_TABLES = {"tenants", "users", "auth_sessions", "api_keys", "bootstrap_admin_grants"}
 WORKER_GRANTS = {
@@ -36,16 +42,25 @@ def configure_roles(connection, passwords: dict[str, str]) -> None:
             if len(secret) < 24:
                 raise ValueError(f"{profile} database password must be at least 24 characters")
             role = sql.Identifier(name)
+            # DDL identifiers cannot use bind parameters. Every variable below uses
+            # psycopg2 Identifier/Literal, or the closed PRIVILEGE_SQL map.
             cursor.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (name,))
             if not cursor.fetchone():
+                # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
                 cursor.execute(sql.SQL("CREATE ROLE {} NOLOGIN").format(role))
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
             cursor.execute(sql.SQL("ALTER ROLE {} LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION PASSWORD {}").format(role, sql.Literal(secret)))
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
             cursor.execute(sql.SQL("ALTER ROLE {} SET row_security = on").format(role))
             cursor.execute("SELECT current_database()")
             database = cursor.fetchone()[0]
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
             cursor.execute(sql.SQL("GRANT CONNECT ON DATABASE {} TO {}").format(sql.Identifier(database), role))
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
             cursor.execute(sql.SQL("GRANT USAGE ON SCHEMA public TO {}").format(role))
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
             cursor.execute(sql.SQL("REVOKE ALL ON ALL TABLES IN SCHEMA public FROM {}").format(role))
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
             cursor.execute(sql.SQL("REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM {}").format(role))
             if profile == "runtime":
                 grants = {table: "SELECT, INSERT, UPDATE, DELETE" for table in tables if table != "bootstrap_admin_grants"}
@@ -55,10 +70,13 @@ def configure_roles(connection, passwords: dict[str, str]) -> None:
             else:
                 grants = WORKER_GRANTS
             for table, privileges in grants.items():
-                cursor.execute(sql.SQL("GRANT {} ON {} TO {}").format(sql.SQL(privileges), sql.Identifier(table), role))
+                # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+                cursor.execute(sql.SQL("GRANT {} ON {} TO {}").format(PRIVILEGE_SQL[privileges], sql.Identifier(table), role))
                 if profile != "runtime" and (table == "tenants" or "tenant_id" in Base.metadata.tables[table].c):
                     policy = sql.Identifier(f"{name}_service_access")
+                    # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
                     cursor.execute(sql.SQL("DROP POLICY IF EXISTS {} ON {}").format(policy, sql.Identifier(table)))
+                    # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
                     cursor.execute(sql.SQL("CREATE POLICY {} ON {} TO {} USING (true) WITH CHECK (true)").format(policy, sql.Identifier(table), role))
     connection.commit()
 

@@ -57,7 +57,12 @@ def main() -> None:
         "CRS_RULES_DIR": str(ROOT / "waf" / "rules"),
     })
     processes: list[subprocess.Popen[bytes]] = []
+    policy_fixture = None
     try:
+        if os.getenv("E2E_SIGNED_POLICY") == "1":
+            from helpers.runtime_policy_fixture import RuntimePolicyFixture
+            policy_fixture = RuntimePolicyFixture()
+            env.update(policy_fixture.env)
         processes.append(subprocess.Popen(["python3", "tests/helpers/e2e_upstream.py"], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT))
         processes.append(subprocess.Popen(["python3", "-m", "engine.risk.server"], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT))
         processes.append(subprocess.Popen(["python3", "-m", "engine.behavior.server"], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT))
@@ -88,6 +93,40 @@ def main() -> None:
         status, _, _ = request(f"http://127.0.0.1:{GATEWAY_PORT}/safe", oversized)
         assert status == 400, status
         print("gateway e2e: safe proxy, CRS body block, gzip body block, critical auth, and body limit passed")
+        if policy_fixture:
+            import jwt
+            from datetime import UTC, datetime, timedelta
+            status, body, response_headers = request(f"http://127.0.0.1:{GATEWAY_PORT}/policy-denied")
+            assert status == 403 and json.loads(body)["reason"] == "signed_policy", (status, body)
+            assert {k.lower(): v for k, v in response_headers.items()}["x-sl-policy-version"] == f"{policy_fixture.policy_id}:1"
+            status, _, _ = request(f"http://127.0.0.1:{GATEWAY_PORT}/policy-denied-ish")
+            assert status == 200, status
+            foreign = jwt.encode({"sub": "foreign", "tenant_id": "other", "exp": datetime.now(UTC) + timedelta(minutes=2)}, env["JWT_SECRET"], algorithm="HS256")
+            status, body, _ = request(f"http://127.0.0.1:{GATEWAY_PORT}/safe", headers={"Authorization": f"Bearer {foreign}"})
+            assert status == 403 and json.loads(body)["code"] == "POLICY_TENANT", (status, body)
+
+            def restart_gateway():
+                processes[-1].terminate()
+                processes[-1].wait(timeout=5)
+                processes.append(subprocess.Popen([gateway_bin], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT))
+                wait_http(f"http://127.0.0.1:{GATEWAY_PORT}/health")
+
+            policy_fixture.monitor()
+            deadline = time.monotonic() + 15
+            while True:
+                status, _, response_headers = request(f"http://127.0.0.1:{GATEWAY_PORT}/policy-denied")
+                version = {k.lower(): v for k, v in response_headers.items()}.get("x-sl-policy-version")
+                if status == 200 and version == f"{policy_fixture.policy_id}:2":
+                    break
+                assert time.monotonic() < deadline, (status, version)
+                time.sleep(0.5)
+            status, _, _ = request(f"http://127.0.0.1:{GATEWAY_PORT}/safe", attack, {"Content-Type": "application/json"})
+            assert status == 403, status
+            policy_fixture.tamper.set()
+            restart_gateway()
+            status, body, _ = request(f"http://127.0.0.1:{GATEWAY_PORT}/safe")
+            assert status == 503 and json.loads(body)["code"] == "POLICY_DEPENDENCY", (status, body)
+            print("signed policy e2e: real API-key export, Python-to-Go signature, deny boundary, tenant binding, forged signature rejection, version update, and monitor WAF protection passed")
     finally:
         for process in reversed(processes):
             if process.poll() is None:
@@ -98,6 +137,8 @@ def main() -> None:
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
+        if policy_fixture:
+            policy_fixture.close()
 
 
 if __name__ == "__main__":

@@ -91,6 +91,52 @@ def test_policy_versions_diff_and_rollback_are_persisted():
     assert [v["version"] for v in versions.json()] == [3, 2, 1]
 
 
+def test_runtime_policy_exports_verified_bytes_and_rejects_tampering():
+    import base64
+    import json
+    from control_plane.app.api.v1.policies import _signer
+    from control_plane.app.infrastructure.db.models import PolicyVersion
+
+    seed_users()
+    client = TestClient(app)
+    h = headers("admin-a", "tenant-a", True)
+    created = client.post("/api/v1/policies", headers=h, json={
+        "name": "gateway", "rules": {"gateway": {"deny_path_prefixes": ["/private"]}},
+    })
+    assert created.status_code == 200, created.text
+    policy_id = created.json()["id"]
+    response = client.get(f"/api/v1/policies/{policy_id}/runtime", headers=h)
+    assert response.status_code == 200, response.text
+    bundle = response.json()
+    payload = base64.b64decode(bundle["payload"], validate=True)
+    _signer.public_key.verify(base64.b64decode(bundle["signature"]), payload)
+    snapshot = json.loads(payload)
+    assert snapshot["tenant_id"] == "tenant-a"
+    assert snapshot["policy_id"] == policy_id
+    assert snapshot["expires_at"] - snapshot["issued_at"] == 60
+    assert snapshot["rules"]["mode"] == "enforce"
+    db = TestingSession()
+    version = db.query(PolicyVersion).filter_by(policy_id=policy_id).one()
+    version.rules = json.dumps({"gateway": {"mode": "monitor"}})
+    db.commit()
+    db.close()
+    assert client.get(f"/api/v1/policies/{policy_id}/runtime", headers=h).status_code == 409
+
+
+def test_runtime_policy_refuses_unsupported_or_ambiguous_rules():
+    seed_users()
+    client = TestClient(app)
+    h = headers("admin-a", "tenant-a", True)
+    for rules in ({}, {"gateway": {"mode": "disable"}},
+                  {"gateway": {"deny_path_prefixes": ["//private"]}},
+                  {"gateway": {"deny_path_prefixes": ["/private\u007f"]}},
+                  {"gateway": {"block_score": True}}):
+        created = client.post("/api/v1/policies", headers=h, json={"name": "invalid", "rules": rules})
+        assert created.status_code == 200, created.text
+        policy_id = created.json()["id"]
+        assert client.get(f"/api/v1/policies/{policy_id}/runtime", headers=h).status_code == 409
+
+
 def test_high_risk_and_breakglass_require_separate_persistent_approver():
     seed_users()
     client = TestClient(app)

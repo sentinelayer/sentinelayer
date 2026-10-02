@@ -74,6 +74,12 @@ jobs:
           E2E_REDIS_URL: redis://127.0.0.1:6379/0
           JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
         run: python tests/gateway_e2e.py
+      - name: Run signed control-plane policy Gateway E2E
+        env:
+          E2E_REDIS_URL: redis://127.0.0.1:6379/0
+          JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
+          E2E_SIGNED_POLICY: "1"
+        run: python tests/gateway_e2e.py
 
   security-integration:
     runs-on: ubuntu-latest

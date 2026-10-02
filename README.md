@@ -46,7 +46,7 @@ flowchart TD
     D -->|Block / Review| A[Audit + Risk Record]
     CP[Control Plane] --> P[(PostgreSQL)]
     CP --> S[(Redis)]
-    CP -. policy rollout pending .-> G
+    CP -. signed policy opt-in .-> G
 ```
 
 ## Why this repository is honest about readiness
@@ -85,6 +85,8 @@ npm --prefix dashboard run build
 (cd gateway && go test ./... && go build ./...)
 pytest -m "not integration" -q
 ```
+
+Untuk gateway satu tenant, aktifkan [signed runtime policy](docs/operations/gateway-runtime-policy.md) dengan tenant binding dan public key yang dipin. Routing policy untuk gateway multi-tenant masih memerlukan desain terpisah.
 
 Gateway production membutuhkan `JWT_SECRET` minimal 32 byte dan koneksi Redis. Schema production dimigrasikan oleh job terpisah; kredensial migration tidak diberikan ke API/worker. Gunakan tiga role PostgreSQL sesuai [panduan database](docs/operations/database-roles.md). Secret harus dibuat, disimpan, dan dirotasi melalui secret manager atau KMS yang sesuai.
 

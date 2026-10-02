@@ -22,6 +22,7 @@ import (
 	"github.com/sentinelayer/gateway/internal/engine"
 	"github.com/sentinelayer/gateway/internal/normalize"
 	"github.com/sentinelayer/gateway/internal/observability"
+	"github.com/sentinelayer/gateway/internal/policy"
 	"github.com/sentinelayer/gateway/internal/ratelimit"
 	"github.com/sentinelayer/gateway/internal/ssrf"
 	"github.com/sentinelayer/gateway/internal/waf"
@@ -205,6 +206,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("invalid UPSTREAM_URL: %v", err)
 	}
+	policyClient, err := policy.FromEnvironment()
+	if err != nil {
+		log.Fatalf("policy configuration failed: %v", err)
+	}
 	proxy := httputil.NewSingleHostReverseProxy(upstream)
 
 	mux := http.NewServeMux()
@@ -261,6 +266,32 @@ func main() {
 		}
 
 		reqCtx := extractContext(r, claims)
+		policyVersion := "builtin-v1"
+		var snapshot *policy.Snapshot
+		if policyClient != nil {
+			var policyErr error
+			snapshot, policyErr = policyClient.Current(r.Context())
+			if policyErr != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusServiceUnavailable)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "verified policy unavailable", "code": "POLICY_DEPENDENCY"})
+				observability.IncBlocked("policy_dependency")
+				return
+			}
+			if reqCtx.Authenticated && reqCtx.TenantID != snapshot.TenantID {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusForbidden)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "policy tenant mismatch", "code": "POLICY_TENANT"})
+				return
+			}
+			reqCtx.TenantID = snapshot.TenantID
+			if snapshot.ApplicationID != "" {
+				reqCtx.ApplicationID = snapshot.ApplicationID
+			}
+			policyVersion = fmt.Sprintf("%s:%d", snapshot.PolicyID, snapshot.Version)
+		}
+		w.Header().Set("X-SL-Policy-Version", policyVersion)
+		r.Header.Set("X-SL-Policy-Version", policyVersion)
 		normalize.NormalizeRequest(r)
 		if _, err := normalize.NormalizeBody(r); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -341,7 +372,7 @@ func main() {
 				score = 100
 				confidence = 0.5
 				reason = "risk_engine_unavailable_fail_closed"
-			} else if v, ok := lkg.Get(reqCtx.TenantID + ":" + reqCtx.Endpoint); ok {
+			} else if v, ok := lkg.Get(reqCtx.TenantID + ":" + reqCtx.Endpoint + ":" + policyVersion); ok {
 				if prev, ok2 := v.(DecisionOutput); ok2 {
 					action = prev.Action
 					score = prev.Score
@@ -380,12 +411,18 @@ func main() {
 			action = "MONITOR"
 		}
 
+		if snapshot != nil && snapshot.Blocked(r.URL.Path, score) {
+			action = "BLOCK"
+			reason = "signed_policy"
+			signals = append(signals, "signed_policy_block")
+		}
+
 		out := DecisionOutput{
 			Action: action, Score: score, Confidence: confidence,
-			Signals: signals, Reason: reason, PolicyVer: "v1.0.0",
+			Signals: signals, Reason: reason, PolicyVer: policyVersion,
 			Context: reqCtx, Timestamp: time.Now().UTC(),
 		}
-		lkg.Save(reqCtx.TenantID+":"+reqCtx.Endpoint, out)
+		lkg.Save(reqCtx.TenantID+":"+reqCtx.Endpoint+":"+policyVersion, out)
 
 		if action == "BLOCK" {
 			w.Header().Set("Content-Type", "application/json")

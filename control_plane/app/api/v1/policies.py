@@ -1,12 +1,13 @@
+import base64
 import difflib
 import hashlib
 import json
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 from sqlalchemy.orm import Session
 
 from control_plane.app.api.deps import db_with_tenant, tenant_id
@@ -30,6 +31,24 @@ class PolicyVersionCreate(BaseModel):
 
 class PolicyRollback(BaseModel):
     reason: str = Field(default="manual rollback", min_length=1, max_length=2000)
+
+
+class GatewayRuntimeRules(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mode: Literal["enforce", "monitor"] = "enforce"
+    block_score: int = Field(default=100, ge=0, le=100, strict=True)
+    deny_path_prefixes: list[str] = Field(default_factory=list, max_length=100)
+
+    @field_validator("deny_path_prefixes")
+    @classmethod
+    def validate_paths(cls, paths):
+        for path in paths:
+            if (not path.startswith("/") or len(path) > 256 or not path.isascii() or "//" in path
+                    or any(part in {".", ".."} for part in path.split("/"))
+                    or any(character in path for character in ("?", "#", "\\", "%"))
+                    or any(ord(character) < 32 or ord(character) > 126 for character in path)):
+                raise ValueError("Gateway path prefixes must be canonical ASCII paths")
+        return paths
 
 
 def _actor_id(request: Request) -> str | None:
@@ -195,6 +214,34 @@ async def list_policies(request: Request, db: Session = Depends(db_with_tenant))
     tid = tenant_id(request)
     policies = db.query(Policy).filter(Policy.tenant_id == tid).order_by(Policy.created_at.desc()).all()
     return [_policy_dict(p) for p in policies]
+
+
+@router.get("/{policy_id}/runtime")
+async def runtime_policy(policy_id: str, request: Request, db: Session = Depends(db_with_tenant)):
+    tid = tenant_id(request)
+    policy = _get_policy(policy_id, tid, db)
+    version = db.query(PolicyVersion).filter(
+        PolicyVersion.policy_id == policy.id, PolicyVersion.tenant_id == tid,
+        PolicyVersion.version == policy.current_version,
+    ).first()
+    if not version or not _signature_valid(version):
+        raise HTTPException(status_code=409, detail="Current policy version has no valid signature")
+    configured = _rules(version.rules).get("gateway")
+    if not isinstance(configured, dict):
+        raise HTTPException(status_code=409, detail="Policy must define explicit gateway rules")
+    try:
+        rules = GatewayRuntimeRules.model_validate(configured)
+    except ValidationError as exc:
+        raise HTTPException(status_code=409, detail="Gateway rules are invalid") from exc
+    now = int(datetime.now(UTC).timestamp())
+    payload = {
+        "policy_id": policy.id, "tenant_id": tid, "application_id": policy.application_id,
+        "version": version.version, "issued_at": now, "expires_at": now + 60,
+        "rules": rules.model_dump(),
+    }
+    # Sign these exact canonical bytes; the gateway verifies bytes before parsing.
+    return {"payload": base64.b64encode(_signer.canonical(payload)).decode("ascii"),
+            "signature": _signer.sign(payload), "key_id": _signer.key_id}
 
 
 @router.get("/{policy_id}")
