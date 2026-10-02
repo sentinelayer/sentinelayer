@@ -1,6 +1,6 @@
 # SentinelLayer remediation evidence — 2026-10-02
 
-Status: repository remediation verified locally; production acceptance remains open.
+Status: repository remediation verified locally and in GitHub CI; production acceptance remains open.
 
 ## Changes
 
@@ -24,24 +24,33 @@ Status: repository remediation verified locally; production acceptance remains o
 | Live API | 5 passed | Disposable SQLite-backed Uvicorn; positive owner access, cross-tenant denial/list isolation, auth/login/logout |
 | Gateway | All Go package tests, `go vet ./...`, build passed | Includes JWT expiry, provenance and rate-limit identity regressions |
 | Gateway E2E | Passed with real Redis 7.4 | Safe proxy, CRS body SQLi blocking, gzip body blocking, critical auth, body-size limit |
+| Cloudflare | Typecheck passed | Compilation; no deployment performed |
 | Dashboard | Production build passed | Compilation; full interactive browser acceptance not performed |
 | Integrity | Python compilation, Bash syntax, YAML parsing, source-manifest verification, `git diff --check` passed | Repository checks |
 
-The local environment has no Docker/PostgreSQL server. GitHub CI for commit `5772e6938efcd45540c04d5ff8b68b27f48a5cfa` passed all five jobs: unit, gateway, gateway E2E, Docker image and security integration. Its PostgreSQL job passed migrations 0001–0025, five live API cases, one unprivileged RLS probe and the real backup/restore test. See https://github.com/sentinelayer/sentinelayer/actions/runs/37067052225 . CI for follow-up commit `214c0d2758c03043c91596be396c81bf41e64cae` also passed all five jobs, including the transaction-context and all-tenant-table policy checks: https://github.com/sentinelayer/sentinelayer/actions/runs/37067782594 . Its Trivy scans passed; Semgrep identified the newly added mutable setup-node tag. Pin that action to the resolved full commit SHA. Inspect all workflows for the final commit before counting the final security state as successful. The third revision passed Semgrep, both Trivy scans, E2E Security, SBOM, Operational Readiness and Security Gate, while Gitleaks flagged a dummy fixture value in the WebSocket test. Replace that hardcoded value with a runtime-generated random value; retain the detector and rerun security CI. No external production deployment was performed.
+## GitHub verification
 
-The initial security scans found six fixed-version findings in PyJWT 2.13.0 (one critical, five high). Update both installation declarations to 2.14.0, the fixed version reported by Trivy and the upstream security release. Existing HS256 authentication tests pass against the updated library; both Trivy workflows passed for commit `214c0d2`; the final security workflow must also pass.
+Code commit: [`068002a1413b736e0ed39d4e05cbb590cc73d7be`](https://github.com/sentinelayer/sentinelayer/commit/068002a1413b736e0ed39d4e05cbb590cc73d7be).
+
+- [CI](https://github.com/sentinelayer/sentinelayer/actions/runs/37069212959): all six jobs passed — Python regressions/dashboard build, Go tests/vet/build, gateway E2E, Docker image, PostgreSQL security integration, and Cloudflare typechecking.
+- [Security](https://github.com/sentinelayer/sentinelayer/actions/runs/37069212914): all five jobs passed — Semgrep, Gitleaks, Trivy, resolved Python dependencies, and all JavaScript lockfiles including development dependencies.
+- [Trivy](https://github.com/sentinelayer/sentinelayer/actions/runs/37069212863): passed.
+
+PostgreSQL evidence includes migrations 0001–0025, five live API cases, the unprivileged legal-holds isolation probe, transaction-context survival after commit/rollback, policies on every modeled tenant table, and a real pg_dump/pg_restore round trip with corruption rejection.
+
+The local environment has no Docker/PostgreSQL server; those results are from GitHub Actions. No external production deployment was performed.
 
 Webhook delivery now resolves once and connects directly to validated numeric addresses. It disables environment proxies and automatic redirects, while preserving the original HTTPS hostname for SNI and certificate validation. Real local HTTP/TLS tests verify no second DNS lookup, correct Host, verified certificates, ignored hostile proxy settings and rejected redirects. The resolver is mocked only to route the test destination to the disposable local server.
 
-Tenant sessions now restore transaction-local context whenever a new transaction starts, including after commit/rollback. Exact tenant IDs are preserved instead of silently rewritten. Remove the unused legacy RLS helper with its separate-connection/session-scoped settings and invalid policy SQL; schema policies are owned by Alembic migrations.
+Tenant sessions now restore transaction-local context whenever a new transaction starts, including after commit/rollback. Exact tenant IDs are preserved instead of silently rewritten. The unused legacy RLS helper was removed because it used separate connections, session-scoped settings and invalid policy SQL. Alembic migrations own schema policies.
 
 ## Dependency audit expansion
 
-Auditing the resolved Python dependency graph exposed findings not covered by the original direct-requirements/high-severity Trivy selection. Update FastAPI/Starlette, PyJWT, python-multipart, requests, pytest and pytest-asyncio; remove python-jose and Passlib because repository code has no imports or usage of either. This also removes unused ECDSA/ASN.1 dependencies, including an unfixed advisory. The updated resolved requirement graph reports **no known vulnerabilities** with pip-audit. This is scanner evidence for this date, not a guarantee against undisclosed vulnerabilities.
+Auditing the resolved Python dependency graph exposed findings not covered by the original direct-requirements/high-severity Trivy selection. FastAPI/Starlette, PyJWT, python-multipart, requests, pytest and pytest-asyncio were updated. Unused python-jose and Passlib were removed; repository code has no imports or usage of either. This also removes unused ECDSA/ASN.1 dependencies, including an unfixed advisory. The updated resolved requirement graph reports **no known vulnerabilities** with pip-audit. This is scanner evidence for this date, not a guarantee against undisclosed vulnerabilities.
 
 Final Python pins: FastAPI 0.142.2, Starlette 1.7.0, PyJWT 2.15.1, python-multipart 0.0.32, requests 2.34.2, pytest 9.1.1 and pytest-asyncio 1.4.0. Application regressions and the live API/gateway probes pass after the upgrades. See upstream compatibility/security notes: https://fastapi.tiangolo.com/release-notes/ and https://pyjwt.readthedocs.io/en/latest/changelog.html .
 
-Auditing all JavaScript lockfiles including development dependencies also found vulnerable Vite/esbuild, React Router and Cloudflare tooling chains. Update Vite to the fixed 6.4 branch, React Router to 7.18.4+, compatible React plugin 4.7+, and Cloudflare tooling within its declared version ranges; regenerate both dashboard/workspace locks and the Cloudflare lock. Require all three npm audits and Cloudflare typechecking in CI alongside dashboard compilation. This changes dependency major versions; interactive dashboard routing/login acceptance on the deployment remains required.
+Auditing all JavaScript lockfiles including development dependencies also found vulnerable Vite/esbuild, React Router and Cloudflare tooling chains. Vite was updated to 6.4.3, React Router to 7.18.4+, the React plugin to 4.7+, and Cloudflare tooling within its declared version ranges. All three locks were regenerated and report zero findings in npm audit, including development dependencies. CI now requires those audits and Cloudflare typechecking alongside dashboard compilation. This changes dependency major versions; interactive dashboard routing/login acceptance on the deployment remains required.
 
 ## Open production gates
 

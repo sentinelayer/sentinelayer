@@ -35,7 +35,7 @@ SentinelLayer menyatukan enforcement dan konteks risiko dalam satu jalur request
 ## Request path
 
 ```mermaid
-flowchart LR
+flowchart TD
     C[Client / API Consumer] --> G[SentinelLayer Gateway]
     G --> N[Normalize + Inspect]
     N --> W[Coraza WAF / OWASP CRS]
@@ -46,7 +46,7 @@ flowchart LR
     D -->|Block / Review| A[Audit + Risk Record]
     CP[Control Plane] --> P[(PostgreSQL)]
     CP --> S[(Redis)]
-    CP -. policies, tenants, audit .-> G
+    CP -. policy rollout pending .-> G
 ```
 
 ## Why this repository is honest about readiness
@@ -78,11 +78,12 @@ docker compose up --build
 ### Build dan test
 
 ```bash
+python -m pip install -r requirements.txt
 alembic -c alembic.ini upgrade head
-npm --prefix dashboard ci
+npm --prefix dashboard ci --ignore-scripts --workspaces=false
 npm --prefix dashboard run build
 (cd gateway && go test ./... && go build ./...)
-pytest -q tests/unit
+pytest -m "not integration" -q
 ```
 
 Gateway production membutuhkan `JWT_SECRET` minimal 32 byte dan koneksi Redis. Schema production dimigrasikan melalui Railway pre-deploy command. Secret harus dibuat, disimpan, dan dirotasi melalui secret manager atau KMS yang sesuai.
@@ -96,7 +97,7 @@ Gateway production membutuhkan `JWT_SECRET` minimal 32 byte dan koneksi Redis. S
 | `JWT_SECRET` | Session/token signing; minimal 32 byte |
 | `METRICS_TOKEN` | Proteksi endpoint metrics |
 | `KMS_KEY` | Proteksi secret/material kriptografi |
-| `SL_ENFORCE_PROVENANCE` | Enforcement signed image/attestation provenance |
+| `SL_ENFORCE_PROVENANCE` | Source-manifest dan expected/running SHA-256 checks (`1`/`true`); OCI signature verification belum dibuktikan |
 
 ## Documentation map
 
@@ -106,6 +107,7 @@ Gateway production membutuhkan `JWT_SECRET` minimal 32 byte dan koneksi Redis. S
 | OpenAPI specification | [`docs/api/openapi-control-plane.yaml`](docs/api/openapi-control-plane.yaml) |
 | Architecture | [`docs/architecture/`](docs/architecture/) |
 | Operations | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) |
+| Remediation evidence | [`docs/operations/remediation-2026-10-02.md`](docs/operations/remediation-2026-10-02.md) |
 | Production readiness | [`docs/operations/production-readiness.md`](docs/operations/production-readiness.md) |
 | Webhook security | [`docs/api/webhook-security.md`](docs/api/webhook-security.md) |
 | Disaster recovery | [`docs/runbooks/dr-restore.md`](docs/runbooks/dr-restore.md) |
