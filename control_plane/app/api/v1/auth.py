@@ -182,6 +182,8 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 async def login(req: LoginRequest, db: Session = Depends(get_db)):
+    if len(req.password.encode("utf-8")) > 72:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     user = db.query(User).filter(User.email == req.email).first()
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="Invalid credentials")

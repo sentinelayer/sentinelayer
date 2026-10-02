@@ -28,6 +28,11 @@ class UserRoleUpdate(BaseModel):
 
 @router.post("/")
 async def create_user(data: UserCreate, request: Request, db: Session = Depends(db_with_tenant)):
+    if data.password is not None:
+        if len(data.password) < 12:
+            raise HTTPException(status_code=400, detail="Password must be at least 12 characters")
+        if len(data.password.encode("utf-8")) > 72:
+            raise HTTPException(status_code=400, detail="Password must not exceed 72 UTF-8 bytes")
     caller_tenant = tenant_id(request)
     if data.tenant_id and data.tenant_id != caller_tenant:
         raise HTTPException(status_code=403, detail="Cannot create a user for another tenant")

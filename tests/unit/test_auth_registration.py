@@ -75,3 +75,13 @@ def test_inactive_user_cannot_login(registration):
         "email": "owner@example.com", "password": "StrongPassword123!",
     })
     assert response.status_code == 401
+
+
+def test_login_rejects_password_suffix_beyond_bcrypt_boundary(registration):
+    client, _ = registration
+    value = "a" * 72
+    assert signup(client, password=value).status_code == 200
+    response = client.post("/api/v1/auth/login", json={
+        "email": "owner@example.com", "password": value + "suffix",
+    })
+    assert response.status_code == 401

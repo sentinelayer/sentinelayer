@@ -357,3 +357,18 @@ def test_bootstrap_admin_grant_is_one_use(monkeypatch):
         assert member.is_admin is False
     finally:
         db.close()
+
+
+def test_admin_user_creation_enforces_password_boundaries():
+    seed_users()
+    client = TestClient(app)
+    h = headers("admin-a", "tenant-a", True)
+    for value in ("short", "a" * 73, "é" * 37):
+        response = client.post("/api/v1/users/", headers=h, json={
+            "email": "new@example.com", "full_name": "New User", "password": value,
+        })
+        assert response.status_code == 400, response.text
+    created = client.post("/api/v1/users/", headers=h, json={
+        "email": "new@example.com", "full_name": "New User", "password": "ValidLongPassword123!",
+    })
+    assert created.status_code == 200, created.text

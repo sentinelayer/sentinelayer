@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import jwt
+import secrets
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -19,7 +20,7 @@ def test_websocket_rejects_revoked_and_expired_sessions(monkeypatch):
     sessions = sessionmaker(bind=engine)
     now = datetime.now(UTC)
     with sessions() as db:
-        db.add(User(id="u", email="u@example.com", hashed_password="fixture", tenant_id="t", is_active=True))
+        db.add(User(id="u", email="u@example.com", hashed_password=secrets.token_hex(32), tenant_id="t", is_active=True))
         db.add(AuthSession(token_id="j", user_id="u", tenant_id="t", created_at=now, expires_at=now + timedelta(minutes=5)))
         db.commit()
     value = jwt.encode({"sub": "u", "tenant_id": "t", "jti": "j", "exp": now + timedelta(minutes=5)}, secret, algorithm="HS256")
@@ -61,7 +62,7 @@ def test_revoked_listener_closes_without_sending_messages(monkeypatch, trigger):
     sessions = sessionmaker(bind=engine)
     now = datetime.now(UTC)
     with sessions() as db:
-        db.add(User(id="u", email="u@example.com", hashed_password="fixture", tenant_id="t", is_active=True))
+        db.add(User(id="u", email="u@example.com", hashed_password=secrets.token_hex(32), tenant_id="t", is_active=True))
         for identity in ("listener", "sender"):
             db.add(AuthSession(token_id=identity, user_id="u", tenant_id="t", created_at=now,
                                expires_at=now + timedelta(minutes=5)))

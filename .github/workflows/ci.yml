@@ -20,7 +20,7 @@ jobs:
           node-version: "22"
       - name: Build dashboard for SPA smoke checks
         run: |
-          npm --prefix dashboard ci --ignore-scripts
+          npm --prefix dashboard ci --ignore-scripts --workspaces=false
           npm --prefix dashboard run build
       - name: Local regression tests
         run: pytest -m "not integration" -v --tb=short
@@ -151,3 +151,16 @@ jobs:
           name: repository-grc-evidence
           path: evidence/
           if-no-files-found: error
+
+  cloudflare-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Validate Cloudflare project
+        working-directory: cloudflare
+        run: |
+          npm ci --ignore-scripts
+          npm run typecheck
