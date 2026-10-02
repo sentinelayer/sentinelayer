@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 
 from control_plane.app.infrastructure.db.session import Base
 
@@ -257,8 +257,10 @@ class RiskDecisionRecord(Base):
 
 class RuntimeEvent(Base):
     __tablename__ = "runtime_events"
+    __table_args__ = (UniqueConstraint("tenant_id", "sequence", name="uq_runtime_events_tenant_sequence"),)
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    sequence = Column(BigInteger, nullable=False)
     event_type = Column(String(128), nullable=False, index=True)
     source = Column(String(128), nullable=False, default="system")
     data = Column(Text, nullable=False, default="{}")
@@ -266,6 +268,12 @@ class RuntimeEvent(Base):
     risk_score = Column(Integer, nullable=True, index=True)
     outcome = Column(String(32), nullable=True, index=True)
     occurred_at = Column(DateTime, default=_utcnow, nullable=False, index=True)
+
+
+class TenantEventOffset(Base):
+    __tablename__ = "tenant_event_offsets"
+    tenant_id = Column(String, ForeignKey("tenants.id"), primary_key=True)
+    last_sequence = Column(BigInteger, nullable=False, default=0)
 
 
 class Incident(Base):

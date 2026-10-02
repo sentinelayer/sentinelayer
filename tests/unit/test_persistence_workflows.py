@@ -137,6 +137,27 @@ def test_runtime_policy_refuses_unsupported_or_ambiguous_rules():
         assert client.get(f"/api/v1/policies/{policy_id}/runtime", headers=h).status_code == 409
 
 
+def test_event_replay_is_ordered_and_server_policy_evidence_cannot_be_forged():
+    seed_users()
+    client = TestClient(app)
+    h = headers("admin-a", "tenant-a", True)
+    policy = client.post("/api/v1/policies", headers=h, json={"name": "events", "rules": {}})
+    assert policy.status_code == 200, policy.text
+    event = client.post("/api/v1/events", headers=h, json={"event_type": "test.observation"})
+    assert event.status_code == 200, event.text
+    rows = client.get("/api/v1/events?after=0", headers=h).json()
+    assert [row["sequence"] for row in rows] == [1, 2]
+    assert rows[0]["type"] == "policy.changed"
+    assert rows[0]["data"]["policy_id"] == policy.json()["id"]
+    assert client.get("/api/v1/events?after=1", headers=h).json() == [rows[1]]
+    assert client.post("/api/v1/events", headers=h,
+                       json={"event_type": "policy.changed"}).status_code == 403
+    assert client.post("/api/v1/events", headers=h,
+                       json={"event_type": "test", "source": "control-plane"}).status_code == 403
+    assert client.post("/api/v1/events", headers=h,
+                       json={"event_type": "test", "data": {"value": "x" * 65536}}).status_code == 413
+
+
 def test_high_risk_and_breakglass_require_separate_persistent_approver():
     seed_users()
     client = TestClient(app)

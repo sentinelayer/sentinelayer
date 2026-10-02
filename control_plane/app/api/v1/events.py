@@ -5,7 +5,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -13,6 +13,7 @@ from control_plane.app.infrastructure.db.models import RiskDecisionRecord
 
 from control_plane.app.api.deps import db_with_tenant, tenant_id
 from control_plane.app.infrastructure.db.models import RuntimeEvent
+from control_plane.app.domain.events import append_event
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -33,6 +34,7 @@ def _serialize(event: RuntimeEvent) -> dict[str, Any]:
         data = {"raw": event.data}
     return {
         "id": event.id,
+        "sequence": event.sequence,
         "tenant_id": event.tenant_id,
         "type": event.event_type,
         "source": event.source,
@@ -49,11 +51,16 @@ def _serialize(event: RuntimeEvent) -> dict[str, Any]:
 async def get_events(
     request: Request,
     limit: int = Query(default=50, ge=1, le=500),
+    after: int | None = Query(default=None, ge=0, le=9223372036854775807),
     db: Session = Depends(db_with_tenant),
 ):
     tid = tenant_id(request)
-    events = db.query(RuntimeEvent).filter(RuntimeEvent.tenant_id == tid).order_by(
-        RuntimeEvent.occurred_at.desc(), RuntimeEvent.id.desc()).limit(limit).all()
+    query = db.query(RuntimeEvent).filter(RuntimeEvent.tenant_id == tid)
+    if after is not None:
+        query = query.filter(RuntimeEvent.sequence > after).order_by(RuntimeEvent.sequence.asc())
+    else:
+        query = query.order_by(RuntimeEvent.sequence.desc())
+    events = query.limit(limit).all()
     return [_serialize(event) for event in events]
 
 
@@ -61,13 +68,13 @@ async def get_events(
 @router.post("")
 async def create_event(body: EventCreate, request: Request, db: Session = Depends(db_with_tenant)):
     tid = tenant_id(request)
-    event = RuntimeEvent(
-        id=str(uuid.uuid4()), tenant_id=tid, event_type=body.event_type, source=body.source,
-        data=json.dumps(body.data, sort_keys=True), severity=body.severity,
-        risk_score=body.risk_score, outcome=body.outcome, occurred_at=datetime.now(UTC),
-    )
-    db.add(event)
-    db.flush()
+    if len(json.dumps(body.data).encode("utf-8")) > 65536:
+        raise HTTPException(status_code=413, detail="Event data exceeds 64 KiB")
+    # Reserve server-origin event types; tenant callers cannot forge rollout evidence.
+    if body.event_type.startswith("policy.") or body.source == "control-plane":
+        raise HTTPException(status_code=403, detail="Server-origin event metadata is reserved")
+    event = append_event(db, tid, body.event_type, source=body.source, data=body.data,
+                         severity=body.severity, risk_score=body.risk_score, outcome=body.outcome)
     if body.risk_score is not None:
         confidence = body.data.get("confidence", 0)
         try:

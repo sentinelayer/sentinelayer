@@ -3,54 +3,23 @@ from __future__ import annotations
 import asyncio
 import os
 from datetime import UTC, datetime
-from collections import defaultdict
+
 
 import jwt
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from control_plane.app.runtime import is_production
-from control_plane.app.infrastructure.db.models import AuthSession, User
-from control_plane.app.infrastructure.db.session import AuthSessionLocal
+from control_plane.app.infrastructure.db.models import AuthSession, User, RuntimeEvent, TenantEventOffset
+from control_plane.app.api.v1.events import _serialize
+from sqlalchemy.exc import SQLAlchemyError
+from control_plane.app.infrastructure.db.session import AuthSessionLocal, SessionLocal, set_tenant_context
 
 router = APIRouter(prefix="/events-ws", tags=["events"])
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGORITHM = "HS256"
 SESSION_RECHECK_SECONDS = 30
-
-
-class ConnectionManager:
-    def __init__(self):
-        self.connections: dict[str, set[WebSocket]] = defaultdict(set)
-
-    async def connect(self, websocket: WebSocket, tenant_id: str) -> None:
-        await websocket.accept()
-        self.connections[tenant_id].add(websocket)
-
-    def disconnect(self, websocket: WebSocket, tenant_id: str) -> None:
-        connections = self.connections.get(tenant_id)
-        if not connections:
-            return
-        connections.discard(websocket)
-        if not connections:
-            self.connections.pop(tenant_id, None)
-
-    async def broadcast(self, message: str, tenant_id: str) -> None:
-        stale: list[WebSocket] = []
-        for connection in self.connections.get(tenant_id, set()).copy():
-            try:
-                claims = _claims(connection)
-                if not claims or claims[1] != tenant_id:
-                    await connection.close(code=1008, reason="Session revoked or expired")
-                    stale.append(connection)
-                    continue
-                await connection.send_text(message)
-            except Exception:  # noqa: BLE001 - remove dead sockets without breaking other subscribers
-                stale.append(connection)
-        for connection in stale:
-            self.disconnect(connection, tenant_id)
-
-
-manager = ConnectionManager()
+EVENT_POLL_SECONDS = 1
+SEND_TIMEOUT_SECONDS = 5
 
 
 def _claims(websocket: WebSocket) -> tuple[str, str] | None:
@@ -90,28 +59,70 @@ def _claims(websocket: WebSocket) -> tuple[str, str] | None:
     return str(user_id), str(tenant_id)
 
 
+def _read_events(websocket, tenant, after):
+    factory = getattr(websocket.app.state, "session_factory", SessionLocal)
+    with factory() as db:
+        set_tenant_context(db, tenant)
+        offset = db.get(TenantEventOffset, tenant)
+        latest = offset.last_sequence if offset else 0
+        if after is None:
+            return latest, []
+        rows = db.query(RuntimeEvent).filter(RuntimeEvent.tenant_id == tenant,
+                                             RuntimeEvent.sequence > after).order_by(
+                                                 RuntimeEvent.sequence.asc()).limit(100).all()
+        return latest, [_serialize(row) for row in rows]
+
+
 @router.websocket("/stream")
 async def websocket_endpoint(websocket: WebSocket):
-    claims = _claims(websocket)
-    if not claims:
-        await websocket.close(code=1008, reason="Valid bearer token required")
-        return
-    _, tenant_id = claims
-    await manager.connect(websocket, tenant_id)
     try:
+        claims = await asyncio.to_thread(_claims, websocket)
+        if not claims:
+            await websocket.close(code=1008, reason="Valid bearer token required")
+            return
+        _, tenant = claims
+        raw = websocket.query_params.get("after")
+        if raw is not None and (not raw.isascii() or not raw.isdecimal() or len(raw) > 19
+                                or int(raw) > 9223372036854775807):
+            await websocket.close(code=1008, reason="Invalid event cursor")
+            return
+        after = int(raw) if raw is not None else None
+        latest, _ = await asyncio.to_thread(_read_events, websocket, tenant, None)
+        if after is not None and after > latest:
+            await websocket.close(code=1008, reason="Event cursor is ahead of this tenant")
+            return
+        cursor = latest if after is None else after
+        await websocket.accept()
+        await asyncio.wait_for(websocket.send_json({"type": "stream.ready", "cursor": cursor,
+                                                    "latest": latest}), timeout=SEND_TIMEOUT_SECONDS)
         while True:
-            try:
-                data = await asyncio.wait_for(websocket.receive_text(), timeout=SESSION_RECHECK_SECONDS)
-            except asyncio.TimeoutError:
-                if _claims(websocket) != claims:
-                    await websocket.close(code=1008, reason="Session revoked or expired")
-                    return
-                continue
-            if _claims(websocket) != claims:
+            if await asyncio.to_thread(_claims, websocket) != claims:
                 await websocket.close(code=1008, reason="Session revoked or expired")
                 return
-            await manager.broadcast(data, tenant_id)
+            _, events = await asyncio.to_thread(_read_events, websocket, tenant, cursor)
+            for event in events:
+                if await asyncio.to_thread(_claims, websocket) != claims:
+                    await websocket.close(code=1008, reason="Session revoked or expired")
+                    return
+                await asyncio.wait_for(websocket.send_json({"type": "event", "cursor": event["sequence"],
+                                                            "event": event}), timeout=SEND_TIMEOUT_SECONDS)
+                cursor = event["sequence"]
+            if len(events) == 100:
+                continue
+            try:
+                message = await asyncio.wait_for(websocket.receive_text(),
+                    timeout=min(EVENT_POLL_SECONDS, SESSION_RECHECK_SECONDS))
+            except asyncio.TimeoutError:
+                continue
+            if await asyncio.to_thread(_claims, websocket) != claims:
+                await websocket.close(code=1008, reason="Session revoked or expired")
+                return
+            if message != "ping":
+                await websocket.close(code=1008, reason="Event stream accepts ping only")
+                return
+            await asyncio.wait_for(websocket.send_json({"type": "pong", "cursor": cursor}),
+                                   timeout=SEND_TIMEOUT_SECONDS)
     except WebSocketDisconnect:
         pass
-    finally:
-        manager.disconnect(websocket, tenant_id)
+    except (SQLAlchemyError, asyncio.TimeoutError):
+        await websocket.close(code=1013, reason="Event stream temporarily unavailable; reconnect with cursor")

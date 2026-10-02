@@ -45,8 +45,8 @@ def test_websocket_rejects_revoked_and_expired_sessions(monkeypatch):
 import pytest
 
 
-@pytest.mark.parametrize("trigger", ["idle", "broadcast"])
-def test_revoked_listener_closes_without_sending_messages(monkeypatch, trigger):
+@pytest.mark.parametrize("trigger", ["idle", "event"])
+def test_revoked_listener_closes_without_sending_messages(monkeypatch, trigger, tmp_path):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
     from sqlalchemy.pool import StaticPool
@@ -54,10 +54,8 @@ def test_revoked_listener_closes_without_sending_messages(monkeypatch, trigger):
 
     secret = "test-only-websocket-secret-32-characters"
     monkeypatch.setattr(events_ws, "JWT_SECRET", secret)
-    monkeypatch.setattr(events_ws, "SESSION_RECHECK_SECONDS", 0.02 if trigger == "idle" else 30)
-    manager = events_ws.ConnectionManager()
-    monkeypatch.setattr(events_ws, "manager", manager)
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    monkeypatch.setattr(events_ws, "SESSION_RECHECK_SECONDS", 0.02)
+    engine = create_engine(f"sqlite:///{tmp_path / 'sessions.db'}", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     sessions = sessionmaker(bind=engine)
     now = datetime.now(UTC)
@@ -79,16 +77,20 @@ def test_revoked_listener_closes_without_sending_messages(monkeypatch, trigger):
     try:
         with TestClient(app) as client:
             with client.websocket_connect(url("listener")) as listener:
+                assert listener.receive_json()["type"] == "stream.ready"
                 with client.websocket_connect(url("sender")) as sender:
+                    assert sender.receive_json()["type"] == "stream.ready"
                     with sessions() as db:
                         db.query(AuthSession).filter(AuthSession.token_id == "listener").first().revoked_at = now
                         db.commit()
-                    if trigger == "broadcast":
-                        sender.send_text("sensitive-event")
-                        assert sender.receive_text() == "sensitive-event"
+                    if trigger == "event":
+                        from control_plane.app.domain.events import append_event
+                        with sessions() as db:
+                            append_event(db, "t", "test.event", data={"value": "sensitive"})
+                            db.commit()
+                        assert sender.receive_json()["type"] == "event"
                     with pytest.raises(WebSocketDisconnect) as closed:
                         listener.receive_text()
                     assert closed.value.code == 1008
-        assert manager.connections == {}
     finally:
         engine.dispose()

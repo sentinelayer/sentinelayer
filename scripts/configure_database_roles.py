@@ -65,6 +65,7 @@ def configure_roles(connection, passwords: dict[str, str]) -> None:
             if profile == "runtime":
                 grants = {table: "SELECT, INSERT, UPDATE, DELETE" for table in tables if table != "bootstrap_admin_grants"}
                 grants["audit_events"] = "SELECT, INSERT"
+                grants["runtime_events"] = "SELECT, INSERT"
             elif profile == "authentication":
                 grants = {table: "SELECT, INSERT, UPDATE" for table in AUTH_TABLES}
             else:

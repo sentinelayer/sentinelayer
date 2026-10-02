@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from control_plane.app.api.deps import db_with_tenant, tenant_id
 from control_plane.app.infrastructure.db.models import AuditEvent, Application, Policy, PolicyVersion
 from control_plane.app.domain.policy.signing import PolicySigning
+from control_plane.app.domain.events import append_event
 
 router = APIRouter(prefix="/policies", tags=["policies"])
 _signer = PolicySigning()
@@ -203,6 +204,7 @@ async def create_policy(data: PolicyCreate, request: Request, db: Session = Depe
     )
     db.add(version)
     _record_audit(db, tid, actor, "policy.created", "policy", policy.id, {"version": 1})
+    append_event(db, tid, "policy.changed", data={"policy_id": policy.id, "version": version.version})
     db.commit()
     db.refresh(policy)
     return _policy_dict(policy, version)
@@ -278,6 +280,7 @@ async def create_policy_version(
     db.add(version)
     _record_audit(db, tid, _actor_id(request), "policy.version.created", "policy", policy.id,
                   {"version": next_version, "previous_version": latest.version})
+    append_event(db, tid, "policy.changed", data={"policy_id": policy.id, "version": version.version})
     db.commit()
     db.refresh(policy)
     return _policy_dict(policy, version)
@@ -406,6 +409,7 @@ async def rollback_policy(
     _record_audit(db, tid, _actor_id(request), "policy.rollback", "policy", policy.id,
                   {"from_version": latest.version, "restored_version": version, "new_version": next_version,
                    "reason": body.reason if body else "manual rollback"})
+    append_event(db, tid, "policy.changed", data={"policy_id": policy.id, "version": restored.version, "rollback_of": version})
     db.commit()
     db.refresh(policy)
     return _policy_dict(policy, restored)
