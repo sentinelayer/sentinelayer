@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from control_plane.app.api.v1 import policy_delivery
 
 from control_plane.app.api.v1 import (
     ai_assist,
@@ -36,6 +37,7 @@ from control_plane.app.api.v1 import (
 from control_plane.app.api.v1.admin import breakglass
 
 router = APIRouter()
+router.include_router(policy_delivery.router)
 
 router.include_router(auth.router)
 router.include_router(tenants.router)

@@ -86,7 +86,7 @@ npm --prefix dashboard run build
 pytest -m "not integration" -q
 ```
 
-Untuk gateway satu tenant, aktifkan [signed runtime policy](docs/operations/gateway-runtime-policy.md) dengan tenant binding dan public key yang dipin. Routing policy untuk gateway multi-tenant masih memerlukan desain terpisah.
+Untuk gateway satu tenant, aktifkan [signed runtime policy](docs/operations/gateway-runtime-policy.md) dengan tenant binding dan public key yang dipin. Untuk beberapa tenant, gunakan [binding hostname dan laporan gateway](docs/operations/gateway-policy-fleet.md). Event tersimpan mendukung [replay lintas worker](docs/operations/durable-events.md).
 
 Gateway production membutuhkan `JWT_SECRET` minimal 32 byte dan koneksi Redis. Schema production dimigrasikan oleh job terpisah; kredensial migration tidak diberikan ke API/worker. Gunakan tiga role PostgreSQL sesuai [panduan database](docs/operations/database-roles.md). Secret harus dibuat, disimpan, dan dirotasi melalui secret manager atau KMS yang sesuai.
 

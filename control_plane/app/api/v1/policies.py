@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 from sqlalchemy.orm import Session
 
 from control_plane.app.api.deps import db_with_tenant, tenant_id
-from control_plane.app.infrastructure.db.models import AuditEvent, Application, Policy, PolicyVersion
+from control_plane.app.infrastructure.db.models import AuditEvent, Application, Policy, PolicyVersion, GatewayPolicyDelivery, User
 from control_plane.app.domain.policy.signing import PolicySigning
 from control_plane.app.domain.events import append_event
 
@@ -216,6 +216,49 @@ async def list_policies(request: Request, db: Session = Depends(db_with_tenant))
     tid = tenant_id(request)
     policies = db.query(Policy).filter(Policy.tenant_id == tid).order_by(Policy.created_at.desc()).all()
     return [_policy_dict(p) for p in policies]
+
+
+class GatewayRegistration(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    gateway_id: str = Field(pattern=r"^[A-Za-z0-9_.-]{1,64}$")
+    service_user_id: str = Field(min_length=1, max_length=128)
+
+
+@router.post("/{policy_id}/gateways")
+async def register_gateway(policy_id: str, body: GatewayRegistration, request: Request,
+                           db: Session = Depends(db_with_tenant)):
+    tid = tenant_id(request)
+    policy = _get_policy(policy_id, tid, db)
+    user = db.query(User).filter_by(id=body.service_user_id, tenant_id=tid, is_active=True).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Active tenant service account not found")
+    row = db.query(GatewayPolicyDelivery).filter_by(tenant_id=tid, gateway_id=body.gateway_id).with_for_update().first()
+    if row is None:
+        row = GatewayPolicyDelivery(tenant_id=tid, gateway_id=body.gateway_id, policy_id=policy.id,
+                                    service_user_id=user.id)
+        db.add(row)
+    elif row.policy_id != policy.id or row.service_user_id != user.id:
+        row.policy_id, row.service_user_id = policy.id, user.id
+        row.reported_version = row.issued_at = row.expires_at = row.signing_key_id = row.reported_at = None
+    _record_audit(db, tid, _actor_id(request), "policy.gateway.registered", "policy", policy.id,
+                  {"gateway_id": body.gateway_id, "service_user_id": user.id})
+    db.commit()
+    return {"gateway_id": row.gateway_id, "policy_id": row.policy_id, "service_user_id": row.service_user_id}
+
+
+@router.get("/{policy_id}/gateways")
+async def gateway_delivery_status(policy_id: str, request: Request, db: Session = Depends(db_with_tenant)):
+    tid = tenant_id(request)
+    policy = _get_policy(policy_id, tid, db)
+    now = int(datetime.now(UTC).timestamp())
+    rows = db.query(GatewayPolicyDelivery).filter_by(tenant_id=tid, policy_id=policy.id).order_by(GatewayPolicyDelivery.gateway_id).all()
+    return [{"gateway_id": row.gateway_id, "desired_version": policy.current_version,
+             "reported_version": row.reported_version,
+             "state": ("unreported" if row.reported_version is None else
+                       "stale" if row.expires_at <= now else
+                       "lagging" if row.reported_version != policy.current_version else "reported"),
+             "reported_at": row.reported_at.isoformat() if row.reported_at else None,
+             "expires_at": row.expires_at, "signing_key_id": row.signing_key_id} for row in rows]
 
 
 @router.get("/{policy_id}/runtime")

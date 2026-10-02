@@ -276,6 +276,21 @@ class TenantEventOffset(Base):
     last_sequence = Column(BigInteger, nullable=False, default=0)
 
 
+class GatewayPolicyDelivery(Base):
+    __tablename__ = "gateway_policy_deliveries"
+    __table_args__ = (UniqueConstraint("tenant_id", "gateway_id", name="uq_gateway_delivery_tenant_gateway"),)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String, ForeignKey("tenants.id"), nullable=False, index=True)
+    gateway_id = Column(String(64), nullable=False)
+    policy_id = Column(String, ForeignKey("policies.id", ondelete="CASCADE"), nullable=False, index=True)
+    service_user_id = Column(String, nullable=False)
+    reported_version = Column(Integer, nullable=True)
+    issued_at = Column(BigInteger, nullable=True)
+    expires_at = Column(BigInteger, nullable=True)
+    signing_key_id = Column(String(128), nullable=True)
+    reported_at = Column(DateTime, nullable=True)
+
+
 class Incident(Base):
     __tablename__ = "incidents"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))

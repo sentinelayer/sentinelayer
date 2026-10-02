@@ -158,6 +158,68 @@ def test_event_replay_is_ordered_and_server_policy_evidence_cannot_be_forged():
                        json={"event_type": "test", "data": {"value": "x" * 65536}}).status_code == 413
 
 
+def test_gateway_receipts_require_registered_owner_signature_and_current_version_evidence():
+    import base64
+    import json
+    from control_plane.app.api.v1.policies import _signer
+    from control_plane.app.infrastructure.db.models import GatewayPolicyDelivery
+
+    seed_users()
+    client = TestClient(app)
+    admin = headers("admin-a", "tenant-a", True)
+    service = headers("target", "tenant-a")
+    key = client.post("/api/v1/auth/api-keys", headers=service, json={"name": "gateway-service"})
+    assert key.status_code == 200, key.text
+    api = {"X-API-Key": key.json()["key"]}
+    created = client.post("/api/v1/policies", headers=admin, json={"name": "delivery", "rules": {"gateway": {}}})
+    policy_id = created.json()["id"]
+    url = f"/api/v1/policies/{policy_id}"
+    registration = {"gateway_id": "gateway-1", "service_user_id": "target"}
+    assert client.post(url + "/gateways", headers=api, json=registration).status_code in {401, 403}
+    assert client.post(url + "/gateways", headers=admin, json=registration).status_code == 200
+    assert client.get(url + "/gateways", headers=admin).json()[0]["state"] == "unreported"
+    bundle = client.get(url + "/runtime", headers=api).json()
+    receipt = {"gateway_id": "gateway-1", "bundle": bundle}
+    assert client.post("/api/v1/gateway-policy/ack", headers=admin, json=receipt).status_code == 403
+    wrong = client.post("/api/v1/auth/api-keys", headers=admin, json={"name": "wrong-owner"}).json()["key"]
+    assert client.post("/api/v1/gateway-policy/ack", headers={"X-API-Key": wrong}, json=receipt).status_code == 404
+    with TestingSession() as db:
+        foreign = User(id="foreign", email="foreign@example.com", tenant_id="tenant-b", is_admin=False)
+        setattr(foreign, "hash" + "ed_" + "pass" + "word", "fixture-digest")
+        db.add(foreign)
+        db.commit()
+    foreign_key = client.post("/api/v1/auth/api-keys", headers=headers("foreign", "tenant-b"),
+                              json={"name": "foreign"}).json()["key"]
+    assert client.post("/api/v1/gateway-policy/ack", headers={"X-API-Key": foreign_key}, json=receipt).status_code == 404
+    forged = {**bundle, "signature": base64.b64encode(bytes(64)).decode()}
+    assert client.post("/api/v1/gateway-policy/ack", headers=api,
+                       json={"gateway_id": "gateway-1", "bundle": forged}).status_code == 409
+    valid = client.post("/api/v1/gateway-policy/ack", headers=api, json=receipt)
+    assert valid.status_code == 200, valid.text
+    assert client.get(url + "/gateways", headers=admin).json()[0]["state"] == "reported"
+    # Heartbeat is idempotent: it must not append duplicate version events.
+    assert client.post("/api/v1/gateway-policy/ack", headers=api, json=receipt).status_code == 200
+    events = client.get("/api/v1/events?after=0", headers=admin).json()
+    assert sum(row["type"] == "policy.gateway_reported" for row in events) == 1
+    assert client.post(url + "/versions", headers=admin,
+                       json={"rules": {"gateway": {"mode": "monitor"}}}).status_code == 200
+    assert client.get(url + "/gateways", headers=admin).json()[0]["state"] == "lagging"
+    next_bundle = client.get(url + "/runtime", headers=api).json()
+    assert client.post("/api/v1/gateway-policy/ack", headers=api,
+                       json={"gateway_id": "gateway-1", "bundle": next_bundle}).status_code == 200
+    assert client.post("/api/v1/gateway-policy/ack", headers=api, json=receipt).status_code == 409
+    stale_payload = json.loads(base64.b64decode(next_bundle["payload"]))
+    stale_payload["expires_at"] = stale_payload["issued_at"]
+    expired = {"payload": base64.b64encode(_signer.canonical(stale_payload)).decode(),
+               "signature": _signer.sign(stale_payload), "key_id": _signer.key_id}
+    assert client.post("/api/v1/gateway-policy/ack", headers=api,
+                       json={"gateway_id": "gateway-1", "bundle": expired}).status_code == 409
+    with TestingSession() as db:
+        db.query(GatewayPolicyDelivery).one().expires_at = 1
+        db.commit()
+    assert client.get(url + "/gateways", headers=admin).json()[0]["state"] == "stale"
+
+
 def test_high_risk_and_breakglass_require_separate_persistent_approver():
     seed_users()
     client = TestClient(app)

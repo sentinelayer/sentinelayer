@@ -206,7 +206,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("invalid UPSTREAM_URL: %v", err)
 	}
-	policyClient, err := policy.FromEnvironment()
+	policyRouting, err := policy.RoutingFromEnvironment()
 	if err != nil {
 		log.Fatalf("policy configuration failed: %v", err)
 	}
@@ -268,7 +268,22 @@ func main() {
 		reqCtx := extractContext(r, claims)
 		policyVersion := "builtin-v1"
 		var snapshot *policy.Snapshot
-		if policyClient != nil {
+		if policyRouting != nil {
+			policyClient, routeErr := policyRouting.Select(r.Host)
+			if routeErr != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusMisdirectedRequest)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "unconfigured policy host", "code": "POLICY_ROUTE"})
+				return
+			}
+			// Tenant binding needs a validated gateway identity. API keys are
+			// authenticated only by the backend and cannot establish this binding.
+			if r.Header.Get("X-API-Key") != "" || (authHeader != "" && claims == nil) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "policy-bound traffic requires a valid JWT or anonymous request", "code": "POLICY_AUTH"})
+				return
+			}
 			var policyErr error
 			snapshot, policyErr = policyClient.Current(r.Context())
 			if policyErr != nil {

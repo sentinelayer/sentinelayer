@@ -35,6 +35,8 @@ def wait_http(url: str, timeout: float = 20.0) -> None:
 
 def request(url: str, data: bytes | None = None, headers: dict[str, str] | None = None) -> tuple[int, bytes, dict[str, str]]:
     request_headers = {"Accept": "application/json", "User-Agent": "SentinelLayer-E2E/1.0"}
+    if os.getenv("E2E_HOST_POLICY") == "1":
+        request_headers["Host"] = "a.example"
     request_headers.update(headers or {})
     req = urllib.request.Request(url, data=data, headers=request_headers, method="POST" if data is not None else "GET")
     try:
@@ -66,6 +68,10 @@ def main() -> None:
             from helpers.runtime_policy_fixture import RuntimePolicyFixture
             policy_fixture = RuntimePolicyFixture()
             env.update(policy_fixture.env)
+            if os.getenv("E2E_HOST_POLICY") == "1":
+                for name in ("GATEWAY_POLICY_URL", "GATEWAY_POLICY_API_KEY", "GATEWAY_POLICY_ID", "GATEWAY_POLICY_TENANT_ID"):
+                    env.pop(name, None)
+                env["GATEWAY_POLICY_BINDINGS_JSON"] = policy_fixture.host_bindings()
         processes.append(subprocess.Popen(["python3", "tests/helpers/e2e_upstream.py"], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT))
         processes.append(subprocess.Popen(["python3", "-m", "engine.risk.server"], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT))
         processes.append(subprocess.Popen(["python3", "-m", "engine.behavior.server"], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT))
@@ -114,6 +120,18 @@ def main() -> None:
                 processes.append(subprocess.Popen([gateway_bin], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT))
                 wait_http(f"http://127.0.0.1:{GATEWAY_PORT}/health")
 
+            deadline = time.monotonic() + 5
+            while policy_fixture.delivery()["state"] != "reported":
+                assert time.monotonic() < deadline, policy_fixture.delivery()
+                time.sleep(.1)
+            assert policy_fixture.delivery()["reported_version"] == 1
+            if os.getenv("E2E_HOST_POLICY") == "1":
+                assert request(f"http://127.0.0.1:{GATEWAY_PORT}/policy-denied", headers={"Host": "b.example"})[0] == 200
+                assert request(f"http://127.0.0.1:{GATEWAY_PORT}/other-denied", headers={"Host": "b.example"})[0] == 403
+                assert request(f"http://127.0.0.1:{GATEWAY_PORT}/safe", headers={"Host": "unknown.example"})[0] == 421
+                assert request(f"http://127.0.0.1:{GATEWAY_PORT}/policy-denied",
+                               headers={"X-Tenant-ID": "policy-other", "X-Forwarded-Host": "b.example"})[0] == 403
+            assert request(f"http://127.0.0.1:{GATEWAY_PORT}/safe", headers={"X-API-Key": "unverified"})[0] == 401
             policy_fixture.monitor()
             deadline = time.monotonic() + 15
             while True:
@@ -125,11 +143,16 @@ def main() -> None:
                 time.sleep(0.5)
             status, _, _ = request(f"http://127.0.0.1:{GATEWAY_PORT}/safe", attack, {"Content-Type": "application/json"})
             assert status == 403, status
+            deadline = time.monotonic() + 5
+            while policy_fixture.delivery()["reported_version"] != 2:
+                assert time.monotonic() < deadline, policy_fixture.delivery()
+                time.sleep(.1)
+            assert policy_fixture.delivery()["state"] == "reported"
             policy_fixture.tamper.set()
             restart_gateway()
             status, body, _ = request(f"http://127.0.0.1:{GATEWAY_PORT}/safe")
             assert status == 503 and json.loads(body)["code"] == "POLICY_DEPENDENCY", (status, body)
-            print("signed policy e2e: real API-key export, Python-to-Go signature, deny boundary, tenant binding, forged signature rejection, version update, and monitor WAF protection passed")
+            print("signed policy e2e: real API-key export, Python-to-Go signature, deny boundary, tenant binding, forged signature rejection, hot version update, authenticated receipt, and monitor WAF protection passed")
     finally:
         for process in reversed(processes):
             if process.poll() is None:

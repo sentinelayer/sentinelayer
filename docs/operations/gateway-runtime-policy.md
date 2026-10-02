@@ -1,7 +1,7 @@
 # Signed gateway runtime policy
 
-This is an opt-in binding of one gateway/upstream to one tenant and one policy.
-Do not enable it on a shared multi-tenant API gateway without a routing design.
+This is opt-in policy enforcement with either a default single-tenant binding
+or explicit operator-configured hostname bindings for several tenants.
 The existing built-in WAF/auth/rate/risk pipeline remains active.
 
 ## Configure
@@ -60,8 +60,8 @@ parsing; no cross-language JSON reserialization is used for signature checks.
   records the actual policy ID/version. Risk fallback caches include this version.
 - Older versions cannot replace the current snapshot in the same process.
   Roll back through the API's rollback operation, which creates a new higher
-  version. The version floor is memory-only and resets on restart; durable
-  rollback protection is not implemented.
+  version. Configure `GATEWAY_POLICY_STATE_DIR` on a durable volume to retain
+  the version floor across restarts; otherwise the floor is memory-only.
 
 Leaving all `GATEWAY_POLICY_*` values unset uses the built-in pipeline with
 `builtin-v1` decision provenance. A partial binding fails startup.
@@ -74,5 +74,7 @@ The signed-policy E2E uses the real API handlers and API-key middleware with an
 isolated SQLite database, a real Go gateway, real Redis, risk and behavior
 services. It proves Python-to-Go verification, tenant/deny enforcement, forged
 signature rejection, higher-version adoption and WAF blocking in monitor mode.
-It does not prove deployment networking, managed key rotation, multi-tenant
-policy routing, background rollout or fleet-wide acknowledgement.
+Host-routing E2E additionally exercises two tenant policies, unknown-host
+rejection, spoofed tenant/forwarded-host headers and authenticated policy receipts.
+It does not prove deployment networking, managed key rotation or the honesty of
+a compromised registered gateway. See [fleet delivery](gateway-policy-fleet.md).

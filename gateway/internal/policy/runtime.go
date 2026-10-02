@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -40,8 +41,12 @@ type Envelope struct {
 	KeyID     string `json:"key_id"`
 }
 type Client struct {
+	floor                           int
+	statePath                       string
 	mu                              sync.Mutex
 	URL, APIKey, PolicyID, TenantID string
+	AckURL, GatewayID               string
+	ackRunning                      bool
 	Keys                            map[string]ed25519.PublicKey
 	HTTP                            *http.Client
 	Now                             func() time.Time
@@ -57,17 +62,41 @@ func FromEnvironment() (*Client, error) {
 		}
 		return nil, nil
 	}
+	return newClient(endpoint, os.Getenv("GATEWAY_POLICY_API_KEY"), os.Getenv("GATEWAY_POLICY_ID"), os.Getenv("GATEWAY_POLICY_TENANT_ID"))
+}
+
+func validateEndpoint(endpoint string) error {
 	parsed, err := url.Parse(endpoint)
 	if err != nil || parsed.Hostname() == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return nil, errors.New("invalid policy URL")
+		return errors.New("invalid policy URL")
 	}
 	if parsed.Scheme != "https" {
 		ip := net.ParseIP(parsed.Hostname())
 		if parsed.Scheme != "http" || ip == nil || !ip.IsLoopback() {
-			return nil, errors.New("policy URL must use HTTPS or numeric loopback HTTP")
+			return errors.New("policy URL must use HTTPS or numeric loopback HTTP")
 		}
 	}
-	c := &Client{URL: endpoint, APIKey: os.Getenv("GATEWAY_POLICY_API_KEY"), PolicyID: os.Getenv("GATEWAY_POLICY_ID"), TenantID: os.Getenv("GATEWAY_POLICY_TENANT_ID"), Keys: map[string]ed25519.PublicKey{}, Now: time.Now}
+	return nil
+}
+
+func newClient(endpoint, apiKey, policyID, tenantID string) (*Client, error) {
+	if err := validateEndpoint(endpoint); err != nil {
+		return nil, err
+	}
+	c := &Client{URL: endpoint, APIKey: apiKey, PolicyID: policyID, TenantID: tenantID, Keys: map[string]ed25519.PublicKey{}, Now: time.Now}
+	c.AckURL = os.Getenv("GATEWAY_POLICY_ACK_URL")
+	c.GatewayID = os.Getenv("GATEWAY_INSTANCE_ID")
+	if (c.AckURL == "") != (c.GatewayID == "") {
+		return nil, errors.New("policy acknowledgement requires both URL and gateway instance ID")
+	}
+	if c.AckURL != "" {
+		if err := validateEndpoint(c.AckURL); err != nil {
+			return nil, err
+		}
+		if len(c.GatewayID) > 64 {
+			return nil, errors.New("gateway instance ID exceeds 64 bytes")
+		}
+	}
 	if len(c.APIKey) < 24 || c.PolicyID == "" || c.TenantID == "" {
 		return nil, errors.New("policy URL requires API key, policy ID and tenant ID")
 	}
@@ -84,6 +113,9 @@ func FromEnvironment() (*Client, error) {
 	}
 	if len(c.Keys) == 0 {
 		return nil, errors.New("at least one trusted policy public key is required")
+	}
+	if err := c.initState(os.Getenv("GATEWAY_POLICY_STATE_DIR")); err != nil {
+		return nil, err
 	}
 	c.HTTP = &http.Client{Timeout: 800 * time.Millisecond, Transport: &http.Transport{Proxy: nil}, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return errors.New("policy redirects are forbidden") }}
 	return c, nil
@@ -143,7 +175,7 @@ func (c *Client) verify(raw []byte, now time.Time) (*Snapshot, error) {
 			}
 		}
 	}
-	if c.current != nil && snapshot.Version < c.current.Version {
+	if snapshot.Version < c.floor || (c.current != nil && snapshot.Version < c.current.Version) {
 		return nil, errors.New("policy version rollback rejected")
 	}
 	return &snapshot, nil
@@ -177,7 +209,11 @@ func (c *Client) Current(ctx context.Context) (*Snapshot, error) {
 				var snapshot *Snapshot
 				snapshot, err = c.verify(raw, c.Now())
 				if err == nil {
+					err = c.persistFloor(snapshot.Version)
+				}
+				if err == nil {
 					c.current = snapshot
+					c.report(raw)
 					return clone(snapshot), nil
 				}
 			}
@@ -208,4 +244,41 @@ func (s *Snapshot) Blocked(requestPath string, score float64) bool {
 		}
 	}
 	return false
+}
+
+// report is bounded to one asynchronous HTTP call per client. Receipt failure
+// never changes verified enforcement; the control plane exposes stale status.
+func (c *Client) report(raw []byte) {
+	if c.AckURL == "" || c.ackRunning {
+		return
+	}
+	c.ackRunning = true
+	bundle := append([]byte(nil), raw...)
+	go func() {
+		defer func() { c.mu.Lock(); c.ackRunning = false; c.mu.Unlock() }()
+		body, err := json.Marshal(struct {
+			GatewayID string          `json:"gateway_id"`
+			Bundle    json.RawMessage `json:"bundle"`
+		}{c.GatewayID, json.RawMessage(bundle)})
+		if err != nil {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 800*time.Millisecond)
+		defer cancel()
+		request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.AckURL, bytes.NewReader(body))
+		if err != nil {
+			return
+		}
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("X-API-Key", c.APIKey)
+		response, err := c.HTTP.Do(request)
+		if err != nil {
+			log.Print("policy receipt delivery failed")
+			return
+		}
+		defer response.Body.Close()
+		if response.StatusCode != http.StatusOK {
+			log.Printf("policy receipt rejected: status=%d", response.StatusCode)
+		}
+	}()
 }
