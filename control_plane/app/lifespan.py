@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from control_plane.app.runtime import is_production
+
 from control_plane.app.infrastructure.db.models import Base
 from control_plane.app.infrastructure.db.session import engine
 from control_plane.app.infrastructure.security.provenance import provenance
@@ -10,12 +12,12 @@ from control_plane.app.infrastructure.security.provenance import provenance
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    environment = os.getenv("SL_ENV", "development").lower()
-    auto_create = os.getenv("SL_AUTO_CREATE_SCHEMA", "0" if environment == "production" else "1")
-    if auto_create == "1":
-        Base.metadata.create_all(bind=engine)
+    production = is_production()
+    auto_create = os.getenv("SL_AUTO_CREATE_SCHEMA", "0" if production else "1")
+    if production and auto_create != "0":
+        raise RuntimeError("SL_AUTO_CREATE_SCHEMA must be 0 in production")
     enforce_runtime_digest = os.getenv("SL_ENFORCE_PROVENANCE", "0").strip().lower() in {"1", "true"}
-    enforce_manifest = environment in {"production", "prod"} or enforce_runtime_digest
+    enforce_manifest = production or enforce_runtime_digest
     if enforce_manifest:
         manifest_result = provenance.verify()
         if not manifest_result.get("verified"):
@@ -25,5 +27,9 @@ async def lifespan(app: FastAPI):
         runtime_result = provenance.verify_container("control-plane", approved_hash)
         if not runtime_result.get("verified"):
             raise RuntimeError("Running artifact does not match the approved artifact digest")
-    yield
-    engine.dispose()
+    if auto_create == "1":
+        Base.metadata.create_all(bind=engine)
+    try:
+        yield
+    finally:
+        engine.dispose()

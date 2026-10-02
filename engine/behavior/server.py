@@ -5,6 +5,8 @@ import json
 import os
 import time
 import uuid
+from control_plane.app.runtime import is_production
+
 from typing import Any
 
 import redis
@@ -35,7 +37,7 @@ class SharedBehaviorState:
     def __init__(self) -> None:
         self.redis_client: redis.Redis | None = None
         configured_url = os.getenv("REDIS_URL", "").strip()
-        production = os.getenv("SL_ENV", "development").lower() in {"production", "prod"}
+        production = is_production()
         if configured_url:
             self.redis_client = redis.Redis.from_url(configured_url, decode_responses=True)
         elif production:

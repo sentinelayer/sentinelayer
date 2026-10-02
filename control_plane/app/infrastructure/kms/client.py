@@ -1,6 +1,8 @@
 import logging
 import os
 
+from control_plane.app.runtime import is_production
+
 from cryptography.fernet import Fernet
 
 log = logging.getLogger(__name__)
@@ -9,9 +11,8 @@ log = logging.getLogger(__name__)
 class KMSClient:
     def __init__(self) -> None:
         raw = os.getenv("KMS_KEY")
-        env = os.getenv("SL_ENV", "development")
         if not raw:
-            if env in ("production", "prod"):
+            if is_production():
                 raise RuntimeError("KMS_KEY required in production")
             raw = Fernet.generate_key().decode()
             log.warning("KMS_KEY unset — generated ephemeral key (dev only)")

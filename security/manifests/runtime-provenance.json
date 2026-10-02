@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "artifacts": {
     "control_plane/app/main.py": {
-      "hash": "c70f167efc26a4cfb1c452e6fd17a3a443b3bfb7e52e6dfd4313674510e3fc08",
+      "hash": "bb6c4cbd34b2aeb3f832015632afecb6795814c2d42327e14ade19d5b89f1755",
       "verified": true
     }
   }

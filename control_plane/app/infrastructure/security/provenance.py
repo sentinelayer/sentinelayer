@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -46,7 +47,7 @@ class Provenance:
     def verify_container(self, container_id: str, expected_hash: str) -> dict[str, object]:
         """Verify deployment-provided runtime digest; never hash a container ID as a substitute."""
         running_hash = os.getenv("SL_RUNNING_ARTIFACT_HASH", "")
-        if running_hash and running_hash == expected_hash and len(expected_hash) == 64:
+        if running_hash and running_hash == expected_hash and re.fullmatch(r"[0-9a-fA-F]{64}", expected_hash):
             return {"verified": True, "container_id": container_id, "runtime_hash": running_hash}
         return {"verified": False, "reason": "Runtime artifact digest unavailable or mismatched"}
 

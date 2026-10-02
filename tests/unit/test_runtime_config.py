@@ -48,3 +48,14 @@ def test_explicit_empty_config_does_not_use_process_environment(monkeypatch) -> 
     monkeypatch.delenv("SL_RUNNING_ARTIFACT_HASH", raising=False)
     assert validate({}) == []
     assert validate() != []
+
+
+def test_provenance_rejects_invalid_or_mismatched_digests():
+    errors = validate({"SL_ENFORCE_PROVENANCE": "true",
+                      "SL_APPROVED_ARTIFACT_HASH": "z" * 64,
+                      "SL_RUNNING_ARTIFACT_HASH": "z" * 64})
+    assert "SL_APPROVED_ARTIFACT_HASH must be a SHA-256 hex digest" in errors
+    errors = validate({"SL_ENFORCE_PROVENANCE": "1",
+                      "SL_APPROVED_ARTIFACT_HASH": "a" * 64,
+                      "SL_RUNNING_ARTIFACT_HASH": "b" * 64})
+    assert "Running artifact does not match the approved artifact digest" in errors

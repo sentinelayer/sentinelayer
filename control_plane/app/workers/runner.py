@@ -1,6 +1,8 @@
 """Maintenance worker entry point for one-shot and long-running deployments."""
 from __future__ import annotations
 
+from control_plane.app.runtime import is_production
+
 import argparse
 import fcntl
 import logging
@@ -54,7 +56,7 @@ def _redis_client() -> redis.Redis | None:
     configured_url = os.getenv("REDIS_URL", "").strip()
     if configured_url:
         return redis.Redis.from_url(configured_url, decode_responses=True)
-    if os.getenv("ENVIRONMENT", "development").lower() in {"production", "prod"}:
+    if is_production():
         raise RuntimeError("REDIS_URL is required for distributed maintenance coordination in production")
     return None
 

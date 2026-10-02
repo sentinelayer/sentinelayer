@@ -24,7 +24,7 @@ else
   artifact="$base"
 fi
 
-sha256sum "$artifact" > "${artifact}.sha256"
+( cd "$(dirname "$artifact")" && sha256sum "$(basename "$artifact")" ) > "${artifact}.sha256"
 printf '%s\n' "$(date -u +%FT%TZ) backup=$artifact" >> "$BACKUP_DIR/backup-manifest.log"
 find "$BACKUP_DIR" -type f -name 'sentinellayer-*.dump*' -mtime "+$RETENTION_DAYS" -delete
 find "$BACKUP_DIR" -type f -name 'sentinellayer-*.sha256' -mtime "+$RETENTION_DAYS" -delete

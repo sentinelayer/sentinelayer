@@ -25,7 +25,7 @@ func ValidateJWT(tokenString string, secret []byte) (*Claims, error) {
 			return nil, errors.New("unexpected JWT signing algorithm")
 		}
 		return secret, nil
-	})
+	}, jwt.WithExpirationRequired())
 	if err != nil {
 		return nil, err
 	}

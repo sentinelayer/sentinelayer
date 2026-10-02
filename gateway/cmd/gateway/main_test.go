@@ -71,3 +71,35 @@ func TestClassifyEndpointAuthBootstrapRoutes(t *testing.T) {
 		})
 	}
 }
+
+func TestRuntimeProvenanceRejectsMissingInvalidAndMismatchedDigests(t *testing.T) {
+	valid := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	for _, flag := range []string{"1", "true", "TRUE", " true "} {
+		for _, pair := range [][2]string{{"", ""}, {"invalid", "invalid"}, {valid, ""}, {valid, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}} {
+			if err := validateRuntimeProvenance(flag, pair[0], pair[1]); err == nil {
+				t.Fatalf("accepted enabled provenance flag %q with invalid digests", flag)
+			}
+		}
+		if err := validateRuntimeProvenance(flag, valid, valid); err != nil {
+			t.Fatalf("rejected valid digests with flag %q: %v", flag, err)
+		}
+	}
+	for _, flag := range []string{"", "0", "false"} {
+		if err := validateRuntimeProvenance(flag, "", ""); err != nil {
+			t.Fatalf("disabled provenance rejected: %v", err)
+		}
+	}
+}
+
+func TestRateLimitBucketCannotBeRotatedWithUnverifiedHeaders(t *testing.T) {
+	req := httptest.NewRequest("POST", "http://gateway.test/api/v1/auth/login", nil)
+	req.RemoteAddr = "203.0.113.7:54321"
+	expected := rateLimitKey(req, extractContext(req, nil))
+	for _, header := range []string{"X-Tenant-ID", "X-User-ID", "X-Session-ID", "X-API-Key"} {
+		req.Header.Set(header, "attacker-controlled-new-value")
+	}
+	req.RemoteAddr = "203.0.113.7:54322"
+	if got := rateLimitKey(req, extractContext(req, nil)); got != expected {
+		t.Fatal("unverified headers or ephemeral ports changed the rate bucket")
+	}
+}

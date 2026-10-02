@@ -10,6 +10,8 @@ from sqlalchemy import or_
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from control_plane.app.runtime import is_production
+
 from control_plane.app.infrastructure.db.models import ApiKeyRecord, AuthSession, User
 from control_plane.app.infrastructure.db.session import SessionLocal
 
@@ -56,6 +58,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 ).first()
                 if not row:
                     return JSONResponse(status_code=401, content={"error": "Invalid or expired API key"})
+                user = db.query(User).filter(
+                    User.id == row.user_id, User.tenant_id == row.tenant_id,
+                    User.is_active.is_(True),
+                ).first()
+                if not user:
+                    return JSONResponse(status_code=401, content={"error": "API key owner inactive or missing"})
                 row.last_used_at = now
                 db.commit()
                 request.state.user_id = row.user_id
@@ -80,7 +88,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if not secret:
             return JSONResponse(status_code=500, content={"error": "JWT_SECRET not configured"})
         try:
-            payload = jwt.decode(token, secret, algorithms=["HS256"])
+            payload = jwt.decode(token, secret, algorithms=["HS256"], options={"require": ["exp", "sub", "tenant_id"] + (["jti"] if is_production() else [])})
             request.state.user_id = payload.get("sub")
             request.state.tenant_id = payload.get("tenant_id")
             request.state.is_admin = bool(payload.get("is_admin", False))
@@ -102,11 +110,19 @@ class AuthMiddleware(BaseHTTPMiddleware):
                         AuthSession.revoked_at.is_(None),
                         AuthSession.expires_at > now,
                     ).first()
-                    user = db.query(User).filter(User.id == request.state.user_id).first()
+                    user = db.query(User).filter(
+                        User.id == request.state.user_id,
+                        User.tenant_id == request.state.tenant_id,
+                    ).first()
                     if user is not None and not user.mfa_enabled:
                         request.state.mfa_verified = True
-                    if not session or (user is not None and not user.is_active):
+                    if not session or not user or not user.is_active:
                         return JSONResponse(status_code=401, content={"error": "Session revoked or expired"})
+                    # A demotion takes effect immediately. A promotion still
+                    # requires a fresh login rather than elevating an old token.
+                    request.state.is_admin = request.state.is_admin and bool(user.is_admin)
+                    if not user.is_admin:
+                        request.state.roles = [role for role in request.state.roles if role != "admin"]
                 finally:
                     db.close()
         except jwt.ExpiredSignatureError:

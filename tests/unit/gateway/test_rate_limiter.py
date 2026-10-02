@@ -1,5 +1,3 @@
-import time
-
 import pytest
 from control_plane.gateway.ratelimit.sliding_window import SimpleRateLimiter
 
@@ -42,7 +40,9 @@ def test_endpoint_isolation(limiter):
     result = limiter.is_allowed("user", identifier, "/api/b", limit=5)
     assert result["allowed"] is True
 
-def test_window_reset(limiter):
+def test_window_reset(limiter, monkeypatch):
+    clock = [1000.0]
+    monkeypatch.setattr("control_plane.gateway.ratelimit.sliding_window.time.monotonic", lambda: clock[0])
     identifier = "test-user"
 
     # 10 requests
@@ -55,8 +55,8 @@ def test_window_reset(limiter):
     assert result["allowed"] is False
     assert result["reset_in"] > 0
 
-    # Wait 61 seconds
-    time.sleep(61)
+    # Advance only the limiter clock; no wall-clock delay.
+    clock[0] += 61
 
     # Should be allowed again
     result = limiter.is_allowed("user", identifier, "/api/test", limit=10)

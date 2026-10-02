@@ -13,7 +13,7 @@ checksum_file="${BACKUP_FILE}.sha256"
 
 input="$BACKUP_FILE"
 tmp=""
-cleanup() { [[ -n "$tmp" ]] && rm -f "$tmp"; }
+cleanup() { if [[ -n "$tmp" ]]; then rm -f "$tmp"; fi; }
 trap cleanup EXIT
 if [[ "$BACKUP_FILE" == *.gpg ]]; then
   tmp="$(mktemp --suffix=.dump)"
@@ -29,5 +29,5 @@ fi
 
 : "${RESTORE_CONFIRM:?Set RESTORE_CONFIRM=I_UNDERSTAND to perform destructive restore}"
 [[ "$RESTORE_CONFIRM" == "I_UNDERSTAND" ]] || { echo "Invalid RESTORE_CONFIRM" >&2; exit 2; }
-pg_restore --clean --if-exists --no-owner --no-privileges --dbname="$DATABASE_URL" "$input"
+pg_restore --clean --if-exists --no-owner --no-privileges --exit-on-error --single-transaction --dbname="$DATABASE_URL" "$input"
 echo "Restore completed: $BACKUP_FILE"

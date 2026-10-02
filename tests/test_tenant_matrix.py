@@ -28,7 +28,7 @@ async def test_unauthenticated_sensitive_paths_rejected():
     async with AsyncClient(base_url=BASE, timeout=10.0) as client:
         for path in PATHS:
             resp = await client.get(path)
-            assert resp.status_code in (401, 403, 404, 422), f"{path} -> {resp.status_code}"
+            assert resp.status_code in (401, 403), f"{path} -> {resp.status_code}"
 
 
 @pytest.mark.asyncio
@@ -37,21 +37,26 @@ async def test_tenant_b_cannot_see_tenant_a_resources():
         ta, tb = f"ta-{_uid()}", f"tb-{_uid()}"
         ea, eb = f"{ta}@example.com", f"{tb}@example.com"
         password = "TestPass12chars!"
-        await client.post("/api/v1/auth/register", json={"email": ea, "password": password, "full_name": "A", "tenant_id": ta})
-        await client.post("/api/v1/auth/register", json={"email": eb, "password": password, "full_name": "B", "tenant_id": tb})
+        ra = await client.post("/api/v1/auth/register", json={"email": ea, "password": password, "full_name": "A", "tenant_id": ta})
+        rb = await client.post("/api/v1/auth/register", json={"email": eb, "password": password, "full_name": "B", "tenant_id": tb})
+        assert ra.status_code == 200, ra.text
+        assert rb.status_code == 200, rb.text
         la = await client.post("/api/v1/auth/login", json={"email": ea, "password": password})
         lb = await client.post("/api/v1/auth/login", json={"email": eb, "password": password})
-        if la.status_code != 200 or lb.status_code != 200:
-            pytest.skip("login not available")
+        assert la.status_code == 200, la.text
+        assert lb.status_code == 200, lb.text
         token_a = la.json().get("access_token") or la.json().get("token")
         token_b = lb.json().get("access_token") or lb.json().get("token")
         ha = {"Authorization": f"Bearer {token_a}", "X-Tenant-ID": ta}
         hb = {"Authorization": f"Bearer {token_b}", "X-Tenant-ID": tb}
-        await client.post("/api/v1/applications", headers=ha, json={"name": f"seed-{_uid()}", "environment": "production"})
+        created = await client.post("/api/v1/applications", headers=ha, json={"name": f"seed-{_uid()}", "environment": "production"})
+        assert created.status_code == 200, created.text
         for path in PATHS:
             rb = await client.get(path, headers=hb)
-            if rb.status_code != 200:
+            if path == "/api/v1/evidence":
+                assert rb.status_code == 403, rb.text
                 continue
+            assert rb.status_code == 200, f"{path}: {rb.text}"
             data = rb.json()
             items = data if isinstance(data, list) else data.get("items") or data.get("data") or []
             for item in items:

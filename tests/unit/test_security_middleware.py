@@ -167,3 +167,75 @@ def test_revoked_jwt_session_is_rejected(monkeypatch):
         "/api/v1/protected", headers=auth_headers(token(jti="session-1"))
     )
     assert response.status_code == 401
+
+
+def test_signed_token_without_expiration_is_rejected(monkeypatch):
+    monkeypatch.setenv("JWT_SECRET", SECRET)
+    value = jwt.encode({"sub": "user-a", "tenant_id": "tenant-a"}, SECRET, algorithm="HS256")
+    assert make_client().get("/api/v1/protected", headers=auth_headers(value)).status_code == 401
+
+
+def test_production_rejects_legacy_token_without_session_id(monkeypatch):
+    monkeypatch.setenv("JWT_SECRET", SECRET)
+    monkeypatch.setenv("SL_ENV", "production")
+    assert make_client().get("/api/v1/protected", headers=auth_headers(token())).status_code == 401
+
+
+def test_session_owner_and_admin_demotion_are_enforced(monkeypatch):
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+    from control_plane.app.infrastructure.db.models import Base, User
+
+    monkeypatch.setenv("JWT_SECRET", SECRET)
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    sessions = sessionmaker(bind=engine)
+    with sessions() as db:
+        db.add(User(id="user-a", email="a@example.com", tenant_id="tenant-a",
+                    hashed_password="fixture", is_admin=True, is_active=True))
+        db.add(AuthSession(token_id="live-session", user_id="user-a", tenant_id="tenant-a",
+                           expires_at=datetime.now(UTC) + timedelta(minutes=5)))
+        db.commit()
+    client = make_client(sessions)
+    claims = jwt.decode(token(is_admin=True, mfa_verified=True, jti="live-session"), SECRET, algorithms=["HS256"])
+    claims["roles"] = ["admin"]
+    headers = auth_headers(jwt.encode(claims, SECRET, algorithm="HS256"))
+    assert client.get("/api/v1/admin/high-risk-actions", headers=headers).status_code == 200
+    with sessions() as db:
+        db.query(User).first().is_admin = False
+        db.commit()
+    assert client.get("/api/v1/admin/high-risk-actions", headers=headers).status_code == 403
+    assert client.get("/api/v1/protected", headers=headers).status_code == 200
+    with sessions() as db:
+        db.query(User).first().tenant_id = "other-tenant"
+        db.commit()
+    assert client.get("/api/v1/protected", headers=headers).status_code == 401
+    engine.dispose()
+
+
+def test_api_key_cannot_outlive_active_owner(monkeypatch):
+    import hashlib
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+    from control_plane.app.infrastructure.db.models import ApiKeyRecord, Base, User
+
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    sessions = sessionmaker(bind=engine)
+    key = "slk_" + "a" * 40
+    with sessions() as db:
+        db.add(User(id="user-a", email="a@example.com", tenant_id="tenant-a",
+                    hashed_password="fixture", is_active=True))
+        db.add(ApiKeyRecord(name="test", key_prefix=key[:12], key_hash=hashlib.sha256(key.encode()).hexdigest(),
+                            user_id="user-a", tenant_id="tenant-a"))
+        db.commit()
+    client = make_client(sessions)
+    headers = {"X-API-Key": key}
+    assert client.get("/api/v1/protected", headers=headers).status_code == 200
+    with sessions() as db:
+        db.query(User).first().is_active = False
+        db.commit()
+    assert client.get("/api/v1/protected", headers=headers).status_code == 401
+    engine.dispose()

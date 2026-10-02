@@ -2,6 +2,8 @@
 set -eu
 printf '%s\n' "SentinelLayer single-service launcher active; gateway entrypoint enforced" >&2
 
+python /app/scripts/validate_runtime_config.py
+
 # Railway's pre-deploy hook is the normal migration path. Repeat the idempotent
 # migration here as a startup safety net so a service never becomes healthy with
 # an empty schema when the platform hook is skipped or misconfigured.
@@ -31,17 +33,19 @@ cleanup() {
 trap cleanup INT TERM EXIT
 
 ready() {
-  python - "$1" <<'PY'
-import socket
+  python - "$1" <<'PYTHON'
 import sys
+import urllib.request
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-    sock.settimeout(1)
-    try:
-        sock.connect(("127.0.0.1", int(sys.argv[1])))
-    except OSError:
-        raise SystemExit(1)
-PY
+port = int(sys.argv[1])
+path = "/api/v1/health/readiness" if port == 8005 else "/health"
+try:
+    with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=1) as response:
+        if response.status != 200:
+            raise SystemExit(1)
+except OSError:
+    raise SystemExit(1)
+PYTHON
 }
 
 attempt=0

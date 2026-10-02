@@ -1,4 +1,6 @@
 import os
+from control_plane.app.runtime import is_production
+
 from pathlib import Path
 import re
 import uuid
@@ -34,7 +36,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
         response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-        if os.getenv("SL_ENV", "development").lower() == "production":
+        if is_production():
             response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         return response
 
@@ -61,7 +63,7 @@ app.add_middleware(AuthMiddleware)
 
 app.include_router(router, prefix="/api/v1")
 
-DASHBOARD_DIST = Path(os.getenv("DASHBOARD_DIST", "dashboard/dist"))
+DASHBOARD_DIST = Path(os.getenv("DASHBOARD_DIST", "dashboard/dist")).resolve()
 DASHBOARD_INDEX = DASHBOARD_DIST / "index.html"
 if (DASHBOARD_DIST / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=DASHBOARD_DIST / "assets"), name="dashboard-assets")
@@ -70,7 +72,7 @@ if (DASHBOARD_DIST / "assets").is_dir():
 @app.get("/metrics")
 async def metrics_endpoint(x_metrics_token: str | None = Header(default=None)):
     expected = os.getenv("METRICS_TOKEN")
-    if os.getenv("SL_ENV", "development").lower() == "production" and not expected:
+    if is_production() and not expected:
         raise HTTPException(status_code=503, detail="METRICS_TOKEN is required in production")
     if expected and x_metrics_token != expected:
         raise HTTPException(status_code=401, detail="Invalid metrics token")
@@ -93,8 +95,8 @@ async def root_health():
 async def dashboard_fallback(path: str):
     if path.startswith("api/") or path in {"metrics", "health", "docs", "redoc", "openapi.json"}:
         raise HTTPException(status_code=404, detail="Not found")
-    candidate = DASHBOARD_DIST / path
-    if candidate.is_file() and DASHBOARD_DIST in candidate.parents:
+    candidate = (DASHBOARD_DIST / path).resolve()
+    if candidate.is_file() and candidate.is_relative_to(DASHBOARD_DIST):
         return FileResponse(candidate)
     if DASHBOARD_INDEX.is_file():
         return FileResponse(DASHBOARD_INDEX)

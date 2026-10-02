@@ -6,6 +6,8 @@ import hashlib
 import json
 import logging
 import os
+from control_plane.app.runtime import is_production
+
 from typing import Any
 
 from cryptography.exceptions import InvalidSignature
@@ -20,7 +22,6 @@ class PolicySigning:
     def __init__(self) -> None:
         configured = os.getenv("POLICY_SIGNING_PRIVATE_KEY", "").strip()
         kms_key = os.getenv("KMS_KEY", "").strip()
-        environment = os.getenv("SL_ENV", "development").lower()
 
         if configured:
             try:
@@ -35,7 +36,7 @@ class PolicySigning:
             seed = hashlib.sha256(("sentinelayer-policy-signing-v1:" + kms_key).encode()).digest()
             self.key_id = os.getenv("POLICY_SIGNING_KEY_ID", "policy-kms-derived-v1")
             self.private_key = ed25519.Ed25519PrivateKey.from_private_bytes(seed)
-        elif environment in {"production", "prod"}:
+        elif is_production():
             raise RuntimeError("POLICY_SIGNING_PRIVATE_KEY or KMS_KEY is required in production")
         else:
             self.key_id = "ephemeral-dev"

@@ -15,11 +15,15 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Unit tests
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build dashboard for SPA smoke checks
         run: |
-          pytest tests/unit -v --tb=short \
-            --ignore=tests/integration --ignore=tests/load \
-            --ignore=tests/resilience --ignore=tests/adversarial
+          npm --prefix dashboard ci --ignore-scripts
+          npm --prefix dashboard run build
+      - name: Local regression tests
+        run: pytest -m "not integration" -v --tb=short
       - name: Behavior + risk unit
         run: pytest tests/unit/test_behavior_engine.py tests/unit/test_risk_engine.py -v --tb=short
 
@@ -30,6 +34,11 @@ jobs:
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
           go-version: "1.25"
+      - name: Gateway tests and static analysis
+        working-directory: gateway
+        run: |
+          go test ./...
+          go vet ./...
       - name: Build gateway
         working-directory: gateway
         run: go build -o /tmp/gateway-bin ./cmd/gateway
@@ -111,7 +120,7 @@ jobs:
           CONTROL_PLANE_URL: http://localhost:8005
           JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
         run: |
-          pytest tests/test_bola_real.py tests/test_tenant_matrix.py -v --tb=short
+          pytest tests/test_bola_real.py tests/test_tenant_matrix.py tests/integration/test_full_pipeline.py -v --tb=short
       - name: PostgreSQL RLS isolation evidence
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sentinelayer
@@ -120,6 +129,15 @@ jobs:
           SL_ENV: test
           PYTHONPATH: .
         run: pytest tests/test_rls_real.py -v --tb=short
+      - name: Real PostgreSQL backup and restore
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sentinelayer
+          TEST_POSTGRES_RESTORE: "1"
+          PYTHONPATH: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          pytest tests/integration/test_postgres_backup_restore.py -v --tb=short
       - name: Generate repository GRC evidence
         run: |
           set -euo pipefail

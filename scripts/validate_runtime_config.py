@@ -2,7 +2,15 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
+from pathlib import Path
+
+# Keep the CLI usable from any working directory.
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from control_plane.app.runtime import is_production
 
 
 class ConfigurationError(RuntimeError):
@@ -11,7 +19,7 @@ class ConfigurationError(RuntimeError):
 
 def validate(env: dict[str, str] | None = None) -> list[str]:
     values = os.environ if env is None else env
-    production = values.get("SL_ENV", values.get("ENVIRONMENT", "development")).lower() in {"prod", "production"}
+    production = is_production(values)
     errors: list[str] = []
 
     jwt = values.get("JWT_SECRET", "")
@@ -21,13 +29,20 @@ def validate(env: dict[str, str] | None = None) -> list[str]:
         errors.append("DATABASE_URL is required in production")
     if production and not values.get("REDIS_URL", "").strip():
         errors.append("REDIS_URL is required in production")
-    if production and values.get("SL_AUTO_CREATE_SCHEMA", "0") == "1":
+    if production and values.get("SL_AUTO_CREATE_SCHEMA", "0") != "0":
         errors.append("SL_AUTO_CREATE_SCHEMA must be 0 in production")
     if values.get("SL_ENFORCE_PROVENANCE", "0").strip().lower() in {"1", "true"}:
         if not values.get("SL_APPROVED_ARTIFACT_HASH", "").strip():
             errors.append("SL_APPROVED_ARTIFACT_HASH is required when provenance enforcement is enabled")
         if not values.get("SL_RUNNING_ARTIFACT_HASH", "").strip():
             errors.append("SL_RUNNING_ARTIFACT_HASH is required when provenance enforcement is enabled")
+        approved = values.get("SL_APPROVED_ARTIFACT_HASH", "")
+        running = values.get("SL_RUNNING_ARTIFACT_HASH", "")
+        for name, digest in (("SL_APPROVED_ARTIFACT_HASH", approved), ("SL_RUNNING_ARTIFACT_HASH", running)):
+            if digest and not re.fullmatch(r"[0-9a-fA-F]{64}", digest):
+                errors.append(f"{name} must be a SHA-256 hex digest")
+        if approved and running and approved != running:
+            errors.append("Running artifact does not match the approved artifact digest")
     if production and not values.get("KMS_KEY", "").strip():
         errors.append("KMS_KEY must be provided by the platform secret manager in production")
     return errors

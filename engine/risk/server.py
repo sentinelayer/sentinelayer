@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+from control_plane.app.runtime import is_production
+
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -18,7 +20,7 @@ engine = RiskEngine()
 matrix = DecisionMatrix()
 correlation = RiskCorrelation(
     redis_url=os.getenv("REDIS_URL"),
-    require_shared=os.getenv("SL_ENV", "development").lower() in {"production", "prod"},
+    require_shared=is_production(),
 )
 catalog = SignalCatalog()
 calibration = Calibration()

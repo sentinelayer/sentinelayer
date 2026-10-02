@@ -28,6 +28,7 @@ import (
 )
 
 type RequestContext struct {
+	Authenticated     bool   `json:"-"`
 	TenantID          string `json:"tenant_id"`
 	ApplicationID     string `json:"application_id"`
 	Environment       string `json:"environment"`
@@ -84,6 +85,7 @@ func extractContext(r *http.Request, claims *authctx.Claims) RequestContext {
 		ctx.Environment = "production"
 	}
 	if claims != nil {
+		ctx.Authenticated = true
 		ctx.TenantID = claims.TenantID
 		ctx.UserID = claims.Sub
 	} else {
@@ -119,9 +121,14 @@ func clientAddress(r *http.Request) string {
 
 func rateLimitKey(r *http.Request, ctx RequestContext) string {
 	hash := sha256.New()
+	tenant, user := "", ""
+	if ctx.Authenticated {
+		tenant, user = ctx.TenantID, ctx.UserID
+	}
+	// Never let unverified identity/session/API-key headers create fresh rate
+	// buckets. Socket address is the baseline until trusted proxy policy exists.
 	for _, part := range []string{
-		ctx.TenantID, ctx.UserID, ctx.SessionID, r.Header.Get("X-API-Key"),
-		clientAddress(r), r.Method, r.URL.Path,
+		tenant, user, clientAddress(r), r.Method, r.URL.Path,
 	} {
 		_, _ = hash.Write([]byte(part))
 		_, _ = hash.Write([]byte{0})
@@ -141,14 +148,28 @@ func listenAddress() (string, error) {
 	return ":" + strconv.Itoa(value), nil
 }
 
+func validateRuntimeProvenance(flag, expected, running string) error {
+	enabled := strings.ToLower(strings.TrimSpace(flag))
+	if enabled != "1" && enabled != "true" {
+		return nil
+	}
+	digest, err := hex.DecodeString(expected)
+	if err != nil || len(digest) != sha256.Size {
+		return fmt.Errorf("approved artifact digest must be a SHA-256 hex value")
+	}
+	if expected != running {
+		return fmt.Errorf("running artifact digest unavailable or mismatched")
+	}
+	return nil
+}
+
 func main() {
-	if os.Getenv("SL_ENFORCE_PROVENANCE") == "1" {
-		expected := os.Getenv("SL_APPROVED_ARTIFACT_HASH")
-		running := os.Getenv("SL_RUNNING_ARTIFACT_HASH")
-		if expected == "" || running == "" || expected != running {
-			log.Fatalf("RUNTIME PROVENANCE FAILED: expected=%s running=%s", expected, running)
-		}
-		log.Printf("Runtime provenance verified: %s", running)
+	if err := validateRuntimeProvenance(
+		os.Getenv("SL_ENFORCE_PROVENANCE"),
+		os.Getenv("SL_APPROVED_ARTIFACT_HASH"),
+		os.Getenv("SL_RUNNING_ARTIFACT_HASH"),
+	); err != nil {
+		log.Fatalf("RUNTIME PROVENANCE FAILED: %v", err)
 	}
 
 	crsDir := os.Getenv("CRS_RULES_DIR")

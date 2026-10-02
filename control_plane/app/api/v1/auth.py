@@ -11,6 +11,9 @@ import pyotp
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+
+from control_plane.app.runtime import is_production
 
 from control_plane.app.infrastructure.db.models import ApiKeyRecord, AuthSession, BootstrapAdminGrant, Tenant, User
 from control_plane.app.infrastructure.db.session import get_db
@@ -29,7 +32,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     full_name: str
-    tenant_id: str
+    tenant_id: str = Field(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
     bootstrap_token: str | None = Field(default=None, min_length=32, max_length=256)
 
 
@@ -99,7 +102,7 @@ def _user_from_bearer(authorization: str | None, db: Session) -> User:
         raise HTTPException(status_code=401, detail="Missing bearer token")
     token = authorization.split(" ", 1)[1]
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM], options={"require": ["exp", "sub", "tenant_id"] + (["jti"] if is_production() else [])})
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
     user = db.query(User).filter(User.id == payload.get("sub")).first()
@@ -122,6 +125,8 @@ def _user_from_bearer(authorization: str | None, db: Session) -> User:
 async def register(req: RegisterRequest, db: Session = Depends(get_db)):
     if len(req.password) < 12:
         raise HTTPException(status_code=400, detail="Password must be at least 12 characters")
+    if len(req.password.encode("utf-8")) > 72:
+        raise HTTPException(status_code=400, detail="Password must not exceed 72 UTF-8 bytes")
     existing = db.query(User).filter(User.email == req.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -140,10 +145,17 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
             raise HTTPException(status_code=409, detail="Bootstrap grant already used")
 
     tenant = db.query(Tenant).filter(Tenant.id == req.tenant_id).first()
-    if not tenant:
-        tenant = Tenant(id=req.tenant_id, name=f"tenant-{req.tenant_id[:8]}")
-        db.add(tenant)
+    # Public signup may create a workspace, but must never grant membership to
+    # an existing workspace based only on a caller-supplied tenant identifier.
+    if tenant:
+        raise HTTPException(status_code=409, detail="Tenant unavailable for self-service registration")
+    tenant = Tenant(id=req.tenant_id, name=f"tenant-{req.tenant_id[:8]}")
+    db.add(tenant)
+    try:
         db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Tenant unavailable for self-service registration") from exc
     hashed = bcrypt.hashpw(req.password.encode("utf-8"), bcrypt.gensalt())
     user = User(
         id=str(uuid.uuid4()),
@@ -171,7 +183,7 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login", response_model=TokenResponse)
 async def login(req: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == req.email).first()
-    if not user:
+    if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not bcrypt.checkpw(req.password.encode("utf-8"), user.hashed_password.encode("utf-8")):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -206,7 +218,7 @@ async def logout(
 ):
     user = _user_from_bearer(authorization, db)
     token = authorization.split(" ", 1)[1]
-    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM], options={"require": ["exp", "sub", "tenant_id"] + (["jti"] if is_production() else [])})
     session = db.query(AuthSession).filter(
         AuthSession.token_id == payload.get("jti"), AuthSession.user_id == user.id
     ).first()

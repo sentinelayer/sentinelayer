@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import os
+from datetime import UTC, datetime
 from collections import defaultdict
 
 import jwt
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+from control_plane.app.runtime import is_production
+from control_plane.app.infrastructure.db.models import AuthSession, User
+from control_plane.app.infrastructure.db.session import SessionLocal
 
 router = APIRouter(prefix="/events-ws", tags=["events"])
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -49,12 +54,33 @@ def _claims(websocket: WebSocket) -> tuple[str, str] | None:
     if not token:
         return None
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM], options={"require": ["exp", "sub", "tenant_id"] + (["jti"] if is_production() else [])})
     except jwt.PyJWTError:
         return None
     user_id = payload.get("sub")
     tenant_id = payload.get("tenant_id")
-    return (str(user_id), str(tenant_id)) if user_id and tenant_id else None
+    if not user_id or not tenant_id:
+        return None
+    if token_id := payload.get("jti"):
+        session_factory = getattr(websocket.app.state, "session_factory", SessionLocal)
+        db = session_factory()
+        try:
+            session = db.query(AuthSession).filter(
+                AuthSession.token_id == token_id,
+                AuthSession.user_id == user_id,
+                AuthSession.tenant_id == tenant_id,
+                AuthSession.revoked_at.is_(None),
+                AuthSession.expires_at > datetime.now(UTC),
+            ).first()
+            user = db.query(User).filter(
+                User.id == user_id, User.tenant_id == tenant_id,
+                User.is_active.is_(True),
+            ).first()
+            if not session or not user:
+                return None
+        finally:
+            db.close()
+    return str(user_id), str(tenant_id)
 
 
 @router.websocket("/stream")
@@ -68,6 +94,11 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
+            if _claims(websocket) != claims:
+                await websocket.close(code=1008, reason="Session revoked or expired")
+                return
             await manager.broadcast(data, tenant_id)
     except WebSocketDisconnect:
+        pass
+    finally:
         manager.disconnect(websocket, tenant_id)

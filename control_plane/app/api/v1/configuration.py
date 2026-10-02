@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import uuid
+from control_plane.app.runtime import runtime_environment
+
 from datetime import UTC, datetime
 from typing import Any
 
@@ -16,7 +18,7 @@ from control_plane.app.infrastructure.db.models import ConfigurationEntry
 router = APIRouter(prefix="/configuration", tags=["configuration"])
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "environment": os.getenv("ENVIRONMENT", "development"),
+    "environment": runtime_environment(),
     "rate_limit": int(os.getenv("RATE_LIMIT", "60")),
     "jwt_expiry_minutes": 15,
     "mfa_enabled": True,
