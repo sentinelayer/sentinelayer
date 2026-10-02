@@ -10,7 +10,7 @@ class ConfigurationError(RuntimeError):
 
 
 def validate(env: dict[str, str] | None = None) -> list[str]:
-    values = env or os.environ
+    values = os.environ if env is None else env
     production = values.get("SL_ENV", values.get("ENVIRONMENT", "development")).lower() in {"prod", "production"}
     errors: list[str] = []
 
@@ -23,7 +23,7 @@ def validate(env: dict[str, str] | None = None) -> list[str]:
         errors.append("REDIS_URL is required in production")
     if production and values.get("SL_AUTO_CREATE_SCHEMA", "0") == "1":
         errors.append("SL_AUTO_CREATE_SCHEMA must be 0 in production")
-    if values.get("SL_ENFORCE_PROVENANCE", "0") == "1":
+    if values.get("SL_ENFORCE_PROVENANCE", "0").strip().lower() in {"1", "true"}:
         if not values.get("SL_APPROVED_ARTIFACT_HASH", "").strip():
             errors.append("SL_APPROVED_ARTIFACT_HASH is required when provenance enforcement is enabled")
         if not values.get("SL_RUNNING_ARTIFACT_HASH", "").strip():

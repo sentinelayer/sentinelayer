@@ -33,3 +33,18 @@ def test_valid_production_config_passes() -> None:
         "SL_RUNNING_ARTIFACT_HASH": "a" * 64,
     }
     assert validate(values) == []
+
+
+def test_true_provenance_flag_requires_both_hashes() -> None:
+    for flag in ("true", "TRUE", " true ", "1"):
+        errors = validate({"SL_ENFORCE_PROVENANCE": flag})
+        assert "SL_APPROVED_ARTIFACT_HASH is required when provenance enforcement is enabled" in errors
+        assert "SL_RUNNING_ARTIFACT_HASH is required when provenance enforcement is enabled" in errors
+
+
+def test_explicit_empty_config_does_not_use_process_environment(monkeypatch) -> None:
+    monkeypatch.setenv("SL_ENFORCE_PROVENANCE", "1")
+    monkeypatch.delenv("SL_APPROVED_ARTIFACT_HASH", raising=False)
+    monkeypatch.delenv("SL_RUNNING_ARTIFACT_HASH", raising=False)
+    assert validate({}) == []
+    assert validate() != []
