@@ -1,0 +1,11 @@
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt \
+    && useradd -m -u 1000 sentinel
+COPY control_plane ./control_plane
+COPY scripts ./scripts
+COPY alembic.ini ./
+USER sentinel
+ENV PYTHONPATH=/app
+CMD ["sh", "/app/scripts/migrate_database.sh"]
