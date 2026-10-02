@@ -1,5 +1,7 @@
 import os
 
+from fastapi import Request
+
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
@@ -10,6 +12,12 @@ DATABASE_URL = os.getenv(
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+AUTH_DATABASE_URL = os.getenv("AUTH_DATABASE_URL") or DATABASE_URL
+WORKER_DATABASE_URL = os.getenv("WORKER_DATABASE_URL") or DATABASE_URL
+auth_engine = engine if AUTH_DATABASE_URL == DATABASE_URL else create_engine(AUTH_DATABASE_URL, pool_pre_ping=True)
+worker_engine = engine if WORKER_DATABASE_URL == DATABASE_URL else create_engine(WORKER_DATABASE_URL, pool_pre_ping=True)
+AuthSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=auth_engine)
+WorkerSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=worker_engine)
 Base = declarative_base()
 
 
@@ -20,8 +28,9 @@ def _restore_tenant_context(session, transaction, connection):
         connection.execute(text("SELECT set_config('app.tenant_id', :tid, true)"), {"tid": tenant})
 
 
-def get_db():
-    db = SessionLocal()
+def get_db(request: Request = None):
+    factory = AuthSessionLocal if request is not None and request.url.path.startswith("/api/v1/auth/") else SessionLocal
+    db = factory()
     try:
         yield db
     finally:

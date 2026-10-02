@@ -138,6 +138,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
           pytest tests/integration/test_postgres_backup_restore.py -v --tb=short
+      - name: Production API with least-privilege PostgreSQL roles
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sentinelayer
+          TEST_RESTRICTED_DATABASE: "1"
+          REDIS_URL: redis://localhost:6379/0
+          PYTHONPATH: .
+        run: pytest tests/integration/test_restricted_database_runtime.py -v --tb=short
       - name: Generate repository GRC evidence
         run: |
           set -euo pipefail

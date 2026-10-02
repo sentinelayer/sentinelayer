@@ -124,6 +124,10 @@ def run_forever(interval_seconds: int | None = None, lock_path: str | None = Non
 
 
 def main() -> None:
+    if is_production():
+        from control_plane.app.infrastructure.db.session import engine, auth_engine, worker_engine
+        from control_plane.app.infrastructure.db.privileges import validate_database_roles
+        validate_database_roles(engine, auth_engine, worker_engine)
     parser = argparse.ArgumentParser(description="SentinelLayer maintenance worker")
     parser.add_argument("--once", action="store_true", help="run all jobs once and exit")
     parser.add_argument("--loop", action="store_true", help="run jobs periodically")
@@ -135,7 +139,10 @@ def main() -> None:
     if args.loop:
         run_forever(args.interval)
     else:
-        logger.info("maintenance cycle result: %s", run_once())
+        result = run_once()
+        logger.info("maintenance cycle result: %s", result)
+        if any(not value["ok"] for value in result.values()):
+            raise SystemExit(1)
 
 
 if __name__ == "__main__":

@@ -2,13 +2,16 @@
 set -eu
 printf '%s\n' "SentinelLayer single-service launcher active; gateway entrypoint enforced" >&2
 
+if [ -z "${SL_RUN_STARTUP_MIGRATION:-}" ]; then
+  SL_RUN_STARTUP_MIGRATION="$(python -c 'from control_plane.app.runtime import is_production; print("0" if is_production() else "1")')"
+  export SL_RUN_STARTUP_MIGRATION
+fi
 python /app/scripts/validate_runtime_config.py
 
-# Railway's pre-deploy hook is the normal migration path. Repeat the idempotent
-# migration here as a startup safety net so a service never becomes healthy with
-# an empty schema when the platform hook is skipped or misconfigured.
+# Production migrations run in a separate job without sharing owner credentials
+# with the API/worker processes. Development retains the optional startup migration.
 if [ "${SL_RUN_STARTUP_MIGRATION:-1}" = "1" ]; then
-  if [ -z "${DATABASE_URL:-}" ]; then
+  if [ -z "${MIGRATION_DATABASE_URL:-${DATABASE_URL:-}}" ]; then
     echo "DATABASE_URL is required for startup migration" >&2
     exit 1
   fi

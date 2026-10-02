@@ -13,7 +13,7 @@ from starlette.responses import JSONResponse
 from control_plane.app.runtime import is_production
 
 from control_plane.app.infrastructure.db.models import ApiKeyRecord, AuthSession, User
-from control_plane.app.infrastructure.db.session import SessionLocal
+from control_plane.app.infrastructure.db.session import AuthSessionLocal
 
 PUBLIC_PATHS = {
     "/",
@@ -46,7 +46,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             secret = api_key.strip()
             if len(secret) < 24:
                 return JSONResponse(status_code=401, content={"error": "Invalid API key"})
-            session_factory = getattr(request.app.state, "session_factory", SessionLocal)
+            session_factory = getattr(request.app.state, "auth_session_factory", getattr(request.app.state, "session_factory", AuthSessionLocal))
             db = session_factory()
             try:
                 digest = hashlib.sha256(secret.encode("utf-8")).hexdigest()
@@ -99,7 +99,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 return JSONResponse(status_code=401, content={"error": "Invalid token claims"})
             token_id = payload.get("jti")
             if token_id:
-                session_factory = getattr(request.app.state, "session_factory", SessionLocal)
+                session_factory = getattr(request.app.state, "auth_session_factory", getattr(request.app.state, "session_factory", AuthSessionLocal))
                 db = session_factory()
                 try:
                     now = datetime.now(UTC)

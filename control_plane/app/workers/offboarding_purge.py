@@ -6,7 +6,7 @@ import uuid
 from datetime import UTC, datetime
 
 from control_plane.app.infrastructure.db.models import Application, AuditEvent, LegalHoldRecord, OffboardingRequest, Policy, PolicyVersion
-from control_plane.app.infrastructure.db.session import SessionLocal
+from control_plane.app.infrastructure.db.session import WorkerSessionLocal as SessionLocal
 
 
 def _audit(db, request: OffboardingRequest, detail: dict) -> None:

@@ -2,7 +2,7 @@ import json
 from datetime import UTC, datetime
 
 from control_plane.app.infrastructure.db.models import Evidence
-from control_plane.app.infrastructure.db.session import SessionLocal
+from control_plane.app.infrastructure.db.session import WorkerSessionLocal as SessionLocal
 
 
 def expire_old_evidence() -> dict[str, int]:

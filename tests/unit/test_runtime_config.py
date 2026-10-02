@@ -25,6 +25,9 @@ def test_valid_production_config_passes() -> None:
         "SL_ENV": "production",
         "JWT_SECRET": "x" * 32,
         "DATABASE_URL": "postgresql://example",
+        "AUTH_DATABASE_URL": "postgresql://auth",
+        "WORKER_DATABASE_URL": "postgresql://worker",
+        "SL_RUN_STARTUP_MIGRATION": "0",
         "REDIS_URL": "redis://example",
         "SL_AUTO_CREATE_SCHEMA": "0",
         "KMS_KEY": "managed-by-secret-manager",
@@ -59,3 +62,10 @@ def test_provenance_rejects_invalid_or_mismatched_digests():
                       "SL_APPROVED_ARTIFACT_HASH": "a" * 64,
                       "SL_RUNNING_ARTIFACT_HASH": "b" * 64})
     assert "Running artifact does not match the approved artifact digest" in errors
+
+
+def test_production_runtime_rejects_migration_credentials():
+    errors = validate({"SL_ENV": "production", "MIGRATION_DATABASE_URL": "postgresql://migration",
+                       "SL_RUN_STARTUP_MIGRATION": "1"})
+    assert "Migration credentials must not be exposed to the production runtime" in errors
+    assert "SL_RUN_STARTUP_MIGRATION must be 0 in production; use a separate migration job" in errors

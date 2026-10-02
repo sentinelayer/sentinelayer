@@ -15,7 +15,7 @@ from urllib.request import HTTPHandler, HTTPSHandler, HTTPRedirectHandler, Proxy
 from sqlalchemy import or_
 
 from control_plane.app.infrastructure.db.models import WebhookDelivery, WebhookRegistration
-from control_plane.app.infrastructure.db.session import SessionLocal
+from control_plane.app.infrastructure.db.session import WorkerSessionLocal as SessionLocal
 from control_plane.app.infrastructure.kms.client import KMSClient
 
 MAX_ATTEMPTS = max(1, int(os.getenv("WEBHOOK_DELIVERY_MAX_ATTEMPTS", "5")))

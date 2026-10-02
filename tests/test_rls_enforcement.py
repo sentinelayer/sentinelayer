@@ -13,6 +13,7 @@ def test_migrated_tenant_tables_have_rls_policies():
     if engine.dialect.name != "postgresql" or os.getenv("TEST_POSTGRES_RLS") != "1":
         pytest.skip("requires disposable PostgreSQL with TEST_POSTGRES_RLS=1")
     tenant_tables = {table.name for table in Base.metadata.tables.values() if "tenant_id" in table.c}
+    tenant_tables.add("tenants")
     assert tenant_tables
     with engine.connect() as connection:
         for name in sorted(tenant_tables):
@@ -21,9 +22,12 @@ def test_migrated_tenant_tables_have_rls_policies():
             ), {"name": name})
             assert enabled is True, f"RLS missing for {name}"
             policies = connection.execute(text(
-                "SELECT qual, with_check FROM pg_policies WHERE schemaname = 'public' AND tablename = :name"
+                "SELECT qual, with_check, roles FROM pg_policies WHERE schemaname = 'public' AND tablename = :name"
             ), {"name": name}).all()
             assert policies, f"Tenant policy missing for {name}"
-            for read, write in policies:
+            assert any("app.tenant_id" in (read or "") for read, write, roles in policies)
+            for read, write, roles in policies:
+                if set(roles).issubset({"sentinel_auth", "sentinel_worker"}):
+                    continue
                 assert "app.tenant_id" in (read or ""), f"Read policy unscoped for {name}"
                 assert "app.tenant_id" in (write or ""), f"Write policy unscoped for {name}"

@@ -27,6 +27,14 @@ def validate(env: dict[str, str] | None = None) -> list[str]:
         errors.append("JWT_SECRET must be at least 32 bytes in production")
     if production and not values.get("DATABASE_URL", "").strip():
         errors.append("DATABASE_URL is required in production")
+    if production:
+        for name in ("AUTH_DATABASE_URL", "WORKER_DATABASE_URL"):
+            if not values.get(name, "").strip():
+                errors.append(f"{name} is required in production")
+        if values.get("SL_RUN_STARTUP_MIGRATION", "0") != "0":
+            errors.append("SL_RUN_STARTUP_MIGRATION must be 0 in production; use a separate migration job")
+        if values.get("MIGRATION_DATABASE_URL", "").strip():
+            errors.append("Migration credentials must not be exposed to the production runtime")
     if production and not values.get("REDIS_URL", "").strip():
         errors.append("REDIS_URL is required in production")
     if production and values.get("SL_AUTO_CREATE_SCHEMA", "0") != "0":

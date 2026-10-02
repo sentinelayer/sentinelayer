@@ -72,6 +72,7 @@ async def test_production_never_creates_schema_by_default(monkeypatch, name, val
     def unexpected(*_args, **_kwargs):
         pytest.fail("Production must use migrations, not create_all")
 
+    monkeypatch.setattr(lifecycle, "validate_database_roles", lambda *_args: None)
     monkeypatch.setattr(lifecycle.Base.metadata, "create_all", unexpected)
     monkeypatch.setattr(lifecycle, "engine", SimpleNamespace(dispose=lambda: None))
     async with lifecycle.lifespan(None):
@@ -99,3 +100,20 @@ async def test_engine_is_disposed_when_application_raises(monkeypatch):
         async with lifecycle.lifespan(None):
             raise ValueError("application failure")
     assert calls == ["disposed"]
+
+
+@pytest.mark.asyncio
+async def test_production_rejects_unsafe_database_role_before_serving(monkeypatch):
+    monkeypatch.setenv("SL_ENV", "production")
+    monkeypatch.setenv("SL_AUTO_CREATE_SCHEMA", "0")
+    monkeypatch.delenv("MIGRATION_DATABASE_URL", raising=False)
+    monkeypatch.setenv("SL_ENFORCE_PROVENANCE", "0")
+    monkeypatch.setattr(lifecycle.provenance, "verify", lambda: {"verified": True})
+
+    def reject(*_args):
+        raise RuntimeError("runtime database role has elevated privileges")
+
+    monkeypatch.setattr(lifecycle, "validate_database_roles", reject)
+    with pytest.raises(RuntimeError, match="elevated privileges"):
+        async with lifecycle.lifespan(None):
+            pytest.fail("Production must not serve with an owner/superuser runtime identity")

@@ -10,7 +10,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from control_plane.app.runtime import is_production
 from control_plane.app.infrastructure.db.models import AuthSession, User
-from control_plane.app.infrastructure.db.session import SessionLocal
+from control_plane.app.infrastructure.db.session import AuthSessionLocal
 
 router = APIRouter(prefix="/events-ws", tags=["events"])
 JWT_SECRET = os.getenv("JWT_SECRET")
@@ -69,7 +69,7 @@ def _claims(websocket: WebSocket) -> tuple[str, str] | None:
     if not user_id or not tenant_id:
         return None
     if token_id := payload.get("jti"):
-        session_factory = getattr(websocket.app.state, "session_factory", SessionLocal)
+        session_factory = getattr(websocket.app.state, "auth_session_factory", getattr(websocket.app.state, "session_factory", AuthSessionLocal))
         db = session_factory()
         try:
             session = db.query(AuthSession).filter(

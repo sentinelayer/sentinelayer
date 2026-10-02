@@ -3,7 +3,6 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-preDeployCommand = "PYTHONPATH=/app alembic -c alembic.ini upgrade head"
 startCommand = "/app/scripts/start_single_service.sh"
 healthcheckPath = "/health"
 restartPolicyType = "ON_FAILURE"

@@ -86,13 +86,14 @@ npm --prefix dashboard run build
 pytest -m "not integration" -q
 ```
 
-Gateway production membutuhkan `JWT_SECRET` minimal 32 byte dan koneksi Redis. Schema production dimigrasikan melalui Railway pre-deploy command. Secret harus dibuat, disimpan, dan dirotasi melalui secret manager atau KMS yang sesuai.
+Gateway production membutuhkan `JWT_SECRET` minimal 32 byte dan koneksi Redis. Schema production dimigrasikan oleh job terpisah; kredensial migration tidak diberikan ke API/worker. Gunakan tiga role PostgreSQL sesuai [panduan database](docs/operations/database-roles.md). Secret harus dibuat, disimpan, dan dirotasi melalui secret manager atau KMS yang sesuai.
 
 ## Environment yang perlu diperhatikan
 
 | Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | PostgreSQL connection |
+| `DATABASE_URL` | Tenant-scoped PostgreSQL runtime role |
+| `AUTH_DATABASE_URL` / `WORKER_DATABASE_URL` | Dedicated authentication / maintenance roles in production |
 | `REDIS_URL` / `REDIS_ADDR` | Runtime state dan rate limiting |
 | `JWT_SECRET` | Session/token signing; minimal 32 byte |
 | `METRICS_TOKEN` | Proteksi endpoint metrics |
@@ -107,6 +108,7 @@ Gateway production membutuhkan `JWT_SECRET` minimal 32 byte dan koneksi Redis. S
 | OpenAPI specification | [`docs/api/openapi-control-plane.yaml`](docs/api/openapi-control-plane.yaml) |
 | Architecture | [`docs/architecture/`](docs/architecture/) |
 | Operations | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) |
+| Production database roles | [`docs/operations/database-roles.md`](docs/operations/database-roles.md) |
 | Remediation evidence | [`docs/operations/remediation-2026-10-02.md`](docs/operations/remediation-2026-10-02.md) |
 | Production readiness | [`docs/operations/production-readiness.md`](docs/operations/production-readiness.md) |
 | Webhook security | [`docs/api/webhook-security.md`](docs/api/webhook-security.md) |
