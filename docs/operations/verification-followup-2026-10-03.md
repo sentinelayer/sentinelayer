@@ -22,4 +22,12 @@ Capacity profiles use synthetic X-Tenant-ID scoping and distinct paths; they do 
 
 ## Remaining gates
 
-This follow-up is not general-availability certification. Representative held-out detection/false-positive calibration, deployed sustained tenant capacity, managed failover, real alert recipient delivery, independent off-account recovery/key custody/retention, and independent security/legal review remain open. Synthetic WAF samples are regression tests, not customer accuracy evidence. PostgreSQL CI and the new deployed grant-aware restore must be checked before claiming those checks passed.
+This follow-up is not general-availability certification. Representative held-out detection/false-positive calibration, deployed sustained tenant capacity, managed failover, real alert recipient delivery, independent off-account recovery/key custody/retention, and independent security/legal review remain open. Synthetic WAF samples are regression tests, not customer accuracy evidence. 
+
+## Deployed verification
+
+Code commit `5074470f169928745773fc23720aa228fd5759f5`: all seven GitHub workflows succeeded, including full PostgreSQL schema/grant restore. API deployment `5c08cc7a-cdf2-4d6f-be01-89c3bc0db3be` succeeded; runtime UID1000, durable policy floor3, Redis engines and database readiness passed. Live health/readiness 200, signed deny403, boundary200.
+
+Backup restore deployment `c76b8300-b2ff-4ca5-bcc1-7e73c962ece9` authenticated encrypted bucket readback, restored33 tables at schema0028, matched snapshot counts, reapplied restricted grants and passed runtime tenant isolation/auth/worker reads. Temporary database removed. Private verification deployment `f4330caa-71c5-4224-abea-e458432b9761` passed owner MFA, deny boundaries, gateway receipt version3 and session revocation.
+
+Daily backup deployment `ea678cf7-932b-4f70-80ba-bdd0d2383ce8` succeeded with cron `0 3 * * *` restored. Drill flags were staged as0; OAuth access withholds variable values, so direct value readback is unavailable. All five services report SUCCESS. Raw non-secret proof: [deployed follow-up evidence](evidence/deployed-followup-2026-10-03.json). Daily schedule readiness does not imply tomorrow's execution has already occurred.

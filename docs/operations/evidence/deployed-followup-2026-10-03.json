@@ -1,0 +1,276 @@
+{
+  "codeCommit": "5074470f169928745773fc23720aa228fd5759f5",
+  "ci": [
+    {
+      "name": "Operational Readiness",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Security Gate (Machine-Enforced + Omar)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "SBOM Attestation",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Security",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "E2E Security",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Trivy",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "CI",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "restore": {
+    "scope": "deployment",
+    "deploymentId": "c76b8300-b2ff-4ca5-bcc1-7e73c962ece9",
+    "serviceId": "21ef7aeb-2c9d-4b04-9b18-06038e7e793f",
+    "environmentId": "e0d9905c-d4fe-47ca-ac76-f02ac46b0011",
+    "status": "SUCCESS",
+    "deploy": [
+      {
+        "timestamp": "2026-10-03T10:10:06.524871072Z",
+        "severity": "info",
+        "message": "Starting Container",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:10:06.883290177Z",
+        "severity": "info",
+        "message": "Encrypted bucket backup uploaded and read-back verified",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:10:07.197145882Z",
+        "severity": "info",
+        "message": "Isolated restore PASS: 33 tables; schema 0028; snapshot row counts match",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:10:07.846280745Z",
+        "severity": "info",
+        "message": "Restored service grants and runtime tenant isolation PASS; no role passwords changed",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:10:07.888229929Z",
+        "severity": "info",
+        "message": "Disposable restore database removed",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:10:07.888232909Z",
+        "severity": "info",
+        "message": "Backup job completed",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      }
+    ]
+  },
+  "pilot": {
+    "scope": "deployment",
+    "deploymentId": "f4330caa-71c5-4224-abea-e458432b9761",
+    "serviceId": "d1e423e0-422a-406b-a147-013a978d5a71",
+    "environmentId": "e0d9905c-d4fe-47ca-ac76-f02ac46b0011",
+    "status": "SUCCESS",
+    "deploy": [
+      {
+        "timestamp": "2026-10-03T10:10:59.627013651Z",
+        "severity": "info",
+        "message": "Starting Container",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:11:00.183529562Z",
+        "severity": "info",
+        "message": "Owner MFA enforcement and authenticated pilot access PASS",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:11:00.183532822Z",
+        "severity": "info",
+        "message": "Signed deny rule and path boundary PASS",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:11:00.183536022Z",
+        "severity": "info",
+        "message": "Authenticated gateway receipt PASS: version 3",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:11:00.183539142Z",
+        "severity": "info",
+        "message": "PILOT_VERIFIED_VERSION=3",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:11:00.183542182Z",
+        "severity": "info",
+        "message": "Pilot verification completed; owner session revoked",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      }
+    ]
+  },
+  "backupConfig": {
+    "source": {
+      "repo": "sentinelayer/sentinelayer",
+      "branch": "main",
+      "commitSha": "5074470f169928745773fc23720aa228fd5759f5"
+    },
+    "build": {
+      "builder": "DOCKERFILE",
+      "buildEnvironment": "V3",
+      "dockerfilePath": "Dockerfile.backup"
+    },
+    "deploy": {
+      "startCommand": "/opt/backup/bin/python /app/backup_to_bucket.py",
+      "restartPolicyType": "NEVER",
+      "useLegacyStacker": false,
+      "ipv6EgressEnabled": false,
+      "cronSchedule": "0 3 * * *",
+      "runtime": "V2",
+      "multiRegionConfig": {
+        "sfo": {
+          "numReplicas": 1
+        }
+      }
+    }
+  },
+  "services": [
+    {
+      "name": "sentinelayer",
+      "latestDeployment": {
+        "id": "5c08cc7a-cdf2-4d6f-be01-89c3bc0db3be",
+        "status": "SUCCESS",
+        "createdAt": "2026-10-03T10:07:37.099Z",
+        "url": null
+      },
+      "cron": null
+    },
+    {
+      "name": "Redis",
+      "latestDeployment": {
+        "id": "e46fe1f8-4a58-42f5-a17c-6fd545657a38",
+        "status": "SUCCESS",
+        "createdAt": "2026-10-02T23:48:16.325Z",
+        "url": null
+      },
+      "cron": null
+    },
+    {
+      "name": "Postgres",
+      "latestDeployment": {
+        "id": "91985d3c-21d4-47c4-a566-58bfa26e15d9",
+        "status": "SUCCESS",
+        "createdAt": "2026-10-02T23:48:16.361Z",
+        "url": null
+      },
+      "cron": null
+    },
+    {
+      "name": "sentinel-migrate",
+      "latestDeployment": {
+        "id": "f4330caa-71c5-4224-abea-e458432b9761",
+        "status": "SUCCESS",
+        "createdAt": "2026-10-03T10:10:41.812Z",
+        "url": null
+      },
+      "cron": null
+    },
+    {
+      "name": "sentinel-backup",
+      "latestDeployment": {
+        "id": "ea678cf7-932b-4f70-80ba-bdd0d2383ce8",
+        "status": "SUCCESS",
+        "createdAt": "2026-10-03T10:11:52.080Z",
+        "url": null
+      },
+      "cron": "0 3 * * *"
+    }
+  ],
+  "flagVerification": "Restore flags staged as 0; OAuth withholds values, so independent value readback unavailable.",
+  "liveProbes": {
+    "health": 200,
+    "readiness": 200,
+    "signedDeny": 403,
+    "boundary": 200,
+    "policyVersion": 3
+  },
+  "limitations": "Not GA. Tenant32 capacity gate failed; real calibration, HA, independent DR, alert recipient delivery and external review remain open."
+}
