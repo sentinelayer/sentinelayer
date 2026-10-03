@@ -1,0 +1,220 @@
+{
+  "code_commit": "93eb862e3dbfa65f10e0e7f1021b6996c9cf2805",
+  "scope": "Technical verification; not production/GA approval",
+  "local_python": {
+    "passed": 151,
+    "integration_deferred_to_ci": 14
+  },
+  "ci": [
+    {
+      "id": 37092170549,
+      "name": "Operational Readiness",
+      "conclusion": "success"
+    },
+    {
+      "id": 37092170511,
+      "name": "Security Gate (Machine-Enforced + Omar)",
+      "conclusion": "success"
+    },
+    {
+      "id": 37092170551,
+      "name": "Trivy",
+      "conclusion": "success"
+    },
+    {
+      "id": 37092170509,
+      "name": "Security",
+      "conclusion": "success"
+    },
+    {
+      "id": 37092170577,
+      "name": "SBOM Attestation",
+      "conclusion": "success"
+    },
+    {
+      "id": 37092170611,
+      "name": "E2E Security",
+      "conclusion": "success"
+    },
+    {
+      "id": 37092170507,
+      "name": "CI",
+      "conclusion": "success"
+    }
+  ],
+  "ci_jobs": [
+    {
+      "name": "cloudflare-checks",
+      "conclusion": "success",
+      "steps": []
+    },
+    {
+      "name": "unit",
+      "conclusion": "success",
+      "steps": []
+    },
+    {
+      "name": "docker-image",
+      "conclusion": "success",
+      "steps": []
+    },
+    {
+      "name": "e2e-gateway",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Run Gateway E2E",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run engine outage and recovery drill",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run signed control-plane policy Gateway E2E",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run tenant host routing and policy receipt E2E",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "gateway",
+      "conclusion": "success",
+      "steps": []
+    },
+    {
+      "name": "security-integration",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "BOLA + tenant matrix",
+          "conclusion": "success"
+        },
+        {
+          "name": "PostgreSQL RLS isolation evidence",
+          "conclusion": "success"
+        },
+        {
+          "name": "Real PostgreSQL backup and restore",
+          "conclusion": "success"
+        },
+        {
+          "name": "Production API with least-privilege PostgreSQL roles",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "deployment": {
+    "id": "c1a05acb-79d5-43cf-8d02-ab14a32c7603",
+    "status": "SUCCESS",
+    "proof": [
+      {
+        "timestamp": "2026-10-03T03:11:41.480052818Z",
+        "message": "SentinelLayer runtime uid=1000"
+      },
+      {
+        "timestamp": "2026-10-03T03:11:41.480062888Z",
+        "message": "runtime configuration validation passed"
+      },
+      {
+        "timestamp": "2026-10-03T03:11:41.480072567Z",
+        "message": "INFO:     Started parent process [8]"
+      },
+      {
+        "timestamp": "2026-10-03T03:11:41.480081097Z",
+        "message": "INFO:     Started parent process [9]"
+      },
+      {
+        "timestamp": "2026-10-03T03:11:41.752964711Z",
+        "message": "INFO:     Started server process [17]"
+      },
+      {
+        "timestamp": "2026-10-03T03:11:41.781036700Z",
+        "message": "INFO:     Started server process [14]"
+      },
+      {
+        "timestamp": "2026-10-03T03:11:41.796946670Z",
+        "message": "INFO:     Started server process [15]"
+      },
+      {
+        "timestamp": "2026-10-03T03:11:41.809370494Z",
+        "message": "INFO:     Started server process [18]"
+      },
+      {
+        "timestamp": "2026-10-03T03:11:42.087206797Z",
+        "message": "INFO:     Started server process [7]"
+      },
+      {
+        "timestamp": "2026-10-03T03:11:43.003615569Z",
+        "message": "2026/10/03 03:11:42 Loaded durable policy version floor: policy=6f01d176-58df-4e6a-bbd0-5be014259cee version=3"
+      }
+    ]
+  },
+  "pilot": {
+    "id": "b8b8c2d5-1754-4102-87bf-7646c5a1502b",
+    "status": "SUCCESS",
+    "checks": [
+      {
+        "timestamp": "2026-10-03T03:17:03.123426600Z",
+        "message": "Starting Container"
+      },
+      {
+        "timestamp": "2026-10-03T03:17:04.598533016Z",
+        "message": "Owner MFA enforcement and authenticated pilot access PASS"
+      },
+      {
+        "timestamp": "2026-10-03T03:17:04.598538107Z",
+        "message": "Signed deny rule and path boundary PASS"
+      },
+      {
+        "timestamp": "2026-10-03T03:17:04.598542656Z",
+        "message": "Authenticated gateway receipt PASS: version 3"
+      },
+      {
+        "timestamp": "2026-10-03T03:17:04.598548499Z",
+        "message": "PILOT_VERIFIED_VERSION=3"
+      },
+      {
+        "timestamp": "2026-10-03T03:17:04.598553453Z",
+        "message": "Pilot verification completed; owner session revoked"
+      }
+    ]
+  },
+  "public_smoke": [
+    {
+      "path": "/api/v1/health/readiness",
+      "status": 200
+    },
+    {
+      "path": "/__sentinel_policy_probe__",
+      "status": 403,
+      "reason": "signed_policy"
+    },
+    {
+      "path": "/__sentinel_policy_probe__-boundary",
+      "status": 200
+    }
+  ],
+  "policy_version": "6f01d176-58df-4e6a-bbd0-5be014259cee:3",
+  "daily_backup": {
+    "deployment_id": "b8bd86f6-dbc8-4497-bc17-8c328871be9a",
+    "started_at": "2026-10-03T03:04:09.136298356Z",
+    "completed_at": "2026-10-03T03:04:10.949900842Z",
+    "checks": [
+      "Encrypted bucket backup uploaded and read-back verified",
+      "Backup job completed"
+    ]
+  },
+  "memory_snapshot_gb": 0.434200576,
+  "open_gates": [
+    "32-concurrency local processing latency exceeds strict 20ms target",
+    "Representative held-out/customer detection and false-positive calibration",
+    "Sustained deployment capacity and availability evidence",
+    "Managed infrastructure failure/replacement restore, alert delivery and independent DR copy/key custody",
+    "Independent security/legal review and genuine customer acceptance when required for GA"
+  ]
+}

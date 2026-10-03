@@ -145,3 +145,24 @@ They do not establish sustained Railway capacity or justify ignoring the failed
 host routing, tenant mismatch and signature-tamper E2E all passed with the two
 worker configuration. Development without Redis defaults to one worker; explicit
 two-worker configuration requires shared Redis state.
+
+## Deployed verification
+
+Code commit `93eb862e3dbfa65f10e0e7f1021b6996c9cf2805` passed all seven GitHub
+workflows. API deployment `c1a05acb-79d5-43cf-8d02-ab14a32c7603` succeeded,
+ran as UID 1000, started four engine workers, and loaded persistent policy floor
+3. Public readiness returned 200; signed deny probe returned 403; its allowed
+boundary returned 200, all with the expected policy version header.
+
+Fresh private verification deployment `b8b8c2d5-1754-4102-87bf-7646c5a1502b`
+passed actual owner MFA enforcement/login, signed deny/boundary, authenticated
+gateway receipt version 3, and logout session revocation. No policy hot update
+or bootstrap was run during this final verification.
+
+The daily encrypted backup actually ran on 2026-10-03 at 03:04 UTC (10:04 WIB),
+with upload/read-back verification and completed-job logs. The earlier disposable
+restore drill is separate evidence; today's daily run did not perform a restore.
+The post-deployment memory snapshot was 0.434 GB at low traffic, not a load-test
+memory guarantee. Curated deployment, CI and verification evidence is retained
+in `evidence/deployed-verification-2026-10-03.json`. Open production gates above
+remain open; neither these checks nor successful CI establish full GA readiness.
