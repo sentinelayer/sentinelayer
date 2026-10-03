@@ -16,3 +16,9 @@ Offline WAF calibration now accepts sanitized labelled corpora and reports per-c
 ## Acceptance
 
 Resource-bounded history and queue delivery mechanics are verified in the described scope. Overall production acceptance remains open: repeatable sustained deployed tenant performance, representative held-out customer calibration, managed failover, actual recipient alert delivery, independent recovery/key custody/retention, and external security/legal review. Do not promise20ms or an SLA from these results.
+
+## Published and deployed evidence
+
+Code commit `82adaa95bced5da18aeec3da4ccaf5f82b8490f1`: all seven CI workflows succeeded. Local suite: 155 unit tests passed, 17 integration tests deselected; real Redis integration tests and gateway drills were run separately and passed. Go tests and vet passed, including calibration label validation and confidence bounds.
+
+API deployment `debc5dcf-a7c1-4153-b66c-cd3d0747c186` succeeded using the explicit Dockerfile builder, runtime UID 1000, healthy database/Redis engines and durable policy floor 3. Live health/readiness returned 200, signed deny 403, and path boundary 200. Private verifier `6b07a449-b956-4cf0-840e-406c180efbec` passed owner MFA, signed deny boundary, authenticated receipt version 3 and session revocation. All five services report SUCCESS. Existing daily backup remains scheduled at `0 3 * * *`; it was not rerun by this behavior-only deployment. [Non-secret deployment evidence](evidence/deployed-behavior-2026-10-03.json).

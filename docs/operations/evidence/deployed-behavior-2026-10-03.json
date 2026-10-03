@@ -1,0 +1,554 @@
+{
+  "codeCommit": "82adaa95bced5da18aeec3da4ccaf5f82b8490f1",
+  "ci": [
+    {
+      "name": "Trivy",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Operational Readiness",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Security Gate (Machine-Enforced + Omar)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Security",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "E2E Security",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "SBOM Attestation",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "CI",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "liveProbes": [
+    {
+      "path": "/health",
+      "status": 200,
+      "policy_version": null
+    },
+    {
+      "path": "/api/v1/health/readiness",
+      "status": 200,
+      "policy_version": "6f01d176-58df-4e6a-bbd0-5be014259cee:3"
+    },
+    {
+      "path": "/__sentinel_policy_probe__",
+      "status": 403,
+      "policy_version": "6f01d176-58df-4e6a-bbd0-5be014259cee:3"
+    },
+    {
+      "path": "/__sentinel_policy_probe__-boundary",
+      "status": 200,
+      "policy_version": "6f01d176-58df-4e6a-bbd0-5be014259cee:3"
+    }
+  ],
+  "api": {
+    "scope": "deployment",
+    "deploymentId": "debc5dcf-a7c1-4153-b66c-cd3d0747c186",
+    "serviceId": "6ae394a6-fe80-47e0-b68a-ff07017c88c9",
+    "environmentId": "e0d9905c-d4fe-47ca-ac76-f02ac46b0011",
+    "status": "SUCCESS",
+    "deploy": [
+      {
+        "timestamp": "2026-10-03T10:53:53.497202226Z",
+        "severity": "info",
+        "message": "Mounting volume on: /var/lib/containers/railwayapp/bind-mounts/cba27143-fca8-4052-8343-0b8a5768cc03/vol_s2z8wv8nclu79r95",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:53.497309356Z",
+        "severity": "info",
+        "message": "Starting Container",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.252830751Z",
+        "severity": "info",
+        "message": "runtime configuration validation passed",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.252837041Z",
+        "severity": "error",
+        "message": "INFO:     Uvicorn running on http://127.0.0.1:8090 (Press CTRL+C to quit)",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.252841101Z",
+        "severity": "error",
+        "message": "INFO:     Started parent process [8]",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.252845161Z",
+        "severity": "error",
+        "message": "INFO:     Uvicorn running on http://127.0.0.1:8091 (Press CTRL+C to quit)",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.252848071Z",
+        "severity": "error",
+        "message": "INFO:     Started parent process [9]",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.252905830Z",
+        "severity": "info",
+        "message": "Dedicated policy volume initialized; dropping runtime privileges",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.252909520Z",
+        "severity": "error",
+        "message": "SentinelLayer runtime uid=1000",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.252912970Z",
+        "severity": "error",
+        "message": "SentinelLayer single-service launcher active; gateway entrypoint enforced",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.689961091Z",
+        "severity": "error",
+        "message": "INFO:     Started server process [14]",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.689968381Z",
+        "severity": "error",
+        "message": "INFO:     Waiting for application startup.",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.689972661Z",
+        "severity": "error",
+        "message": "INFO:     Application startup complete.",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.701188838Z",
+        "severity": "error",
+        "message": "INFO:     Started server process [15]",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.701192208Z",
+        "severity": "error",
+        "message": "INFO:     Waiting for application startup.",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.703603233Z",
+        "severity": "error",
+        "message": "INFO:     Application startup complete.",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.776610011Z",
+        "severity": "error",
+        "message": "INFO:     Started server process [17]",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.776612691Z",
+        "severity": "error",
+        "message": "INFO:     Waiting for application startup.",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.776615741Z",
+        "severity": "error",
+        "message": "INFO:     Application startup complete.",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.793790030Z",
+        "severity": "error",
+        "message": "INFO:     Started server process [18]",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.793799360Z",
+        "severity": "error",
+        "message": "INFO:     Waiting for application startup.",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.793805520Z",
+        "severity": "error",
+        "message": "INFO:     Application startup complete.",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:54.965693965Z",
+        "severity": "error",
+        "message": "INFO:sentinelayer.maintenance:maintenance cycle completed: {'evidence_expiry': {'ok': True, 'expired': 0}, 'offboarding_purge': {'ok': True, 'purged': 0}, 'webhook_delivery': {'ok': True, 'delivered': 0, 'retried': 0, 'dead_letter': 0}}",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:55.054007075Z",
+        "severity": "error",
+        "message": "INFO:     Started server process [7]",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:55.054011295Z",
+        "severity": "error",
+        "message": "INFO:     Waiting for application startup.",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:55.276013463Z",
+        "severity": "error",
+        "message": "INFO:     Application startup complete.",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:55.276017643Z",
+        "severity": "error",
+        "message": "INFO:     Uvicorn running on http://127.0.0.1:8005 (Press CTRL+C to quit)",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:55.649881139Z",
+        "severity": "info",
+        "message": "INFO:     127.0.0.1:35934 - \"GET /api/v1/health/readiness HTTP/1.1\" 200 OK",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:55.815602727Z",
+        "severity": "info",
+        "message": "INFO:     127.0.0.1:35938 - \"GET /api/v1/health/readiness HTTP/1.1\" 200 OK",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:55.996575448Z",
+        "severity": "error",
+        "message": "2026/10/03 10:53:55 Coraza WAF initialized",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:55.996581978Z",
+        "severity": "error",
+        "message": "2026/10/03 10:53:55 Loaded durable policy version floor: policy=6f01d176-58df-4e6a-bbd0-5be014259cee version=3",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:53:55.996586408Z",
+        "severity": "error",
+        "message": "2026/10/03 10:53:55 Gateway :8080 — full pipeline + risk HTTP client",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"error\""
+          }
+        ]
+      }
+    ]
+  },
+  "pilot": {
+    "scope": "deployment",
+    "deploymentId": "6b07a449-b956-4cf0-840e-406c180efbec",
+    "serviceId": "d1e423e0-422a-406b-a147-013a978d5a71",
+    "environmentId": "e0d9905c-d4fe-47ca-ac76-f02ac46b0011",
+    "status": "SUCCESS",
+    "deploy": [
+      {
+        "timestamp": "2026-10-03T10:55:41.406058684Z",
+        "severity": "info",
+        "message": "Starting Container",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:55:41.912687305Z",
+        "severity": "info",
+        "message": "Owner MFA enforcement and authenticated pilot access PASS",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:55:41.912692765Z",
+        "severity": "info",
+        "message": "Signed deny rule and path boundary PASS",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:55:41.912697005Z",
+        "severity": "info",
+        "message": "Authenticated gateway receipt PASS: version 3",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:55:41.912701145Z",
+        "severity": "info",
+        "message": "PILOT_VERIFIED_VERSION=3",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      },
+      {
+        "timestamp": "2026-10-03T10:55:41.912705325Z",
+        "severity": "info",
+        "message": "Pilot verification completed; owner session revoked",
+        "attributes": [
+          {
+            "key": "level",
+            "value": "\"info\""
+          }
+        ]
+      }
+    ]
+  },
+  "services": [
+    {
+      "name": "sentinelayer",
+      "latestDeployment": {
+        "id": "debc5dcf-a7c1-4153-b66c-cd3d0747c186",
+        "status": "SUCCESS",
+        "createdAt": "2026-10-03T10:52:44.927Z",
+        "url": null
+      },
+      "cron": null
+    },
+    {
+      "name": "Redis",
+      "latestDeployment": {
+        "id": "e46fe1f8-4a58-42f5-a17c-6fd545657a38",
+        "status": "SUCCESS",
+        "createdAt": "2026-10-02T23:48:16.325Z",
+        "url": null
+      },
+      "cron": null
+    },
+    {
+      "name": "Postgres",
+      "latestDeployment": {
+        "id": "91985d3c-21d4-47c4-a566-58bfa26e15d9",
+        "status": "SUCCESS",
+        "createdAt": "2026-10-02T23:48:16.361Z",
+        "url": null
+      },
+      "cron": null
+    },
+    {
+      "name": "sentinel-migrate",
+      "latestDeployment": {
+        "id": "6b07a449-b956-4cf0-840e-406c180efbec",
+        "status": "SUCCESS",
+        "createdAt": "2026-10-03T10:55:26.385Z",
+        "url": null
+      },
+      "cron": null
+    },
+    {
+      "name": "sentinel-backup",
+      "latestDeployment": {
+        "id": "ea678cf7-932b-4f70-80ba-bdd0d2383ce8",
+        "status": "SUCCESS",
+        "createdAt": "2026-10-03T10:11:52.080Z",
+        "url": null
+      },
+      "cron": "0 3 * * *"
+    }
+  ],
+  "productionAcceptance": "open",
+  "performanceGate": "failed; see retained 8/32 concurrency reports",
+  "customerAccuracy": "not evaluated; synthetic WAF regression only",
+  "alertDelivery": "isolated local receiver verified; real production recipient not verified"
+}
