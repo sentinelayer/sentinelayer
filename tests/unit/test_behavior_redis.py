@@ -1,5 +1,6 @@
 """Threshold equivalence, expiry, sequence and scope against disposable Redis."""
 import os
+import asyncio
 import uuid
 import pytest
 from engine.behavior.server import BehaviorRequest, SharedBehaviorState
@@ -43,6 +44,12 @@ def test_bounded_behavior_preserves_window_thresholds_and_scope(monkeypatch):
             clock[0] += .1
             result = state.analyze(BehaviorRequest(tenant_id=tenant, client_id="actor-b", endpoint=endpoint))
         assert result["sequence"]["signals"] == ["sequence_fraud"]
+        async def check_async():
+            result = await state.analyze_async(other)
+            assert result["sequence"]["signals"] == ["sequence_fraud"]
+            assert result["frequency"]["count"] == 5
+            await state.close_async()
+        asyncio.run(check_async())
         assert all(state.redis_client.zcard(key) <= 51 for key in keys)
     finally:
         state.redis_client.delete(*keys)

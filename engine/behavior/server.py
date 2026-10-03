@@ -5,17 +5,28 @@ import json
 import os
 import time
 import uuid
+from contextlib import asynccontextmanager
 from control_plane.app.runtime import is_production
 
 from typing import Any
 
 import redis
+import redis.asyncio as async_redis
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from engine.behavior import behavior_engine
 
-app = FastAPI(title="SentinelLayer Behavior Engine", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(_app):
+    try:
+        yield
+    finally:
+        await state.close_async()
+
+
+app = FastAPI(title="SentinelLayer Behavior Engine", version="1.0.0", lifespan=lifespan)
 
 # The newest 51 timestamps suffice to distinguish every frequency threshold;
 # only the newest 50 actions participate in sequence detection.
@@ -46,11 +57,14 @@ class BehaviorRequest(BaseModel):
 class SharedBehaviorState:
     def __init__(self) -> None:
         self.redis_client: redis.Redis | None = None
+        self.async_client: async_redis.Redis | None = None
         configured_url = os.getenv("REDIS_URL", "").strip()
         production = is_production()
         if configured_url:
             self.redis_client = redis.Redis.from_url(configured_url, decode_responses=True, socket_connect_timeout=0.2,
-                socket_timeout=0.2, retry_on_timeout=False)
+                socket_timeout=0.2, retry_on_timeout=False, max_connections=64)
+            self.async_client = async_redis.Redis.from_url(configured_url, decode_responses=True,
+                socket_connect_timeout=0.2, socket_timeout=0.2, retry_on_timeout=False, max_connections=64)
         elif production:
             raise RuntimeError("REDIS_URL is required for shared behavior state in production")
 
@@ -91,6 +105,26 @@ class SharedBehaviorState:
         except redis.RedisError as exc:
             raise HTTPException(status_code=503, detail="shared behavior state unavailable") from exc
 
+        return self._result(count, entries)
+
+    async def analyze_async(self, req: BehaviorRequest) -> dict[str, Any]:
+        if self.async_client is None:
+            return self.analyze(req)
+        now = time.time()
+        key = f"sl:behavior:actions:{self._scoped_actor(req)}"
+        member = json.dumps({"endpoint": req.endpoint, "timestamp": now, "nonce": uuid.uuid4().hex}, sort_keys=True)
+        try:
+            count, entries = await self.async_client.eval(_OBSERVE_ACTION, 1, key, now, now - 300, member)
+        except redis.RedisError as exc:
+            raise HTTPException(status_code=503, detail="shared behavior state unavailable") from exc
+        return self._result(int(count), entries)
+
+    async def close_async(self):
+        if self.async_client is not None:
+            await self.async_client.aclose()
+
+    @classmethod
+    def _result(cls, count, entries) -> dict[str, Any]:
         actions: list[str] = []
         for raw in entries[-50:]:
             try:
@@ -106,7 +140,7 @@ class SharedBehaviorState:
             frequency = {"is_anomaly": True, "reason": "elevated_request_rate_5m", "confidence": 0.65, "signals": ["freq_elevated"], "count": count}
         frequency["count_is_lower_bound"] = count == 51
         frequency["retained_count_limit"] = 51
-        sequence = self._sequence_anomaly(actions)
+        sequence = cls._sequence_anomaly(actions)
         signals = list(dict.fromkeys([*(frequency["signals"]), *(sequence["signals"])]))
         return {
             "is_anomaly": bool(frequency["is_anomaly"] or sequence["is_anomaly"]),
@@ -125,20 +159,20 @@ def _scoped_actor(req: BehaviorRequest) -> str:
 
 
 @app.get("/health")
-def health() -> dict[str, Any]:
-    if state.redis_client is not None:
+async def health() -> dict[str, Any]:
+    if state.async_client is not None:
         try:
-            state.redis_client.ping()
+            await state.async_client.ping()
         except redis.RedisError as exc:
             raise HTTPException(status_code=503, detail={"status": "not_ready", "behavior_store": "unavailable"}) from exc
     return {"status": "healthy", "service": "behavior-engine", "version": "1.0.0", "state_store": "redis" if state.redis_client else "memory-dev-only"}
 
 
 @app.post("/v1/analyze")
-def analyze(req: BehaviorRequest) -> dict[str, Any]:
+async def analyze(req: BehaviorRequest) -> dict[str, Any]:
     if not req.tenant_id and not req.client_id and not req.user_id and not req.session_id:
         raise HTTPException(status_code=400, detail="behavior scope is required")
-    result = state.analyze(req)
+    result = await state.analyze_async(req)
     result["engine_version"] = "1.0.0"
     return result
 

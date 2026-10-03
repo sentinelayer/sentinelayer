@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import redis
+import redis.asyncio as async_redis
 from engine.risk.signal_catalog import SignalCatalog
 
 
@@ -48,10 +49,13 @@ class RiskCorrelation:
         self.signals = defaultdict(list)
         self.correlation_window = 60
         self._redis = None
+        self._async_redis = None
         configured_url = redis_url or os.getenv("REDIS_URL", "").strip()
         if configured_url:
             self._redis = redis.Redis.from_url(configured_url, decode_responses=True, socket_connect_timeout=0.2,
-                socket_timeout=0.2, retry_on_timeout=False)
+                socket_timeout=0.2, retry_on_timeout=False, max_connections=64)
+            self._async_redis = async_redis.Redis.from_url(configured_url, decode_responses=True,
+                socket_connect_timeout=0.2, socket_timeout=0.2, retry_on_timeout=False, max_connections=64)
         elif require_shared:
             raise RuntimeError("REDIS_URL is required for shared risk correlation in production")
 
@@ -129,6 +133,28 @@ class RiskCorrelation:
                 self.correlation_window + 5, *known)
         except redis.RedisError as exc:
             raise CorrelationUnavailable("shared correlation store unavailable") from exc
+        return self._observation_result(values, flat)
+
+    async def observe_async(self, tenant_id: str, signal_types: list[str], data: dict[str, Any]) -> dict[str, Any]:
+        if not tenant_id or self._async_redis is None:
+            return self.observe(tenant_id, signal_types, data)
+        now = time.time()
+        known = [signal for signal in dict.fromkeys(signal_types) if signal in SignalCatalog().signals]
+        key = self._key(tenant_id)
+        try:
+            values, flat = await self._async_redis.eval(_OBSERVE_SIGNALS, 2, key, key + ":counts", now,
+                now - self.correlation_window, int(now), int(now - self.correlation_window),
+                self.correlation_window + 5, *known)
+        except redis.RedisError as exc:
+            raise CorrelationUnavailable("shared correlation store unavailable") from exc
+        return self._observation_result(values, flat)
+
+    async def close_async(self):
+        if self._async_redis is not None:
+            await self._async_redis.aclose()
+
+    @staticmethod
+    def _observation_result(values, flat) -> dict[str, Any]:
         types = set()
         legacy_count = 0
         for raw in values:

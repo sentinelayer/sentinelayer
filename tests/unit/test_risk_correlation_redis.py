@@ -1,5 +1,6 @@
 """Run against real disposable Redis, never production state."""
 import json
+import asyncio
 import os
 import uuid
 import pytest
@@ -32,6 +33,12 @@ def test_bounded_correlation_preserves_types_counts_and_legacy(monkeypatch):
         correlation.add_signal(tenant, "auth_failure", {})
         assert correlation.correlate(tenant)["signal_count"] == 1
         assert correlation._redis.hlen(key + ":counts") == 1
+        async def check_async():
+            observed = await correlation.observe_async(tenant, ["auth_failure"], {})
+            assert observed["signal_count"] == 2
+            assert observed["types"] == ["auth_failure"]
+            await correlation.close_async()
+        asyncio.run(check_async())
         correlation.add_signal(tenant, "unknown-arbitrary-type", {})
         assert correlation._redis.zcard(key) == 1
     finally:

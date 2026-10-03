@@ -1,5 +1,9 @@
 """Owned-host signed-policy probes; credentials remain in platform secrets."""
 import copy
+import concurrent.futures
+import math
+import uuid
+from collections import Counter
 import json
 import os
 import time
@@ -10,6 +14,51 @@ import pyotp
 POLICY_ID = "6f01d176-58df-4e6a-bbd0-5be014259cee"
 DENY = "/__sentinel_policy_probe__"
 HOT = "/__sentinel_policy_hot_update__"
+
+
+def capacity_probe(client, version):
+    attempts = int(os.getenv("PILOT_CAPACITY_REQUESTS", "500"))
+    concurrency = int(os.getenv("PILOT_CAPACITY_CONCURRENCY", "8"))
+    if not 100 <= attempts <= 1000 or not 1 <= concurrency <= 32:
+        raise ValueError("Deployed capacity probe exceeds its bounded budget")
+    prefix = "/__sentinel_capacity_probe__/" + uuid.uuid4().hex
+    def sample(index):
+        started = time.perf_counter()
+        try:
+            response = client.get(f"{prefix}/{index}")
+            raw = response.headers.get("X-SL-Gateway-Processing-Ms")
+            try:
+                processing = float(raw)
+                if not math.isfinite(processing) or processing < 0:
+                    processing = None
+            except (TypeError, ValueError):
+                processing = None
+            return {"status": str(response.status_code), "processing_ms": processing,
+                    "degraded": response.headers.get("X-SL-Gateway-Degraded") != "false",
+                    "policy_match": response.headers.get("X-SL-Policy-Version") == f"{POLICY_ID}:{version}",
+                    "wall_ms": (time.perf_counter() - started) * 1000}
+        except httpx.RequestError as error:
+            return {"status": type(error).__name__, "processing_ms": None, "degraded": True,
+                    "policy_match": False, "wall_ms": (time.perf_counter() - started) * 1000}
+    started = time.perf_counter()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
+        rows = list(executor.map(sample, range(attempts)))
+    timings = sorted(row["processing_ms"] for row in rows if row["processing_ms"] is not None)
+    p95 = timings[math.ceil(len(timings)*.95)-1] if timings else None
+    report = {"attempts": attempts, "concurrency": concurrency,
+              "elapsed_seconds": time.perf_counter() - started,
+              "status_counts": dict(Counter(row["status"] for row in rows)),
+              "failures": sum(row["status"] != "200" for row in rows),
+              "degraded_responses": sum(row["degraded"] for row in rows),
+              "policy_mismatches": sum(not row["policy_match"] for row in rows),
+              "processing_samples": len(timings), "processing_p95_ms": p95,
+              "client_wall_p95_ms": sorted(row["wall_ms"] for row in rows)[math.ceil(attempts*.95)-1],
+              "scope": "Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification."}
+    report["processing_gate_pass"] = (len(timings) == attempts and p95 < 20 and not report["failures"]
+                                      and not report["degraded_responses"] and not report["policy_mismatches"])
+    print("PILOT_CAPACITY_EVIDENCE=" + json.dumps(report, sort_keys=True), flush=True)
+    print("PILOT_CAPACITY_GATE=" + ("PASS" if report["processing_gate_pass"] else "FAIL"), flush=True)
+    return report
 
 
 def main():
@@ -88,6 +137,8 @@ def main():
                 time.sleep(2)
             else:
                 raise RuntimeError("Gateway receipt did not converge")
+            if os.getenv("PILOT_CAPACITY_PROBE", "0") == "1":
+                capacity_probe(client, previous_version)
             print(f"PILOT_VERIFIED_VERSION={previous_version}", flush=True)
         finally:
             api("POST", "/auth/logout", {})

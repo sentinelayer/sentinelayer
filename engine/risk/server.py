@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 from control_plane.app.runtime import is_production
 
 from typing import Any
@@ -15,7 +16,16 @@ from engine.risk.decision_matrix import DecisionMatrix
 from engine.risk.engine import RiskEngine
 from engine.risk.signal_catalog import SignalCatalog
 
-app = FastAPI(title="SentinelLayer Risk Engine", version="1.1.0")
+
+@asynccontextmanager
+async def lifespan(_app):
+    try:
+        yield
+    finally:
+        await correlation.close_async()
+
+
+app = FastAPI(title="SentinelLayer Risk Engine", version="1.1.0", lifespan=lifespan)
 engine = RiskEngine()
 matrix = DecisionMatrix()
 correlation = RiskCorrelation(
@@ -58,10 +68,10 @@ class RiskResponse(BaseModel):
 
 
 @app.get("/health")
-def health():
-    if correlation._redis is not None:
+async def health():
+    if correlation._async_redis is not None:
         try:
-            correlation._redis.ping()
+            await correlation._async_redis.ping()
         except Exception as exc:  # noqa: BLE001 - health must fail closed on store outage
             raise HTTPException(status_code=503, detail={"status": "not_ready", "correlation_store": "unavailable"}) from exc
     return {
@@ -76,7 +86,17 @@ def health():
 
 
 @app.post("/v1/score", response_model=RiskResponse)
-def score(req: RiskRequest):
+async def score(req: RiskRequest):
+    correlation_data = {"risk_multiplier": 1.0, "signal_count": 0}
+    if req.tenant_id:
+        try:
+            correlation_data = await correlation.observe_async(req.tenant_id, req.signals, {"endpoint": req.endpoint})
+        except CorrelationUnavailable:
+            correlation_data = {"risk_multiplier": 1.0, "signal_count": 0, "unavailable": True}
+    return _decision(req, correlation_data)
+
+
+def _decision(req: RiskRequest, correlation_data: dict[str, Any]):
     ctx = {
         "failed_attempts": max(0, req.failed_attempts or int(req.context.get("failed_attempts", 0) or 0)),
         "suspicious_ip": req.suspicious_ip or bool(req.context.get("suspicious_ip", False)),
@@ -99,21 +119,17 @@ def score(req: RiskRequest):
     if unknown_signals:
         confidence = max(0.0, confidence - 0.1)
 
-    correlation_data: dict[str, Any] = {"risk_multiplier": 1.0, "signal_count": 0}
-    if req.tenant_id:
-        try:
-            correlation_data = correlation.observe(req.tenant_id, req.signals, {"endpoint": req.endpoint})
-            raw_score = min(100.0, raw_score * float(correlation_data["risk_multiplier"]))
-        except CorrelationUnavailable:
-            correlation_data = {"risk_multiplier": 1.0, "signal_count": 0, "unavailable": True}
-            if req.context.get("criticality") == "critical":
-                return RiskResponse(
-                    action="BLOCK", score=100.0, confidence=0.0,
-                    signals=list(dict.fromkeys([*req.signals, "correlation_unavailable"])),
-                    factors={"correlation": correlation_data, "safety_reason": "shared_correlation_unavailable"},
-                    explanation="shared correlation unavailable for critical request",
-                )
-            req.signals = list(dict.fromkeys([*req.signals, "correlation_unavailable"]))
+    if correlation_data.get("unavailable"):
+        if req.context.get("criticality") == "critical":
+            return RiskResponse(
+                action="BLOCK", score=100.0, confidence=0.0,
+                signals=list(dict.fromkeys([*req.signals, "correlation_unavailable"])),
+                factors={"correlation": correlation_data, "safety_reason": "shared_correlation_unavailable"},
+                explanation="shared correlation unavailable for critical request",
+            )
+        req.signals = list(dict.fromkeys([*req.signals, "correlation_unavailable"]))
+    else:
+        raw_score = min(100.0, raw_score * float(correlation_data["risk_multiplier"]))
 
     calibrated_score = calibration.calibrate(raw_score)
     action = matrix.get_action(calibrated_score, confidence)

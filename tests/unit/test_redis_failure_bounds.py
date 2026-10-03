@@ -1,5 +1,6 @@
 """A silent TCP peer must not hold an engine thread indefinitely."""
 import socket
+import asyncio
 import threading
 import time
 import pytest
@@ -8,7 +9,8 @@ from engine.behavior.server import SharedBehaviorState, BehaviorRequest
 from engine.risk.correlation import RiskCorrelation, CorrelationUnavailable
 
 
-def test_silent_redis_peer_has_bounded_failure(monkeypatch):
+@pytest.mark.parametrize("asynchronous", [False, True])
+def test_silent_redis_peer_has_bounded_failure(monkeypatch, asynchronous):
     server = socket.socket()
     server.bind(("127.0.0.1", 0))
     server.listen()
@@ -29,17 +31,26 @@ def test_silent_redis_peer_has_bounded_failure(monkeypatch):
     try:
         started = time.monotonic()
         with pytest.raises(HTTPException) as failure:
-            state.analyze(BehaviorRequest(endpoint="/safe", client_id="silent-peer-test"))
+            request = BehaviorRequest(endpoint="/safe", client_id="silent-peer-test")
+            if asynchronous:
+                asyncio.run(state.analyze_async(request))
+            else:
+                state.analyze(request)
         assert failure.value.status_code == 503
         assert time.monotonic() - started < 1
         started = time.monotonic()
         with pytest.raises(CorrelationUnavailable):
-            risk.add_signal("silent-peer-test", "waf_block", {})
+            if asynchronous:
+                asyncio.run(risk.observe_async("silent-peer-test", ["waf_block"], {}))
+            else:
+                risk.add_signal("silent-peer-test", "waf_block", {})
         assert time.monotonic() - started < 1
     finally:
         stop.set()
         server.close()
         thread.join(timeout=1)
         for peer in peers: peer.close()
+        asyncio.run(state.close_async())
+        asyncio.run(risk.close_async())
         state.redis_client.close()
         risk._redis.close()

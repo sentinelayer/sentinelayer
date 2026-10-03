@@ -211,6 +211,25 @@ func main() {
 		log.Fatalf("policy configuration failed: %v", err)
 	}
 	proxy := httputil.NewSingleHostReverseProxy(upstream)
+	proxy.ModifyResponse = func(response *http.Response) error {
+		// Override upstream values using timings set by this gateway after its
+		// security pipeline. Client/upstream supplied telemetry is not trusted.
+		for responseName, requestName := range map[string]string{
+			"X-SL-Gateway-Processing-Ms": "X-SL-Latency-Ms",
+			"X-SL-Gateway-Degraded":      "X-SL-Degraded",
+			"X-SL-Gateway-WAF-Ms":        "X-SL-WAF-Latency-Ms",
+			"X-SL-Gateway-Behavior-Ms":   "X-SL-Behavior-Latency-Ms",
+			"X-SL-Gateway-Risk-Ms":       "X-SL-Risk-Latency-Ms",
+		} {
+			response.Header.Del(responseName)
+			if response.Request != nil {
+				if value := response.Request.Header.Get(requestName); value != "" {
+					response.Header.Set(responseName, value)
+				}
+			}
+		}
+		return nil
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -317,7 +336,9 @@ func main() {
 		}
 
 		degraded := false
+		wafStart := time.Now()
 		blocked, ruleID, msg := wafEngine.ProcessRequest(r)
+		wafDuration := time.Since(wafStart)
 		wafBlocked := blocked
 		if blocked {
 			// Keep the request in the decision path for risk/audit telemetry,
@@ -347,6 +368,7 @@ func main() {
 			}
 		}
 
+		behaviorStart := time.Now()
 		behaviorCtx, behaviorCancel := context.WithTimeout(r.Context(), 80*time.Millisecond)
 		behaviorResp, behaviorErr := behaviorClient.Analyze(behaviorCtx, engine.BehaviorRequest{
 			TenantID: reqCtx.TenantID, ApplicationID: reqCtx.ApplicationID, Environment: reqCtx.Environment,
@@ -355,6 +377,7 @@ func main() {
 			BusinessOp: reqCtx.BusinessOperation, Sensitivity: reqCtx.Sensitivity, Criticality: reqCtx.Criticality,
 		})
 		behaviorCancel()
+		behaviorDuration := time.Since(behaviorStart)
 		behaviorBlocked := false
 		if behaviorErr != nil {
 			degraded = true
@@ -380,9 +403,11 @@ func main() {
 				"sensitivity": reqCtx.Sensitivity,
 			},
 		}
+		riskStart := time.Now()
 		rctx, cancel := context.WithTimeout(r.Context(), 120*time.Millisecond)
 		riskResp, riskErr := riskClient.Score(rctx, riskReq)
 		cancel()
+		riskDuration := time.Since(riskStart)
 
 		if riskErr != nil {
 			degraded = true
@@ -467,6 +492,9 @@ func main() {
 		r.Header.Set("X-SL-Score", jsonFloat(score))
 		r.Header.Set("X-SL-Tenant", reqCtx.TenantID)
 		r.Header.Set("X-SL-Latency-Ms", jsonFloat(float64(time.Since(start))/float64(time.Millisecond)))
+		r.Header.Set("X-SL-WAF-Latency-Ms", jsonFloat(float64(wafDuration)/float64(time.Millisecond)))
+		r.Header.Set("X-SL-Behavior-Latency-Ms", jsonFloat(float64(behaviorDuration)/float64(time.Millisecond)))
+		r.Header.Set("X-SL-Risk-Latency-Ms", jsonFloat(float64(riskDuration)/float64(time.Millisecond)))
 		proxy.ServeHTTP(w, r)
 		observability.IncAllowed()
 	})
