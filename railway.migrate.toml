@@ -1,7 +1,0 @@
-[build]
-builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile.migrate"
-
-[deploy]
-startCommand = "sh /app/scripts/migrate_database.sh"
-restartPolicyType = "NEVER"
