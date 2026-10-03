@@ -33,3 +33,7 @@ The API remains SUCCESS; the private one-shot verifier is CRASHED because its ca
 - Representative customer-held-out traffic, independent security/legal review and independent off-account DR remain external acceptance gates.
 
 Raw evidence: `evidence/tenant-profile-deadline-20000-32.json`, `evidence/deployed-series-first-failure-2026-10-03.json`, `evidence/deployed-series-rerun-2026-10-03.json`. Earlier failed profiles remain available.
+
+## Subsequent policy-refresh fix
+
+The failures above remain historical evidence. The later [policy-refresh verification](verification-policy-refresh-2026-10-03.md) records an independently reproduced concurrency fix and a complete post-deploy 20,000-request series that passed every window. It supersedes the earlier latency status only for that bounded workload; external GA gates remain open.

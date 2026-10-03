@@ -1,0 +1,221 @@
+{
+  "code_sha": "fc7767591b6c3ddc0f9b779b9f57443eb2a1d07f",
+  "api_deployment_id": "0565842e-348d-4154-9103-96f61c0f273d",
+  "verifier_deployment_id": "d423f7af-b1a8-4c1b-91e9-b8a8dab5e80e",
+  "status": "SUCCESS",
+  "validation": {
+    "github_workflows": 7,
+    "all_success": true,
+    "go_tests": "passed",
+    "go_vet": "passed",
+    "policy_race_tests": "passed",
+    "measurement_unit_tests": 15,
+    "real_redis_tests": 5,
+    "e2e_drills": 3
+  },
+  "logs": [
+    {
+      "timestamp": "2026-10-03T12:50:30.108059403Z",
+      "message": "Starting Container"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:31.760664070Z",
+      "message": "Owner MFA enforcement and authenticated pilot access PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:31.760669911Z",
+      "message": "PILOT_ALERT_EVIDENCE={\"receivers_with_secret\": 0, \"recent_delivery_statuses\": {}, \"registered_receivers\": 0}"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:31.760676805Z",
+      "message": "Signed deny rule and path boundary PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:31.760683043Z",
+      "message": "Authenticated gateway receipt PASS: version 3"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:31.760688905Z",
+      "message": "Deployed trusted rate-stage telemetry ready PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:33.586836213Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:33.586874954Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 194.23332065343857, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.3020946830511093, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 7.284717, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 2.842672, \"Policy\": 0.0075, \"Rate\": 1.455896, \"Risk\": 2.411458, \"WAF\": 1.531354}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:37.780429494Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 242.37658828496933, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.399853192269802, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 7.273897, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 2.655605, \"Policy\": 0.00686, \"Rate\": 1.933708, \"Risk\": 2.363231, \"WAF\": 1.379566}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:37.780448152Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:41.272486206Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:41.272742614Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 275.7893204689026, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.7498096972703934, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 12.270482, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 3.904664, \"Policy\": 0.00721, \"Rate\": 2.678824, \"Risk\": 4.15245, \"WAF\": 1.650703}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:45.456067580Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 306.90987408161163, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 4.09136613458395, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 11.069482, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 5.232351, \"Policy\": 0.008109, \"Rate\": 2.442249, \"Risk\": 3.692618, \"WAF\": 1.987247}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:45.456073449Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:49.806182609Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 305.3358346223831, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.8992459401488304, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 9.982451, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 3.432813, \"Policy\": 0.00644, \"Rate\": 2.797883, \"Risk\": 3.55932, \"WAF\": 1.708401}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:49.806189494Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:53.229378003Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 324.62985068559647, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 4.162903070449829, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 7.854527, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 3.128818, \"Policy\": 0.007179, \"Rate\": 1.553653, \"Risk\": 2.383359, \"WAF\": 1.502384}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:53.229383321Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:56.989224543Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 313.1509870290756, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.5235981345176697, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 8.20545, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 2.437609, \"Policy\": 0.00632, \"Rate\": 1.853389, \"Risk\": 2.447747, \"WAF\": 1.417716}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:50:56.989232249Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:01.719014897Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 333.984911441803, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 4.331482611596584, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 6.638597, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 2.512828, \"Policy\": 0.00778, \"Rate\": 1.16599, \"Risk\": 2.319251, \"WAF\": 1.487225}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:01.719022262Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:05.085808525Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 242.65936017036438, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.8016274124383926, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 6.644237, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 2.277601, \"Policy\": 0.00651, \"Rate\": 1.147391, \"Risk\": 2.36771, \"WAF\": 1.356867}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:05.085813297Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:09.072266659Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:09.072295170Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 398.53385835886, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.872064359486103, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 7.829927, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 3.145706, \"Policy\": 0.00619, \"Rate\": 2.033716, \"Risk\": 2.29053, \"WAF\": 1.329048}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:12.564005008Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 390.5312418937683, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.4641632735729218, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 9.650096, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 3.261705, \"Policy\": 0.00613, \"Rate\": 2.40963, \"Risk\": 2.736433, \"WAF\": 1.400267}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:12.564010988Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:15.905310031Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 380.55748492479324, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.7624339386820793, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 6.47059, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 2.248221, \"Policy\": 0.00638, \"Rate\": 1.16088, \"Risk\": 2.089685, \"WAF\": 1.313357}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:15.905314560Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:19.683142724Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 193.83271038532257, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.4000868797302246, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 5.28842, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 1.893417, \"Policy\": 0.00653, \"Rate\": 0.943074, \"Risk\": 1.898998, \"WAF\": 1.296718}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:19.683149250Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:23.172643669Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 454.879954457283, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.887901224195957, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 7.270956, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 2.689485, \"Policy\": 0.00643, \"Rate\": 1.408246, \"Risk\": 2.206422, \"WAF\": 1.465045}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:23.172650466Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:27.751103820Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:27.751134380Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 209.24922823905945, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.7166949436068535, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 6.99929, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 2.420418, \"Policy\": 0.00666, \"Rate\": 1.405216, \"Risk\": 2.294582, \"WAF\": 1.20605}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:31.519674023Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 512.034147977829, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 4.0376206785440445, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 7.734388, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 2.35391, \"Policy\": 0.00756, \"Rate\": 1.242499, \"Risk\": 2.733493, \"WAF\": 1.386956}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:31.519680987Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:35.672621509Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 627.0422041416168, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 4.290575876832008, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 7.207847, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 2.397699, \"Policy\": 0.00693, \"Rate\": 1.512694, \"Risk\": 2.405229, \"WAF\": 1.390497}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:35.672632892Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:39.952600547Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 541.7206138372421, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 4.0173467844724655, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 7.859176, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 2.415629, \"Policy\": 0.00717, \"Rate\": 1.405286, \"Risk\": 2.624225, \"WAF\": 1.80589}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:39.952604917Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:43.625086441Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 218.69732439517975, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.8775062933564186, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 8.734462, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 3.030238, \"Policy\": 0.00756, \"Rate\": 1.228989, \"Risk\": 2.878552, \"WAF\": 1.687951}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:43.625094879Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:47.158876923Z",
+      "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 227.71456092596054, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.9127611070871353, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 9.815513, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"stage_p95_ms\": {\"Behavior\": 3.082388, \"Policy\": 0.00824, \"Rate\": 1.579823, \"Risk\": 3.5503, \"WAF\": 1.639712}, \"stage_samples\": {\"Behavior\": 1000, \"Policy\": 1000, \"Rate\": 1000, \"Risk\": 1000, \"WAF\": 1000}, \"status_counts\": {\"200\": 1000}, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:47.158883609Z",
+      "message": "PILOT_CAPACITY_GATE=PASS"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:47.158889638Z",
+      "message": "PILOT_CAPACITY_SERIES={\"aggregate_processing_p95_ms\": 8.25722, \"attempts\": 20000, \"completed_rounds\": 20, \"degraded_responses\": 0, \"elapsed_seconds\": 76.53889305144548, \"failures\": 0, \"policy_mismatches\": 0, \"processing_samples\": 20000, \"requested_rounds\": 20, \"round_processing_p95_ms\": [7.284717, 7.273897, 12.270482, 11.069482, 9.982451, 7.854527, 8.20545, 6.638597, 6.644237, 7.829927, 9.650096, 6.47059, 5.28842, 7.270956, 6.99929, 7.734388, 7.207847, 7.859176, 8.734462, 9.815513], \"scope\": \"Bounded authenticated deployed series; every round must pass independently. Aggregate percentile calculated from all received finite processing samples. No HA or SLA claim.\", \"series_gate_pass\": true, \"transport_failure_codes\": {}}"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:47.158894825Z",
+      "message": "PILOT_VERIFIED_VERSION=3"
+    },
+    {
+      "timestamp": "2026-10-03T12:51:47.158899561Z",
+      "message": "Pilot verification completed; owner session revoked"
+    }
+  ],
+  "post_run": {
+    "capacity_probe": "0",
+    "capacity_rounds": "1",
+    "session_cleanup_window": "cleared",
+    "deploys_skipped": true
+  },
+  "limitations": "One bounded76.539-second authenticated pilot series, not hours/days sustained production capacity, HA, SLA, representative customer accuracy or independent certification. Earlier failures retained; no rigorous isolated causal claim for all observed latency improvements."
+}

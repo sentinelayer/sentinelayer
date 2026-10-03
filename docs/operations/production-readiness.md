@@ -34,4 +34,4 @@ The system must not claim zero incidents, zero false positives, 100% uptime, cer
 
 ## Latest verification
 
-See [2026-10-03 technical re-verification](verification-2026-10-03.md) for measured local latency, failure drills and remaining gates. The initial single-worker 32-concurrency latency profile fails; the two-worker local processing reruns cross the target in both directions. Short local bursts and green CI do not approve production capacity.
+See [2026-10-03 policy-refresh verification](verification-policy-refresh-2026-10-03.md) for the latest implemented fix and measured deployed pilot: 20,000 authenticated requests at concurrency 32, all HTTP 200, zero degraded responses/policy mismatches, aggregate processing p95 8.257 ms and all 20 individual windows below 20 ms. Earlier failures remain in the evidence directory. This bounded ~77-second pass does not approve sustained-hours capacity, HA, representative customer accuracy, real alert delivery or an SLA. The [HA expansion assessment](ha-expansion-2026-10-03.md) records concrete infrastructure prerequisites.
