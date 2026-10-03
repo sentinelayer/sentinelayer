@@ -23,6 +23,13 @@ SentinelLayer menyatukan enforcement dan konteks risiko dalam satu jalur request
 
 ## What is inside
 
+Live pilot: [SentinelLayer on Railway](https://sentinelayer-production-b882.up.railway.app).
+The pilot uses private PostgreSQL and Redis, restricted database roles, revocable
+sessions, and encrypted bucket backups. An isolated restore of 33 tables at schema
+0028 passed on 2026-10-03. See [deployment and recovery](docs/operations/railway-deployment.md).
+Signed policy delivery is opt-in and must be configured for each protected host;
+the live pilot currently uses the gateway's built-in enforcement configuration.
+
 | Layer | Tanggung jawab | Teknologi utama |
 |---|---|---|
 | **Edge gateway** | Normalisasi request, body inspection, upstream proxy, dan enforcement | Go, Coraza, OWASP CRS |
