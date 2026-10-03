@@ -28,3 +28,13 @@ The fixture's default five-connection accept backlog caused baseline timeouts in
 Local unit suite:163 passed,17 integration tests deselected. Real Redis tests exercise both sync/async observation and actor/tenant isolation. Silent Redis peers fail within one second for both clients; critical async failures retain deny semantics. Go tests/vet and engine outage/recovery, signed policy/receipt and host-routing drills are checked separately before publication.
 
 Representative held-out traffic, real production alert recipient delivery, managed failover, independent off-account recovery/key custody/retention and external security/legal review remain open. Existing local encrypted/HMAC webhook transport and restricted grant-aware backup restore evidence retains its limited scope. This change is not general-availability approval.
+
+## Deployed verification
+
+Final code `15b6a89bc7dfd1fd80f9848bab49f51bdcfab427` passed all seven GitHub workflows, including Redis-enabled E2E Security. Test clients now use ASGI lifespan contexts so async Redis connections are closed on their owning event loop.
+
+API deployment `12241255-f735-41cc-9e31-4fd7ac138e37` succeeded with explicit Dockerfile build, runtime UID 1000, valid configuration, database readiness and durable policy floor 3. Private verifier `701b3918-8575-4958-b2ee-e44db9735bcf` passed MFA, signed deny/boundary, authenticated receipt and logout revocation.
+
+Actual public-HTTPS authenticated pilot probe:500 requests,8 concurrent clients,1.518 seconds elapsed,all500 HTTP200,zero degraded,zero policy mismatches,all500 processing samples,p95 gateway processing7.704ms. Client wall p95 was47.901ms. Processing gate passed only within this short probe. It does not replace the longer-run failures or certify sustained production capacity. Separate live readiness/boundary probes recorded71.244ms and24.695ms processing, respectively; single cold/isolated samples also show why20ms must not be promised per request.
+
+All five services report SUCCESS; private verifier has restart NEVER and no cron, and its owner session was revoked. Daily backup remains `0 3 * * *`, on its earlier verified backup code. No recurring load test was scheduled. [Non-secret deployed evidence](evidence/deployed-async-2026-10-03.json).
