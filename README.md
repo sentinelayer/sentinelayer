@@ -27,8 +27,10 @@ Live pilot: [SentinelLayer on Railway](https://sentinelayer-production-b882.up.r
 The pilot uses private PostgreSQL and Redis, restricted database roles, revocable
 sessions, and encrypted bucket backups. An isolated restore of 33 tables at schema
 0028 passed on 2026-10-03. See [deployment and recovery](docs/operations/railway-deployment.md).
-Signed policy delivery is opt-in and must be configured for each protected host;
-the live pilot currently uses the gateway's built-in enforcement configuration.
+Signed policy delivery is configured on the owned pilot hostname, with pinned
+Ed25519 verification and a persistent policy version floor. The test deny path
+is `/__sentinel_policy_probe__`; its similarly named `-boundary` path remains allowed.
+Configure separate host bindings before onboarding another protected application.
 
 | Layer | Tanggung jawab | Teknologi utama |
 |---|---|---|

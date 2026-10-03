@@ -36,3 +36,35 @@ backup cannot be recovered after its key is lost; retain older keys during key
 rotation. A same-account bucket is not an independent disaster-recovery copy.
 The drill checks data/schema recovery; role grants must be reapplied using the
 migrator after a full replacement database restore.
+
+## Owned signed-policy pilot
+
+The owned Railway hostname uses policy `6f01d176-58df-4e6a-bbd0-5be014259cee`
+in tenant `sentinel-pilot`; backend and policy fetch/ack address numeric loopback
+port 8005 directly. Public signing material was derived in the isolated bootstrap
+job from the trusted deployment key, then pinned in the gateway environment.
+The gateway service account is active, non-admin, and uses a 90-day API key.
+
+The third persistent volume mounts at `/var/lib/sentinelayer-policy`. Its private
+`runtime` directory holds the version floor. Railway mounts volumes as root, so
+RAILWAY_RUN_UID=0 initializes only that fixed, verified mount before `setpriv`
+drops to UID/GID 1000, clears supplementary groups/capabilities, and enables
+no-new-privileges. Initialization uses Python isolated mode without site imports,
+directory descriptors and no-follow opens. Launcher files and parent directories
+are root-owned; the application processes run as UID 1000.
+
+Owner access: the one-off bootstrap job requires SL_PILOT_BOOTSTRAP=1 and
+platform variables PILOT_ADMIN_EMAIL, PILOT_ADMIN_PASSWORD,
+PILOT_ADMIN_MFA_SECRET, PILOT_SERVICE_PASSWORD and PILOT_GATEWAY_API_KEY.
+Keep their values private in `sentinel-migrate` Railway variables. The owner
+must import the MFA seed into their own authenticator and use its current code
+at login. The account cannot receive a login token without MFA. Re-running
+bootstrap refuses conflicting identities and never resets existing credentials.
+
+Run `python /app/scripts/verify_pilot.py` as a private one-off job with
+SL_PILOT_VERIFY=1. PILOT_HOT_UPDATE=1 enables a temporary deny-rule update and
+restores the original rules as a higher signed version in a finally block.
+The verifier checks real owner MFA, path boundary enforcement, gateway receipts,
+and logout revocation; it never prints passwords, API keys or MFA seeds.
+Set PILOT_HOT_UPDATE=0 when repeating it after a restart. Health alone does not
+prove policy enforcement; the signed probe and current receipt are required.

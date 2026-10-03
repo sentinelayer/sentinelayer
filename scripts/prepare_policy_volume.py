@@ -16,6 +16,8 @@ def prepare_child(mount: str, uid: int, gid: int) -> None:
         child = os.open("runtime", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
         try:
             os.fchown(child, uid, gid)
+            # This is a directory: owner-only traversal/write is required by the gateway.
+            # nosemgrep: python.lang.security.audit.insecure-file-permissions.insecure-file-permissions
             os.fchmod(child, 0o700)
         finally:
             os.close(child)

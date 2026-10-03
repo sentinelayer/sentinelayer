@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -44,6 +45,7 @@ func (c *Client) initState(directory string) error {
 		return errors.New("invalid policy version state")
 	}
 	c.floor = state.Version
+	log.Printf("Loaded durable policy version floor: policy=%s version=%d", c.PolicyID, c.floor)
 	return nil
 }
 
