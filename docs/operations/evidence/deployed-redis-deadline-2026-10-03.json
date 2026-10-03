@@ -1,0 +1,112 @@
+{
+  "code_commit": "4cf556f0522d482f7a616a65d2285853a2739ccc",
+  "pre_hardening_probe": {
+    "deployment_id": "65f89bc7-188b-4a4b-b42c-79438a7721c9",
+    "api_deployment_id": "12241255-f735-41cc-9e31-4fd7ac138e37",
+    "logs": [
+      {
+        "timestamp": "2026-10-03T11:57:55.631215004Z",
+        "message": "Starting Container"
+      },
+      {
+        "timestamp": "2026-10-03T11:57:57.195329685Z",
+        "message": "Owner MFA enforcement and authenticated pilot access PASS"
+      },
+      {
+        "timestamp": "2026-10-03T11:57:57.195333035Z",
+        "message": "PILOT_ALERT_EVIDENCE={\"receivers_with_secret\": 0, \"recent_delivery_statuses\": {}, \"registered_receivers\": 0}"
+      },
+      {
+        "timestamp": "2026-10-03T11:57:57.195336065Z",
+        "message": "Signed deny rule and path boundary PASS"
+      },
+      {
+        "timestamp": "2026-10-03T11:57:57.195339625Z",
+        "message": "Authenticated gateway receipt PASS: version 3"
+      },
+      {
+        "timestamp": "2026-10-03T11:57:59.376419247Z",
+        "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 205.51588386297226, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 2.94791616499424, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 11.955911, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"status_counts\": {\"200\": 1000}}"
+      },
+      {
+        "timestamp": "2026-10-03T11:57:59.376422437Z",
+        "message": "PILOT_CAPACITY_GATE=PASS"
+      },
+      {
+        "timestamp": "2026-10-03T11:57:59.376426217Z",
+        "message": "PILOT_VERIFIED_VERSION=3"
+      },
+      {
+        "timestamp": "2026-10-03T11:57:59.517616202Z",
+        "message": "Pilot verification completed; owner session revoked"
+      }
+    ]
+  },
+  "first_attempt": {
+    "deployment_id": "be02f2e0-4021-4b07-86d7-cdda74c0b2fa",
+    "verification": "failed before MFA",
+    "diagnostic": "RuntimeError; old logging withheld HTTP status"
+  },
+  "local_regression": {
+    "silent_peer_before_seconds": 5.006176846,
+    "after": "pass under 500ms test ceiling",
+    "go_tests": "pass",
+    "go_vet": "pass",
+    "capacity_unit_tests": 6,
+    "real_redis_tests": 5,
+    "e2e_drills": 3
+  },
+  "ci": {
+    "code_sha": "4cf556f0522d482f7a616a65d2285853a2739ccc",
+    "completed_workflows": 7,
+    "all_success": true
+  },
+  "hardening_api": {
+    "deployment_id": "31ef4a72-118a-4076-9bc4-d748211f8564",
+    "status": "SUCCESS",
+    "uid": 1000,
+    "durable_policy_floor": 3
+  },
+  "post_hardening_probe": {
+    "deployment_id": "fc6c3aea-d7dd-425c-a50f-85c09a3cb5c2",
+    "api_deployment_id": "31ef4a72-118a-4076-9bc4-d748211f8564",
+    "logs": [
+      {
+        "timestamp": "2026-10-03T12:02:12.547927271Z",
+        "message": "Starting Container"
+      },
+      {
+        "timestamp": "2026-10-03T12:02:13.377614121Z",
+        "message": "Owner MFA enforcement and authenticated pilot access PASS"
+      },
+      {
+        "timestamp": "2026-10-03T12:02:13.377618271Z",
+        "message": "PILOT_ALERT_EVIDENCE={\"receivers_with_secret\": 0, \"recent_delivery_statuses\": {}, \"registered_receivers\": 0}"
+      },
+      {
+        "timestamp": "2026-10-03T12:02:13.377621661Z",
+        "message": "Signed deny rule and path boundary PASS"
+      },
+      {
+        "timestamp": "2026-10-03T12:02:13.377624711Z",
+        "message": "Authenticated gateway receipt PASS: version 3"
+      },
+      {
+        "timestamp": "2026-10-03T12:02:16.812108323Z",
+        "message": "PILOT_CAPACITY_EVIDENCE={\"attempts\": 1000, \"client_wall_p95_ms\": 232.06751234829426, \"concurrency\": 32, \"degraded_responses\": 0, \"elapsed_seconds\": 3.486563116312027, \"failures\": 0, \"policy_mismatches\": 0, \"processing_gate_pass\": true, \"processing_p95_ms\": 15.976098, \"processing_samples\": 1000, \"scope\": \"Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification.\", \"status_counts\": {\"200\": 1000}}"
+      },
+      {
+        "timestamp": "2026-10-03T12:02:16.812118673Z",
+        "message": "PILOT_CAPACITY_GATE=PASS"
+      },
+      {
+        "timestamp": "2026-10-03T12:02:16.812124393Z",
+        "message": "PILOT_VERIFIED_VERSION=3"
+      },
+      {
+        "timestamp": "2026-10-03T12:02:16.911963215Z",
+        "message": "Pilot verification completed; owner session revoked"
+      }
+    ]
+  }
+}
