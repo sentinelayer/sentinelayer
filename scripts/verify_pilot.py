@@ -4,6 +4,7 @@ import concurrent.futures
 import math
 import uuid
 from collections import Counter
+from datetime import UTC, datetime
 import json
 import os
 import time
@@ -135,6 +136,26 @@ def capacity_series(client, version):
     return evidence
 
 
+def cleanup_previous_probe_session(api):
+    start = os.getenv("PILOT_CLEANUP_PROBE_START")
+    if not start:
+        return
+    lower = datetime.fromisoformat(start).replace(tzinfo=UTC)
+    upper = datetime.fromisoformat(os.environ["PILOT_CLEANUP_PROBE_END"]).replace(tzinfo=UTC)
+    if not 0 < (upper - lower).total_seconds() <= 10:
+        raise ValueError("Previous probe cleanup requires a narrow recorded time window")
+    rows = api("GET", "/auth/sessions")
+    matches = [row for row in rows if not row["revoked"] and
+               lower <= datetime.fromisoformat(row["created_at"]).replace(tzinfo=UTC) < upper]
+    if len(matches) > 1:
+        raise RuntimeError("Previous probe session is ambiguous")
+    for row in matches:
+        result = api("POST", f"/auth/sessions/{row['id']}/revoke", {})
+        if not result.get("revoked"):
+            raise RuntimeError("Previous probe cleanup failed")
+    print(f"Previous recorded probe session cleanup PASS: revoked={len(matches)}", flush=True)
+
+
 def main():
     if os.environ.get("SL_PILOT_VERIFY") != "1":
         raise ValueError("Pilot verification must be explicitly enabled")
@@ -163,6 +184,7 @@ def main():
             owner = api("GET", "/auth/me")
             assert owner["is_admin"] and owner["mfa_enabled"] and owner["tenant_id"] == "sentinel-pilot"
             print("Owner MFA enforcement and authenticated pilot access PASS", flush=True)
+            cleanup_previous_probe_session(api)
             # Read only: report registration/delivery state, never secrets or receiver URLs.
             hooks = api("GET", "/webhooks")
             deliveries = api("GET", "/webhooks/logs?limit=100")

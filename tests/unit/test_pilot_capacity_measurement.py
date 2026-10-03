@@ -122,3 +122,18 @@ def test_private_cleanup_revokes_only_the_verified_owned_session(monkeypatch, tm
     assert rows['ours'] is not None
     assert rows['other'] is None
     database.dispose()
+
+
+def test_previous_probe_cleanup_preserves_unrelated_owner_sessions(monkeypatch):
+    from scripts.verify_pilot import cleanup_previous_probe_session
+    monkeypatch.setenv('PILOT_CLEANUP_PROBE_START', '2026-10-03T12:11:11')
+    monkeypatch.setenv('PILOT_CLEANUP_PROBE_END', '2026-10-03T12:11:13')
+    revoked = []
+    def api(method, path, body=None):
+        if method == 'GET':
+            return [dict(id='failed-probe', created_at='2026-10-03T12:11:12', revoked=False),
+                    dict(id='unrelated', created_at='2026-10-03T12:10:00', revoked=False)]
+        revoked.append(path)
+        return {'revoked': True}
+    cleanup_previous_probe_session(api)
+    assert revoked == ['/auth/sessions/failed-probe/revoke']
