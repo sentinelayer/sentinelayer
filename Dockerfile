@@ -13,7 +13,7 @@ COPY gateway/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -o gateway ./cmd/gateway
 
 FROM python:3.11-slim
-RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client \
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client util-linux \
   && rm -rf /var/lib/apt/lists/* \
   && useradd -m -u 1000 sentinel
 WORKDIR /app
@@ -30,6 +30,9 @@ RUN python scripts/generate_runtime_provenance.py
 COPY --from=gateway-builder /gateway/gateway /usr/local/bin/gateway
 RUN chmod 0555 /app/scripts/start_single_service.sh /usr/local/bin/gateway
 RUN chown -R sentinel:sentinel /app
+RUN chown root:root /app /app/scripts /app/scripts/start_single_service.sh /app/scripts/prepare_policy_volume.py \
+    && chmod 0755 /app /app/scripts \
+    && chmod 0555 /app/scripts/start_single_service.sh /app/scripts/prepare_policy_volume.py
 USER sentinel
 ENV PYTHONPATH=/app
 ENV CRS_RULES_DIR=/app/waf/rules

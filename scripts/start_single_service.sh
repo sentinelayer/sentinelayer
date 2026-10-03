@@ -1,5 +1,15 @@
 #!/bin/sh
 set -eu
+# Railway volumes mount as root. Initialize only the dedicated policy directory,
+# then drop UID/groups/capabilities before executing any application Python.
+if [ "$(/usr/bin/id -u)" = "0" ]; then
+  if [ -n "${GATEWAY_POLICY_STATE_DIR:-}" ]; then
+    python -I -S /app/scripts/prepare_policy_volume.py
+  fi
+  exec /usr/bin/setpriv --reuid=1000 --regid=1000 --clear-groups \
+    --bounding-set=-all --no-new-privs /app/scripts/start_single_service.sh
+fi
+printf 'SentinelLayer runtime uid=%s\n' "$(/usr/bin/id -u)" >&2
 printf '%s\n' "SentinelLayer single-service launcher active; gateway entrypoint enforced" >&2
 
 if [ -z "${SL_RUN_STARTUP_MIGRATION:-}" ]; then
