@@ -71,6 +71,7 @@ def main():
         def api(method, path, body=None):
             response = client.request(method, "/api/v1" + path, json=body)
             if response.status_code != 200:
+                print(f"PILOT_API_FAILURE method={method} path={path} status={response.status_code}", flush=True)
                 raise RuntimeError("Authenticated pilot API operation failed")
             return response.json()
 
@@ -84,6 +85,14 @@ def main():
         owner = api("GET", "/auth/me")
         assert owner["is_admin"] and owner["mfa_enabled"] and owner["tenant_id"] == "sentinel-pilot"
         print("Owner MFA enforcement and authenticated pilot access PASS", flush=True)
+        # Read only: report registration/delivery state, never secrets or receiver URLs.
+        hooks = api("GET", "/webhooks")
+        deliveries = api("GET", "/webhooks/logs?limit=100")
+        print("PILOT_ALERT_EVIDENCE=" + json.dumps({
+            "registered_receivers": len(hooks),
+            "receivers_with_secret": sum(bool(row.get("secret_configured")) for row in hooks),
+            "recent_delivery_statuses": dict(Counter(row["status"] for row in deliveries)),
+        }, sort_keys=True), flush=True)
         original = api("GET", f"/policies/{POLICY_ID}")
         rules = original["rules"]
         if isinstance(rules, str):

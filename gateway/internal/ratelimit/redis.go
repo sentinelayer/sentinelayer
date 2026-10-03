@@ -40,7 +40,16 @@ func NewRedisRateLimiter(addrOrURL string, limit int) *RedisRateLimiter {
 	if limit < 1 {
 		limit = 1
 	}
-	options := &redis.Options{Addr: "127.0.0.1:6379"}
+	options := &redis.Options{
+		Addr:                  "127.0.0.1:6379",
+		DialTimeout:           100 * time.Millisecond,
+		ReadTimeout:           100 * time.Millisecond,
+		WriteTimeout:          100 * time.Millisecond,
+		PoolTimeout:           100 * time.Millisecond,
+		ContextTimeoutEnabled: true,
+		MaxRetries:            -1,
+		PoolSize:              64,
+	}
 	if addrOrURL != "" && (strings.HasPrefix(addrOrURL, "redis://") || strings.HasPrefix(addrOrURL, "rediss://")) {
 		if parsed, err := url.Parse(addrOrURL); err == nil && parsed.Host != "" {
 			options.Addr = parsed.Host

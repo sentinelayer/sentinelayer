@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
@@ -90,4 +91,34 @@ func TestRedisURLParsing(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = redis.Options{}
+}
+
+// A connected Redis peer that never replies must not stall the gateway.
+func TestRedisRateLimiterBoundsSilentPeer(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func() { defer conn.Close(); <-done }()
+		}
+	}()
+	limiter := NewRedisRateLimiter(listener.Addr().String(), 1)
+	defer limiter.client.Close()
+	started := time.Now()
+	allowed, err := limiter.Allow("silent-peer")
+	if err == nil || allowed {
+		t.Fatalf("allowed=%v err=%v; want infrastructure error", allowed, err)
+	}
+	if elapsed := time.Since(started); elapsed > 500*time.Millisecond {
+		t.Fatalf("silent Redis blocked request for %s; want under 500ms", elapsed)
+	}
 }
