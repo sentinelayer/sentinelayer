@@ -73,13 +73,25 @@ type Client struct {
 	cb         *CircuitBreaker
 }
 
+// Engines are private services. Keep a bounded connection pool instead of
+// the default two idle connections, which caused connection churn under load.
+func newHTTPClient(timeout time.Duration) *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = nil
+	transport.MaxIdleConns = 64
+	transport.MaxIdleConnsPerHost = 64
+	transport.MaxConnsPerHost = 64
+	transport.IdleConnTimeout = 90 * time.Second
+	return &http.Client{Timeout: timeout, Transport: transport}
+}
+
 func NewClient(baseURL string) *Client {
 	if baseURL == "" {
 		baseURL = "http://127.0.0.1:8090"
 	}
 	return &Client{
 		baseURL:    baseURL,
-		httpClient: &http.Client{Timeout: 150 * time.Millisecond},
+		httpClient: newHTTPClient(150 * time.Millisecond),
 		cb:         NewCircuitBreaker(5, 10*time.Second),
 	}
 }
@@ -152,7 +164,7 @@ func NewBehaviorClient(baseURL string) *BehaviorClient {
 	}
 	return &BehaviorClient{
 		baseURL:    baseURL,
-		httpClient: &http.Client{Timeout: 100 * time.Millisecond},
+		httpClient: newHTTPClient(100 * time.Millisecond),
 		cb:         NewCircuitBreaker(5, 10*time.Second),
 	}
 }

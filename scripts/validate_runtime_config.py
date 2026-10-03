@@ -22,6 +22,12 @@ def validate(env: dict[str, str] | None = None) -> list[str]:
     production = is_production(values)
     errors: list[str] = []
 
+    if values.get("SL_ENGINE_WORKERS", "2") not in {"1", "2"}:
+        errors.append("SL_ENGINE_WORKERS must be 1 or 2")
+
+    if values.get("SL_ENGINE_WORKERS") == "2" and not values.get("REDIS_URL", "").strip():
+        errors.append("Two engine workers require shared REDIS_URL state")
+
     jwt = values.get("JWT_SECRET", "")
     if production and len(jwt.encode()) < 32:
         errors.append("JWT_SECRET must be at least 32 bytes in production")

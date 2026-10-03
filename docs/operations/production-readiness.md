@@ -34,4 +34,4 @@ The system must not claim zero incidents, zero false positives, 100% uptime, cer
 
 ## Latest verification
 
-See [2026-10-03 technical re-verification](verification-2026-10-03.md) for measured local latency, failure drills and remaining gates. The 32-concurrency latency profile fails; green CI alone does not approve production capacity.
+See [2026-10-03 technical re-verification](verification-2026-10-03.md) for measured local latency, failure drills and remaining gates. The initial single-worker 32-concurrency latency profile fails; the two-worker local processing reruns cross the target in both directions. Short local bursts and green CI do not approve production capacity.

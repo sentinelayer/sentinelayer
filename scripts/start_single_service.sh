@@ -31,9 +31,12 @@ fi
 
 python -m uvicorn control_plane.app.main:app --host 127.0.0.1 --port 8005 &
 CONTROL_PID=$!
-python -m uvicorn engine.risk.server:app --host 127.0.0.1 --port 8090 &
+DEFAULT_ENGINE_WORKERS=1
+if [ -n "${REDIS_URL:-}" ]; then DEFAULT_ENGINE_WORKERS=2; fi
+ENGINE_WORKERS="${SL_ENGINE_WORKERS:-$DEFAULT_ENGINE_WORKERS}"
+python -m uvicorn engine.risk.server:app --host 127.0.0.1 --port 8090 --workers "$ENGINE_WORKERS" --no-access-log &
 RISK_PID=$!
-python -m uvicorn engine.behavior.server:app --host 127.0.0.1 --port 8091 &
+python -m uvicorn engine.behavior.server:app --host 127.0.0.1 --port 8091 --workers "$ENGINE_WORKERS" --no-access-log &
 BEHAVIOR_PID=$!
 python -m control_plane.app.workers.runner --loop &
 WORKER_PID=$!

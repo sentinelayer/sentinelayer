@@ -150,4 +150,5 @@ if __name__ == "__main__":
     import uvicorn
 
     port = int(os.getenv("RISK_ENGINE_PORT", "8090"))
-    uvicorn.run("engine.risk.server:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run("engine.risk.server:app", host="127.0.0.1", port=port, reload=False,
+                workers=int(os.getenv("SL_ENGINE_WORKERS", "2" if os.getenv("REDIS_URL") else "1")), access_log=False)

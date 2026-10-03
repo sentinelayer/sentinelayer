@@ -316,6 +316,7 @@ func main() {
 			return
 		}
 
+		degraded := false
 		blocked, ruleID, msg := wafEngine.ProcessRequest(r)
 		wafBlocked := blocked
 		if blocked {
@@ -327,6 +328,7 @@ func main() {
 		if rateLimiter != nil {
 			allowed, rateErr := rateLimiter.Allow(rateLimitKey(r, reqCtx))
 			if rateErr != nil {
+				degraded = true
 				if failMatrix.ShouldFailClosed("redis", endpointClass) {
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusServiceUnavailable)
@@ -355,6 +357,7 @@ func main() {
 		behaviorCancel()
 		behaviorBlocked := false
 		if behaviorErr != nil {
+			degraded = true
 			signals = append(signals, "behavior_engine_unavailable")
 			behaviorBlocked = failMatrix.ShouldFailClosed("behavior_engine", endpointClass)
 		} else {
@@ -382,6 +385,7 @@ func main() {
 		cancel()
 
 		if riskErr != nil {
+			degraded = true
 			if failMatrix.ShouldFailClosed("risk_engine", endpointClass) {
 				action = "BLOCK"
 				score = 100
@@ -403,6 +407,11 @@ func main() {
 			}
 			signals = append(signals, "risk_engine_error")
 		} else {
+			for _, signal := range riskResp.Signals {
+				if signal == "correlation_unavailable" {
+					degraded = true
+				}
+			}
 			score = riskResp.Score
 			confidence = riskResp.Confidence
 			action = riskResp.Action
@@ -453,6 +462,7 @@ func main() {
 			return
 		}
 
+		r.Header.Set("X-SL-Degraded", strconv.FormatBool(degraded))
 		r.Header.Set("X-SL-Decision", action)
 		r.Header.Set("X-SL-Score", jsonFloat(score))
 		r.Header.Set("X-SL-Tenant", reqCtx.TenantID)

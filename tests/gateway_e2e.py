@@ -85,6 +85,7 @@ def main() -> None:
         assert status == 200, (status, body)
         safe_response = json.loads(body)
         assert safe_response["upstream"] is True
+        assert safe_response["gateway_degraded"] == "false"
         assert safe_response["decision"] in {"ALLOW", "MONITOR"}
 
         attack = b'{"username":"admin\' OR 1=1 --"}'
@@ -116,7 +117,9 @@ def main() -> None:
                 status, body, _ = request(f"http://127.0.0.1:{GATEWAY_PORT}/api/v1/admin/drill", headers=auth)
                 assert status == 403, (module, status, body)
                 assert json.loads(body)["reason"].endswith("unavailable_fail_closed"), body
-                assert request(f"http://127.0.0.1:{GATEWAY_PORT}/safe")[0] == 200
+                normal_status, normal_body, _ = request(f"http://127.0.0.1:{GATEWAY_PORT}/safe")
+                assert normal_status == 200
+                assert json.loads(normal_body)["gateway_degraded"] == "true"
                 assert request(f"http://127.0.0.1:{GATEWAY_PORT}/safe", attack,
                                {"Content-Type": "application/json"})[0] == 403
                 processes.append(subprocess.Popen([sys.executable, "-m", module], cwd=ROOT, env=env,

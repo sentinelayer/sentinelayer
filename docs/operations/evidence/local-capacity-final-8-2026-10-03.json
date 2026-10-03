@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-10-03T03:06:33.955502+00:00",
+  "engine_workers": "2",
+  "baseline": {
+    "attempts": 5000,
+    "concurrency": 8,
+    "elapsed_seconds": 3.8291538520002177,
+    "completed_requests_per_second": 1305.771508080871,
+    "failures": 0,
+    "status_counts": {
+      "200": 5000
+    },
+    "degraded_responses": 0,
+    "gateway_processing_samples": 0,
+    "gateway_processing_p95_ms": null,
+    "p50_ms": 5.697659999896132,
+    "p95_ms": 10.756558000139194,
+    "p99_ms": 13.73222500023985,
+    "max_ms": 38.90953099971739,
+    "connection_mode": "new connection per request",
+    "rate_limit_scope": "distinct paths; not one-path capacity"
+  },
+  "gateway": {
+    "attempts": 5000,
+    "concurrency": 8,
+    "elapsed_seconds": 5.685379117000139,
+    "completed_requests_per_second": 879.4488277921956,
+    "failures": 0,
+    "status_counts": {
+      "200": 5000
+    },
+    "degraded_responses": 0,
+    "gateway_processing_samples": 5000,
+    "gateway_processing_p95_ms": 7.521798,
+    "p50_ms": 8.110460999887437,
+    "p95_ms": 13.723740999921574,
+    "p99_ms": 17.249171000003116,
+    "max_ms": 37.73554899998999,
+    "connection_mode": "new connection per request",
+    "rate_limit_scope": "distinct paths; not one-path capacity"
+  },
+  "local_processing_gate_pass": true,
+  "limitations": "Local synthetic distinct-path profile; no signed policy, sustained production capacity, HA or SLA claim."
+}

@@ -68,3 +68,11 @@ The verifier checks real owner MFA, path boundary enforcement, gateway receipts,
 and logout revocation; it never prints passwords, API keys or MFA seeds.
 Set PILOT_HOT_UPDATE=0 when repeating it after a restart. Health alone does not
 prove policy enforcement; the signed probe and current receipt are required.
+
+## Engine worker budget
+
+SL_ENGINE_WORKERS defaults to 2 (allowed: 1 or 2). Each engine uses two Uvicorn
+workers and shared Redis state; internal engine access logs are disabled. The
+API remains a single worker. Monitor memory against the 1 GiB service budget
+and measure actual deployment load before increasing capacity claims. Worker
+count is not HA: all processes still share one service replica and volume.

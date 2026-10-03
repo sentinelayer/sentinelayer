@@ -29,26 +29,31 @@ def run_benchmark(origin, iterations=200, concurrency=1, timeout=3, prefix="/ben
                     timeout=timeout, allow_redirects=False)
                 status = str(response.status_code)
                 try:
-                    processing = response.json().get("gateway_processing_ms") if response.status_code == 200 else None
+                    payload = response.json() if response.status_code == 200 else {}
+                    processing = payload.get("gateway_processing_ms")
+                    degraded = payload.get("gateway_degraded") == "true"
                 except (ValueError, AttributeError):
                     processing = None
+                    degraded = False
                 processing = float(processing) if processing is not None else None
         except requests.RequestException as exc:
             status = type(exc).__name__
             processing = None
-        return (time.perf_counter() - start) * 1000, status, processing
+            degraded = False
+        return (time.perf_counter() - start) * 1000, status, processing, degraded
     start = time.perf_counter()
     with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
         results = list(executor.map(sample, range(iterations)))
     elapsed = time.perf_counter() - start
-    timings = [value for value, _, _ in results]
-    statuses = Counter(status for _, status, _ in results)
+    timings = [value for value, _, _, _ in results]
+    statuses = Counter(status for _, status, _, _ in results)
     return {"attempts": iterations, "concurrency": concurrency, "elapsed_seconds": elapsed,
         "completed_requests_per_second": iterations / elapsed,
         "failures": sum(count for status, count in statuses.items() if status != "200"),
         "status_counts": dict(statuses),
-        "gateway_processing_samples": sum(value is not None for _, _, value in results),
-        "gateway_processing_p95_ms": percentile([value for _, _, value in results if value is not None], .95), "p50_ms": percentile(timings, .5),
+        "degraded_responses": sum(degraded for _, _, _, degraded in results),
+        "gateway_processing_samples": sum(value is not None for _, _, value, _ in results),
+        "gateway_processing_p95_ms": percentile([value for _, _, value, _ in results if value is not None], .95), "p50_ms": percentile(timings, .5),
         "p95_ms": percentile(timings, .95), "p99_ms": percentile(timings, .99), "max_ms": max(timings),
         "connection_mode": "new connection per request",
         "rate_limit_scope": "distinct paths; not one-path capacity"}
@@ -75,7 +80,7 @@ def main():
     delta = gateway["p95_ms"] - baseline["p95_ms"]
     result = {"timestamp": datetime.now(UTC).isoformat(), "baseline": baseline, "gateway": gateway,
         "p95_distribution_difference_ms": delta, "latency_target_ms": 20,
-        "local_latency_gate_pass": gateway["gateway_processing_samples"] == args.iterations and gateway["gateway_processing_p95_ms"] < 20 and not gateway["failures"] and not baseline["failures"],
+        "local_latency_gate_pass": gateway["gateway_processing_samples"] == args.iterations and gateway["gateway_processing_p95_ms"] < 20 and not gateway["failures"] and not baseline["failures"] and not gateway["degraded_responses"],
         "limitations": "Difference of percentiles, not paired request overhead; synthetic workload, no production capacity or SLA claim."}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")

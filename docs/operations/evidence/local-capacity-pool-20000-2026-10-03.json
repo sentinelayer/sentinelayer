@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-10-03T03:02:15.066606+00:00",
+  "baseline": {
+    "attempts": 20000,
+    "concurrency": 32,
+    "elapsed_seconds": 15.041945505000058,
+    "completed_requests_per_second": 1329.6152411502785,
+    "failures": 0,
+    "status_counts": {
+      "200": 20000
+    },
+    "gateway_processing_samples": 0,
+    "gateway_processing_p95_ms": null,
+    "p50_ms": 20.478382999954192,
+    "p95_ms": 42.691672000273684,
+    "p99_ms": 56.874003000302764,
+    "max_ms": 1059.465193000051,
+    "connection_mode": "new connection per request",
+    "rate_limit_scope": "distinct paths; not one-path capacity"
+  },
+  "gateway": {
+    "attempts": 20000,
+    "concurrency": 32,
+    "elapsed_seconds": 23.343594456999654,
+    "completed_requests_per_second": 856.7660835969901,
+    "failures": 0,
+    "status_counts": {
+      "200": 20000
+    },
+    "gateway_processing_samples": 20000,
+    "gateway_processing_p95_ms": 17.13563,
+    "p50_ms": 19.22114299986788,
+    "p95_ms": 42.3314049999135,
+    "p99_ms": 1031.6423279996343,
+    "max_ms": 1287.462663000042,
+    "connection_mode": "new connection per request",
+    "rate_limit_scope": "distinct paths; not one-path capacity"
+  },
+  "local_processing_gate_pass": true,
+  "limitations": "Local synthetic distinct-path profile; no signed policy, sustained production capacity, HA or SLA claim.",
+  "engine_workers_requested": "2",
+  "actual_risk_workers": 1,
+  "actual_behavior_workers": 2,
+  "configuration_note": "The direct risk module entrypoint still used one worker in this preliminary runner. Final runtime/runner was corrected; preserve this intermediate evidence."
+}

@@ -144,4 +144,6 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=int(os.getenv("BEHAVIOR_ENGINE_PORT", "8091")),
         reload=False,
+        workers=int(os.getenv("SL_ENGINE_WORKERS", "2" if os.getenv("REDIS_URL") else "1")),
+        access_log=False,
     )
