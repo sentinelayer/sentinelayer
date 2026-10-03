@@ -118,6 +118,12 @@ def test_failed_delivery_retries_then_dead_letters(monkeypatch):
     webhook = SimpleNamespace(id="webhook-1", tenant_id="tenant-1")
     db = _DB(delivery, webhook)
     monkeypatch.setattr(webhook_delivery, "SessionLocal", lambda: db)
+    def claim(db, delivery, now):
+        delivery.status = "delivering"
+        delivery.attempt_count += 1
+        db.commit()
+        return "claimed"
+    monkeypatch.setattr(webhook_delivery, "_claim", claim)
     monkeypatch.setattr(webhook_delivery, "MAX_ATTEMPTS", 2)
     monkeypatch.setattr(webhook_delivery, "_deliver", lambda *_args: (_ for _ in ()).throw(RuntimeError("upstream unavailable")))
 

@@ -70,6 +70,13 @@ jobs:
       - name: Build Gateway
         working-directory: gateway
         run: go build -o /tmp/gateway-bin ./cmd/gateway
+      - name: Real Redis correlation state regression
+        env:
+          TEST_ENGINE_REDIS_URL: redis://127.0.0.1:6379/0
+          JWT_SECRET: ci-test-secret-min-32-chars-xxxxxx
+          SL_ENV: test
+          PYTHONPATH: .
+        run: pytest tests/unit/test_risk_correlation_redis.py -v --tb=short
       - name: Run Gateway E2E
         env:
           E2E_REDIS_URL: redis://127.0.0.1:6379/0

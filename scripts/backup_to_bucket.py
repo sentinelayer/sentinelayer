@@ -176,6 +176,36 @@ def main() -> None:
                         cursor.execute("SELECT version_num FROM alembic_version")
                         version = cursor.fetchone()[0]
                 print(f"Isolated restore PASS: {len(expected)} tables; schema {version}; snapshot row counts match", flush=True)
+                if os.getenv("BACKUP_RESTORE_ROLE_CHECK", "0") == "1":
+                    from scripts.configure_database_roles import configure_roles
+                    with psycopg2.connect(**target_dsn) as target:
+                        configure_roles(target, {}, provision_roles=False)
+                        with target.cursor() as cursor:
+                            suffix = secrets.token_hex(12)
+                            tenants = ["restore-probe-a-" + suffix, "restore-probe-b-" + suffix]
+                            apps = ["restore-app-a-" + suffix, "restore-app-b-" + suffix]
+                            cursor.execute("INSERT INTO tenants (id,name) VALUES (%s,'restore A'),(%s,'restore B')", tenants)
+                            cursor.execute("INSERT INTO applications (id,name,tenant_id) VALUES (%s,'restore A',%s),(%s,'restore B',%s)", (apps[0],tenants[0],apps[1],tenants[1]))
+                            cursor.execute("SET LOCAL ROLE sentinel_app")
+                            cursor.execute("SELECT count(*) FROM applications")
+                            if cursor.fetchone()[0] != 0:
+                                raise ValueError("Restored runtime role exposed unscoped tenant data")
+                            cursor.execute("SELECT set_config('app.tenant_id', %s, true)", (tenants[0],))
+                            cursor.execute("SELECT id FROM applications ORDER BY id")
+                            if cursor.fetchall() != [(apps[0],)]:
+                                raise ValueError("Restored runtime tenant isolation failed")
+                            cursor.execute("RESET ROLE")
+                            cursor.execute("SET LOCAL ROLE sentinel_auth")
+                            cursor.execute("SELECT count(*) FROM users")
+                            if cursor.fetchone()[0] != expected["users"]:
+                                raise ValueError("Restored authentication role cannot read recovered users")
+                            cursor.execute("RESET ROLE")
+                            cursor.execute("SET LOCAL ROLE sentinel_worker")
+                            cursor.execute("SELECT count(*) FROM webhook_deliveries")
+                            if cursor.fetchone()[0] != expected["webhook_deliveries"]:
+                                raise ValueError("Restored worker role cannot read recovered deliveries")
+                    print("Restored service grants and runtime tenant isolation PASS; no role passwords changed", flush=True)
+
             finally:
                 if created:
                     with admin.cursor() as cursor:

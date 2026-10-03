@@ -39,7 +39,8 @@ class SharedBehaviorState:
         configured_url = os.getenv("REDIS_URL", "").strip()
         production = is_production()
         if configured_url:
-            self.redis_client = redis.Redis.from_url(configured_url, decode_responses=True)
+            self.redis_client = redis.Redis.from_url(configured_url, decode_responses=True, socket_connect_timeout=0.2,
+                socket_timeout=0.2, retry_on_timeout=False)
         elif production:
             raise RuntimeError("REDIS_URL is required for shared behavior state in production")
 

@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--iterations", type=int, default=5000)
     parser.add_argument("--concurrency", type=int, default=32)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--tenant-profile", action="store_true", help="Simulate tenant-scoped risk correlation; not signed-policy validation")
     args = parser.parse_args()
     if not 1 <= args.iterations <= 100000 or not 1 <= args.concurrency <= 64:
         parser.error("bounded iterations/concurrency required")
@@ -64,11 +65,12 @@ def main():
                     time.sleep(.2)
             common = {"iterations": args.iterations, "concurrency": args.concurrency}
             baseline = run_benchmark("http://127.0.0.1:18080", prefix="/capacity-baseline", **common)
-            gateway = run_benchmark("http://127.0.0.1:18000", prefix="/capacity-gateway", **common)
+            gateway = run_benchmark("http://127.0.0.1:18000", prefix="/capacity-gateway",
+                extra_headers={"X-Tenant-ID": "capacity-test-tenant"} if args.tenant_profile else None, **common)
             passed = (gateway["gateway_processing_samples"] == args.iterations
                 and gateway["gateway_processing_p95_ms"] < 20 and not gateway["failures"] and not baseline["failures"] and not gateway["degraded_responses"])
             evidence = {"timestamp": datetime.now(UTC).isoformat(), "engine_workers": env.get("SL_ENGINE_WORKERS", "2"),
-                "baseline": baseline, "gateway": gateway, "local_processing_gate_pass": passed,
+                "tenant_profile": args.tenant_profile, "baseline": baseline, "gateway": gateway, "local_processing_gate_pass": passed,
                 "limitations": "Local synthetic distinct-path profile; no signed policy, sustained production capacity, HA or SLA claim."}
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(json.dumps(evidence, indent=2) + "\n")

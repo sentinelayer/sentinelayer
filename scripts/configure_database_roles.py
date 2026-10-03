@@ -7,6 +7,7 @@ Passwords are supplied by the platform and are never printed.
 from __future__ import annotations
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -33,25 +34,33 @@ WORKER_GRANTS = {
 }
 
 
-def configure_roles(connection, passwords: dict[str, str]) -> None:
+def configure_roles(connection, passwords: dict[str, str], *, provision_roles: bool = True) -> None:
+    if not provision_roles and not re.fullmatch(r"sentinel_restore_[0-9a-f]{32}", connection.get_dsn_parameters()["dbname"]):
+        raise ValueError("Grant-only verification requires a generated disposable restore database")
     tables = set(Base.metadata.tables)
     with connection.cursor() as cursor:
         cursor.execute("REVOKE CREATE ON SCHEMA public FROM PUBLIC")
         for profile, name in ROLES.items():
-            secret = passwords[profile]
-            if len(secret) < 24:
-                raise ValueError(f"{profile} database password must be at least 24 characters")
             role = sql.Identifier(name)
-            # DDL identifiers cannot use bind parameters. Every variable below uses
-            # psycopg2 Identifier/Literal, or the closed PRIVILEGE_SQL map.
-            cursor.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (name,))
-            if not cursor.fetchone():
+            if provision_roles:
+                secret = passwords[profile]
+                if len(secret) < 24:
+                    raise ValueError(f"{profile} database password must be at least 24 characters")
+                # DDL identifiers cannot use bind parameters. Every variable below uses
+                # psycopg2 Identifier/Literal, or the closed PRIVILEGE_SQL map.
+                cursor.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (name,))
+                if not cursor.fetchone():
+                    # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+                    cursor.execute(sql.SQL("CREATE ROLE {} NOLOGIN").format(role))
                 # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
-                cursor.execute(sql.SQL("CREATE ROLE {} NOLOGIN").format(role))
-            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
-            cursor.execute(sql.SQL("ALTER ROLE {} LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION PASSWORD {}").format(role, sql.Literal(secret)))
-            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
-            cursor.execute(sql.SQL("ALTER ROLE {} SET row_security = on").format(role))
+                cursor.execute(sql.SQL("ALTER ROLE {} LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION PASSWORD {}").format(role, sql.Literal(secret)))
+                # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+                cursor.execute(sql.SQL("ALTER ROLE {} SET row_security = on").format(role))
+            else:
+                cursor.execute("SELECT rolcanlogin, rolsuper, rolbypassrls, rolcreatedb, rolcreaterole, rolreplication FROM pg_roles WHERE rolname = %s", (name,))
+                attributes = cursor.fetchone()
+                if not attributes or not attributes[0] or any(attributes[1:]):
+                    raise ValueError("Restore verification requires existing restricted service roles")
             cursor.execute("SELECT current_database()")
             database = cursor.fetchone()[0]
             # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query

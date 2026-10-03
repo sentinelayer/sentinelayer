@@ -16,7 +16,7 @@ def percentile(values, fraction):
     return sorted(values)[max(0, math.ceil(len(values) * fraction) - 1)] if values else None
 
 
-def run_benchmark(origin, iterations=200, concurrency=1, timeout=3, prefix="/benchmark"):
+def run_benchmark(origin, iterations=200, concurrency=1, timeout=3, prefix="/benchmark", extra_headers=None):
     if not 1 <= iterations <= 100000 or not 1 <= concurrency <= 64 or timeout <= 0:
         raise ValueError("invalid bounded benchmark settings")
     def sample(index):
@@ -25,7 +25,7 @@ def run_benchmark(origin, iterations=200, concurrency=1, timeout=3, prefix="/ben
             with requests.Session() as session:
                 session.trust_env = False
                 response = session.get(f"{origin.rstrip('/')}{prefix}/{index}",
-                    headers={"User-Agent": "SentinelLayer-Benchmark/1.0", "Accept": "application/json"},
+                    headers={"User-Agent": "SentinelLayer-Benchmark/1.0", "Accept": "application/json", **(extra_headers or {})},
                     timeout=timeout, allow_redirects=False)
                 status = str(response.status_code)
                 try:

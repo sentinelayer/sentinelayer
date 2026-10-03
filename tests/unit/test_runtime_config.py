@@ -69,3 +69,13 @@ def test_production_runtime_rejects_migration_credentials():
                        "SL_RUN_STARTUP_MIGRATION": "1"})
     assert "Migration credentials must not be exposed to the production runtime" in errors
     assert "SL_RUN_STARTUP_MIGRATION must be 0 in production; use a separate migration job" in errors
+
+
+def test_grant_only_restore_refuses_active_database_before_any_sql():
+    from scripts.configure_database_roles import configure_roles
+    class ActiveDatabase:
+        def get_dsn_parameters(self): return {"dbname": "sentinelayer"}
+        def cursor(self): raise AssertionError("active database SQL must not execute")
+    import pytest
+    with pytest.raises(ValueError, match="disposable"):
+        configure_roles(ActiveDatabase(), {}, provision_roles=False)

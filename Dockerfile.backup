@@ -7,6 +7,8 @@ WORKDIR /app
 COPY operations/backup/requirements.txt ./
 RUN /opt/backup/bin/pip install --no-cache-dir -r requirements.txt
 COPY scripts/backup_to_bucket.py ./
+COPY scripts/configure_database_roles.py ./scripts/configure_database_roles.py
+COPY control_plane ./control_plane
 USER sentinel
 ENTRYPOINT []
 CMD ["/opt/backup/bin/python", "/app/backup_to_bucket.py"]

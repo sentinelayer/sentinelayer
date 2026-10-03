@@ -12,7 +12,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import HTTPHandler, HTTPSHandler, HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 
 from control_plane.app.infrastructure.db.models import WebhookDelivery, WebhookRegistration
 from control_plane.app.infrastructure.db.session import WorkerSessionLocal as SessionLocal
@@ -135,29 +135,63 @@ def _deliver(delivery: WebhookDelivery, webhook: WebhookRegistration) -> dict[st
     return {"status": "delivered", "response_code": status, "signature": delivery.last_signature}
 
 
+def _eligible(now):
+    due = or_(WebhookDelivery.next_attempt_at.is_(None), WebhookDelivery.next_attempt_at <= now)
+    expired = or_(
+        WebhookDelivery.next_attempt_at <= now,
+        and_(WebhookDelivery.next_attempt_at.is_(None),
+             WebhookDelivery.created_at <= now - timedelta(minutes=5)),
+    )
+    return or_(and_(WebhookDelivery.status.in_(["queued", "retry"]), due),
+               and_(WebhookDelivery.status == "delivering", expired))
+
+
+def _claim(db, delivery, now):
+    query = db.query(WebhookDelivery).filter(WebhookDelivery.id == delivery.id, _eligible(now))
+    exhausted = query.filter(WebhookDelivery.attempt_count >= MAX_ATTEMPTS).update({
+        "status": "dead_letter", "last_error": "delivery attempt budget exhausted after interrupted claim",
+        "next_attempt_at": None,
+    }, synchronize_session=False)
+    if exhausted:
+        db.commit()
+        return "dead_letter"
+    claimed = query.filter(WebhookDelivery.attempt_count < MAX_ATTEMPTS).update({
+        "status": "delivering", "attempt_count": WebhookDelivery.attempt_count + 1,
+        "next_attempt_at": now + timedelta(seconds=max(60, TIMEOUT_SECONDS * 4)),
+    }, synchronize_session=False)
+    db.commit()
+    if not claimed:
+        return "skipped"
+    db.refresh(delivery)
+    return "claimed"
+
+
 def deliver_pending_webhooks(limit: int = 100) -> dict[str, int]:
     db = SessionLocal()
     delivered = retried = dead_letter = 0
     try:
         now = datetime.now(UTC)
         rows = db.query(WebhookDelivery).filter(
-            WebhookDelivery.status.in_(["queued", "retry"]),
-            or_(WebhookDelivery.next_attempt_at.is_(None), WebhookDelivery.next_attempt_at <= now),
+            _eligible(now),
         ).order_by(WebhookDelivery.created_at.asc()).limit(limit).all()
         for delivery in rows:
+            claimed = _claim(db, delivery, datetime.now(UTC))
+            if claimed == "dead_letter":
+                dead_letter += 1
+                continue
+            if claimed != "claimed":
+                continue
             webhook = db.query(WebhookRegistration).filter(
                 WebhookRegistration.id == delivery.webhook_id,
                 WebhookRegistration.tenant_id == delivery.tenant_id,
             ).first()
-            delivery.attempt_count = (delivery.attempt_count or 0) + 1
-            delivery.status = "delivering"
-            db.commit()
             try:
                 if not webhook:
                     raise ValueError("webhook registration not found")
                 _deliver(delivery, webhook)
                 delivery.status = "delivered"
                 delivery.last_error = None
+                delivery.next_attempt_at = None
                 delivered += 1
             except Exception as exc:  # noqa: BLE001 - persist delivery failure and continue queue
                 delivery.last_error = str(exc)[:1000]

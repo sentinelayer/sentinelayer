@@ -102,9 +102,7 @@ def score(req: RiskRequest):
     correlation_data: dict[str, Any] = {"risk_multiplier": 1.0, "signal_count": 0}
     if req.tenant_id:
         try:
-            for signal in dict.fromkeys(req.signals):
-                correlation.add_signal(req.tenant_id, signal, {"endpoint": req.endpoint})
-            correlation_data = correlation.correlate(req.tenant_id)
+            correlation_data = correlation.observe(req.tenant_id, req.signals, {"endpoint": req.endpoint})
             raw_score = min(100.0, raw_score * float(correlation_data["risk_multiplier"]))
         except CorrelationUnavailable:
             correlation_data = {"risk_multiplier": 1.0, "signal_count": 0, "unavailable": True}
