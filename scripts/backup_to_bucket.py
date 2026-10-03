@@ -66,6 +66,8 @@ def counts(connection) -> dict[str, int]:
         tables = [row[0] for row in cursor.fetchall()]
         result = {}
         for table in tables:
+            # Catalog identifiers are quoted by psycopg2; identifiers cannot use value parameters.
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
             cursor.execute(sql.SQL("SELECT COUNT(*) FROM public.{}").format(sql.Identifier(table)))
             result[table] = cursor.fetchone()[0]
         return result
@@ -160,10 +162,12 @@ def main() -> None:
             created = False
             try:
                 with admin.cursor() as cursor:
+                    # Name is generated locally and quoted as an SQL identifier.
+                    # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
                     cursor.execute(sql.SQL("CREATE DATABASE {} TEMPLATE template0").format(sql.Identifier(test_name)))
                 created = True
                 run_pg(["pg_restore", "--no-owner", "--no-privileges", "--exit-on-error",
-                        "--single-transaction", str(restored)], pg_env(dsn, test_name))
+                        "--single-transaction", "--dbname=" + test_name, str(restored)], pg_env(dsn, test_name))
                 target_dsn = dict(dsn, dbname=test_name)
                 with psycopg2.connect(**target_dsn) as target:
                     if counts(target) != remote["manifest"]["table_counts"]:
@@ -175,6 +179,8 @@ def main() -> None:
             finally:
                 if created:
                     with admin.cursor() as cursor:
+                        # Only the locally created, quoted disposable database is removed.
+                        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
                         cursor.execute(sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(test_name)))
                     print("Disposable restore database removed", flush=True)
                 admin.close()
