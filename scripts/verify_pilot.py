@@ -16,6 +16,49 @@ DENY = "/__sentinel_policy_probe__"
 HOT = "/__sentinel_policy_hot_update__"
 
 
+def transport_failure_code(error):
+    # Exception messages can include credentials/URLs. Emit only type and errno.
+    root = error
+    for _ in range(10):
+        if root.__cause__ is None:
+            break
+        root = root.__cause__
+    code = getattr(root, "errno", None)
+    return type(root).__name__ + (f":{code}" if isinstance(code, int) else "")
+
+
+def revoke_owner_session(client, token):
+    try:
+        response = client.post("/api/v1/auth/logout", json={})
+        if response.status_code == 200:
+            return "api"
+    except httpx.RequestError:
+        pass
+    # Private verifier only: revoke this verified token if public egress fails.
+    # No credentials or tokens are emitted; API runtime never gets this DB URL.
+    import jwt
+    from sqlalchemy import create_engine, text
+    claims = jwt.decode(token, os.environ["JWT_SECRET"], algorithms=["HS256"],
+                        options={"require": ["exp", "sub", "tenant_id", "jti"]})
+    if os.getenv("SL_PILOT_VERIFY") != "1" or claims["tenant_id"] != "sentinel-pilot":
+        raise ValueError("Private session cleanup requires the owned pilot tenant")
+    database = create_engine(os.environ["MIGRATION_DATABASE_URL"], pool_pre_ping=True)
+    try:
+        with database.begin() as connection:
+            result = connection.execute(text("""
+                UPDATE auth_sessions SET revoked_at=CURRENT_TIMESTAMP, revoke_reason='pilot_cleanup'
+                WHERE token_id=:jti AND user_id=:uid AND tenant_id=:tenant
+                  AND user_id IN (SELECT id FROM users WHERE email=:email AND tenant_id=:tenant)
+            """), dict(jti=claims["jti"], uid=claims["sub"], tenant=claims["tenant_id"],
+                       email=os.environ["PILOT_ADMIN_EMAIL"]))
+            if result.rowcount != 1:
+                raise RuntimeError("Private session cleanup could not verify one owned session")
+        print("Owner session revoked through private database fallback PASS", flush=True)
+        return "database"
+    finally:
+        database.dispose()
+
+
 def capacity_probe(client, version):
     attempts = int(os.getenv("PILOT_CAPACITY_REQUESTS", "500"))
     concurrency = int(os.getenv("PILOT_CAPACITY_CONCURRENCY", "8"))
@@ -36,10 +79,10 @@ def capacity_probe(client, version):
             return {"status": str(response.status_code), "processing_ms": processing,
                     "degraded": response.headers.get("X-SL-Gateway-Degraded") != "false",
                     "policy_match": response.headers.get("X-SL-Policy-Version") == f"{POLICY_ID}:{version}",
-                    "wall_ms": (time.perf_counter() - started) * 1000}
+                    "transport_failure": None, "wall_ms": (time.perf_counter() - started) * 1000}
         except httpx.RequestError as error:
-            return {"status": type(error).__name__, "processing_ms": None, "degraded": True,
-                    "policy_match": False, "wall_ms": (time.perf_counter() - started) * 1000}
+            return {"status": type(error).__name__, "processing_ms": None, "degraded": False,
+                    "policy_match": True, "transport_failure": transport_failure_code(error), "wall_ms": (time.perf_counter() - started) * 1000}
     started = time.perf_counter()
     with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
         rows = list(executor.map(sample, range(attempts)))
@@ -48,6 +91,7 @@ def capacity_probe(client, version):
     report = {"attempts": attempts, "concurrency": concurrency,
               "elapsed_seconds": time.perf_counter() - started,
               "status_counts": dict(Counter(row["status"] for row in rows)),
+              "transport_failure_codes": dict(Counter(row["transport_failure"] for row in rows if row["transport_failure"])),
               "failures": sum(row["status"] != "200" for row in rows),
               "degraded_responses": sum(row["degraded"] for row in rows),
               "policy_mismatches": sum(not row["policy_match"] for row in rows),
@@ -73,6 +117,8 @@ def capacity_series(client, version):
         if time.monotonic() - started >= 300:
             break
         reports.append(capacity_probe(client, version))
+        if reports[-1]["transport_failure_codes"]:
+            break  # Preserve failure evidence and avoid another round of unreachable traffic.
     evidence = {
         "requested_rounds": rounds, "completed_rounds": len(reports),
         "attempts": sum(row["attempts"] for row in reports),
@@ -80,6 +126,7 @@ def capacity_series(client, version):
         "failures": sum(row["failures"] for row in reports),
         "degraded_responses": sum(row["degraded_responses"] for row in reports),
         "policy_mismatches": sum(row["policy_mismatches"] for row in reports),
+        "transport_failure_codes": dict(sum((Counter(row["transport_failure_codes"]) for row in reports), Counter())),
         "round_processing_p95_ms": [row["processing_p95_ms"] for row in reports],
         "series_gate_pass": len(reports) == rounds and all(row["processing_gate_pass"] for row in reports),
         "scope": "Bounded authenticated deployed series; every round must pass independently. No aggregate percentile, HA or SLA claim.",
@@ -94,7 +141,8 @@ def main():
     origin = os.environ["PILOT_BASE_URL"].rstrip("/")
     if origin != "https://sentinelayer-production-b882.up.railway.app":
         raise ValueError("Only the owned pilot origin is supported")
-    with httpx.Client(base_url=origin, timeout=20, follow_redirects=False, trust_env=False) as client:
+    with httpx.Client(base_url=origin, timeout=20, follow_redirects=False, trust_env=False,
+                      limits=httpx.Limits(max_connections=32, max_keepalive_connections=32, keepalive_expiry=30)) as client:
         def api(method, path, body=None):
             response = client.request(method, "/api/v1" + path, json=body)
             if response.status_code != 200:
@@ -109,6 +157,8 @@ def main():
         credentials["mfa_code"] = pyotp.TOTP(os.environ["PILOT_ADMIN_MFA_SECRET"]).now()
         login = api("POST", "/auth/login", credentials)
         client.headers["Authorization"] = "Bearer " + login["access_token"]
+        cleanup_mode = None
+        capacity_ok = True
         try:
             owner = api("GET", "/auth/me")
             assert owner["is_admin"] and owner["mfa_enabled"] and owner["tenant_id"] == "sentinel-pilot"
@@ -174,13 +224,16 @@ def main():
             else:
                 raise RuntimeError("Gateway receipt did not converge")
             if os.getenv("PILOT_CAPACITY_PROBE", "0") == "1":
-                capacity_series(client, previous_version)
+                capacity_ok = capacity_series(client, previous_version)["series_gate_pass"]
             print(f"PILOT_VERIFIED_VERSION={previous_version}", flush=True)
         finally:
-            api("POST", "/auth/logout", {})
-        response = client.get("/api/v1/auth/me")
-        assert response.status_code == 401
+            cleanup_mode = revoke_owner_session(client, login["access_token"])
+        if cleanup_mode == "api":
+            response = client.get("/api/v1/auth/me")
+            assert response.status_code == 401
         print("Pilot verification completed; owner session revoked", flush=True)
+        if not capacity_ok:
+            raise RuntimeError("Deployed capacity series gate failed")
 
 
 if __name__ == "__main__":

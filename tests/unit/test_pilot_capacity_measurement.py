@@ -31,9 +31,9 @@ def test_series_preserves_failed_round(monkeypatch):
     monkeypatch.setenv('PILOT_CAPACITY_REQUESTS', '100')
     reports = iter([
         dict(attempts=100, failures=0, degraded_responses=1, policy_mismatches=0,
-             processing_p95_ms=5, processing_gate_pass=False),
+             processing_p95_ms=5, processing_gate_pass=False, transport_failure_codes={}),
         dict(attempts=100, failures=0, degraded_responses=0, policy_mismatches=0,
-             processing_p95_ms=4, processing_gate_pass=True),
+             processing_p95_ms=4, processing_gate_pass=True, transport_failure_codes={}),
     ])
     monkeypatch.setattr(verify_pilot, 'capacity_probe', lambda *_: next(reports))
     evidence = verify_pilot.capacity_series(None, 3)
@@ -74,3 +74,51 @@ def test_owner_session_revoked_when_alert_inspection_fails(monkeypatch):
     with pytest.raises(RuntimeError):
         verify_pilot.main()
     assert calls[-1] == '/api/v1/auth/logout'
+
+
+def test_transport_failure_does_not_report_an_engine_degradation(monkeypatch):
+    import socket
+    monkeypatch.setenv('PILOT_CAPACITY_REQUESTS', '100')
+    def receive(request):
+        try:
+            raise socket.gaierror(-3, 'sensitive-hostname-must-not-appear')
+        except OSError as cause:
+            raise httpx.ConnectError('credential-bearing-url-must-not-appear') from cause
+    with httpx.Client(base_url='https://pilot.example.test', transport=httpx.MockTransport(receive)) as client:
+        evidence = capacity_probe(client, 3)
+    assert evidence['transport_failure_codes'] == {'gaierror:-3': 100}
+    assert evidence['failures'] == 100
+    assert evidence['degraded_responses'] == 0
+    assert evidence['policy_mismatches'] == 0
+    assert not evidence['processing_gate_pass']
+
+
+def test_private_cleanup_revokes_only_the_verified_owned_session(monkeypatch, tmp_path):
+    import jwt
+    import time
+    from sqlalchemy import create_engine, text
+    from scripts.verify_pilot import revoke_owner_session
+    url = 'sqlite:///' + str(tmp_path / 'sessions.db')
+    database = create_engine(url)
+    with database.begin() as connection:
+        connection.execute(text('CREATE TABLE users (id TEXT, email TEXT, tenant_id TEXT)'))
+        connection.execute(text('CREATE TABLE auth_sessions (token_id TEXT, user_id TEXT, tenant_id TEXT, revoked_at TEXT, revoke_reason TEXT)'))
+        connection.execute(text("INSERT INTO users VALUES ('owner','test@example.test','sentinel-pilot')"))
+        connection.execute(text("INSERT INTO auth_sessions VALUES ('ours','owner','sentinel-pilot',NULL,NULL), ('other','owner','sentinel-pilot',NULL,NULL)"))
+    monkeypatch.setenv('SL_PILOT_VERIFY', '1')
+    monkeypatch.setenv('JWT_SECRET', 'test-secret-at-least-32-characters-long')
+    monkeypatch.setenv('PILOT_ADMIN_EMAIL', 'test@example.test')
+    monkeypatch.setenv('MIGRATION_DATABASE_URL', url)
+    token = jwt.encode(dict(exp=int(time.time())+60, sub='owner', tenant_id='sentinel-pilot', jti='ours'),
+                       'test-secret-at-least-32-characters-long', algorithm='HS256')
+    def receive(request):
+        raise httpx.ConnectError('unavailable')
+    with httpx.Client(base_url='https://pilot.example.test', transport=httpx.MockTransport(receive)) as client:
+        with pytest.raises(jwt.InvalidTokenError):
+            revoke_owner_session(client, token + 'forged')
+        assert revoke_owner_session(client, token) == 'database'
+    with database.connect() as connection:
+        rows = dict(connection.execute(text('SELECT token_id, revoked_at FROM auth_sessions')).all())
+    assert rows['ours'] is not None
+    assert rows['other'] is None
+    database.dispose()
