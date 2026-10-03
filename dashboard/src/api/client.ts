@@ -103,8 +103,25 @@ export async function apiPut<T = unknown>(path: string, body: unknown, options: 
   return res.json() as Promise<T>;
 }
 
-export async function login(email: string, password: string): Promise<{ access_token: string }> {
-  const data = await apiPost<{ access_token: string }>("/auth/login", { email, password });
+export type LoginResponse = { access_token: string; mfa_required?: boolean };
+
+async function publicPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${apiPath(path)}`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  if (!res.ok) throw await errorFromResponse(res);
+  return res.json() as Promise<T>;
+}
+
+export async function login(email: string, password: string, mfaCode?: string): Promise<LoginResponse> {
+  const body: Record<string, string> = { email, password };
+  if (mfaCode?.trim()) body.mfa_code = mfaCode.trim();
+  const data = await publicPost<LoginResponse>("/auth/login", body);
+  if (data.mfa_required) {
+    logout();
+    return data;
+  }
+  if (!data.access_token) throw { status: 401, message: "Sign-in did not complete. Please try again." };
   if (data.access_token) {
     localStorage.setItem("sl_access_token", data.access_token);
     try {
@@ -124,10 +141,9 @@ export async function register(
   tenant_id: string,
   bootstrap_token?: string
 ): Promise<unknown> {
-  localStorage.setItem("sl_tenant_id", tenant_id);
   const body: Record<string, string> = { email, password, full_name, tenant_id };
   if (bootstrap_token?.trim()) body.bootstrap_token = bootstrap_token.trim();
-  return apiPost("/auth/register", body);
+  return publicPost("/auth/register", body);
 }
 
 export function logout(): void {

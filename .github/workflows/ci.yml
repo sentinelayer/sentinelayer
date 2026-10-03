@@ -21,6 +21,7 @@ jobs:
       - name: Build dashboard for SPA smoke checks
         run: |
           npm --prefix dashboard ci --ignore-scripts --workspaces=false
+          npm --prefix dashboard test
           npm --prefix dashboard run build
       - name: Local regression tests
         run: pytest -m "not integration" -v --tb=short

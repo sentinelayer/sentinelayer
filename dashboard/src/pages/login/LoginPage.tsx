@@ -10,10 +10,14 @@ export default function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [requiresMfa, setRequiresMfa] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
 
   function switchMode(nextMode: "login" | "register") {
     setMode(nextMode);
     setError(null);
+    setRequiresMfa(false);
+    setMfaCode("");
   }
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -24,7 +28,12 @@ export default function LoginPage({ onSuccess }: { onSuccess: () => void }) {
       if (mode === "register") {
         await register(email.trim(), password, fullName.trim(), tenantId, bootstrapToken);
       }
-      await login(email.trim(), password);
+      const result = await login(email.trim(), password, requiresMfa ? mfaCode : undefined);
+      if (result.mfa_required) {
+        setRequiresMfa(true);
+        setMfaCode("");
+        return;
+      }
       onSuccess();
     } catch (err: unknown) {
       const message = errorMessage(err);
@@ -68,7 +77,7 @@ export default function LoginPage({ onSuccess }: { onSuccess: () => void }) {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setRequiresMfa(false); setMfaCode(""); }}
               autoComplete="email"
               placeholder="you@example.com"
               required
@@ -79,7 +88,7 @@ export default function LoginPage({ onSuccess }: { onSuccess: () => void }) {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setRequiresMfa(false); setMfaCode(""); }}
               autoComplete={isRegister ? "new-password" : "current-password"}
               placeholder="At least 12 characters"
               minLength={12}
@@ -104,8 +113,17 @@ export default function LoginPage({ onSuccess }: { onSuccess: () => void }) {
 
           {error && <p className="auth-error" role="alert">{error}</p>}
 
+          {requiresMfa && (
+            <label>
+              Authenticator or recovery code
+              <input type="text" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)}
+                autoComplete="one-time-code" maxLength={32} required autoFocus />
+              <span className="field-help">Enter the current code from your authenticator to finish signing in.</span>
+            </label>
+          )}
+
           <button className="primary-button" type="submit" disabled={loading}>
-            {loading ? "Please wait…" : isRegister ? "Create account" : "Sign in"}
+            {loading ? "Please wait…" : requiresMfa ? "Verify and sign in" : isRegister ? "Create account" : "Sign in"}
           </button>
         </form>
 
