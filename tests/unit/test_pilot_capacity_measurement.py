@@ -157,3 +157,18 @@ def test_series_aggregate_uses_all_samples_and_keeps_window_failure(monkeypatch)
     assert evidence['aggregate_processing_p95_ms'] == 1
     assert evidence['round_processing_p95_ms'] == [40, 1]
     assert not evidence['series_gate_pass']
+
+
+def test_capacity_waits_for_new_gateway_telemetry(monkeypatch):
+    from scripts import verify_pilot
+    calls = []
+    def receive(request):
+        calls.append(request.url.path)
+        headers = {'X-SL-Policy-Version': f'{POLICY_ID}:3'}
+        if len(calls) == 2:
+            headers['X-SL-Gateway-Rate-Ms'] = '0.25'
+        return httpx.Response(200, headers=headers)
+    monkeypatch.setattr(verify_pilot.time, 'sleep', lambda *_: None)
+    with httpx.Client(base_url='https://pilot.example.test', transport=httpx.MockTransport(receive)) as client:
+        verify_pilot.wait_for_rate_telemetry(client, 3)
+    assert len(calls) == 2

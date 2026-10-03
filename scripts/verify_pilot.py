@@ -156,6 +156,22 @@ def capacity_series(client, version):
     return evidence
 
 
+def wait_for_rate_telemetry(client, version):
+    deadline = time.monotonic() + 90
+    while time.monotonic() < deadline:
+        try:
+            response = client.get(DENY + "-boundary")
+            value = float(response.headers.get("X-SL-Gateway-Rate-Ms", "nan"))
+            if (response.status_code == 200 and math.isfinite(value) and value >= 0
+                    and response.headers.get("X-SL-Policy-Version") == f"{POLICY_ID}:{version}"):
+                print("Deployed trusted rate-stage telemetry ready PASS", flush=True)
+                return
+        except (httpx.RequestError, ValueError):
+            pass
+        time.sleep(2)
+    raise RuntimeError("Rate-stage telemetry deployment did not converge")
+
+
 def cleanup_previous_probe_session(api):
     start = os.getenv("PILOT_CLEANUP_PROBE_START")
     if not start:
@@ -266,6 +282,7 @@ def main():
             else:
                 raise RuntimeError("Gateway receipt did not converge")
             if os.getenv("PILOT_CAPACITY_PROBE", "0") == "1":
+                wait_for_rate_telemetry(client, previous_version)
                 capacity_ok = capacity_series(client, previous_version)["series_gate_pass"]
             print(f"PILOT_VERIFIED_VERSION={previous_version}", flush=True)
         finally:
