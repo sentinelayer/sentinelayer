@@ -61,6 +61,33 @@ def capacity_probe(client, version):
     return report
 
 
+def capacity_series(client, version):
+    rounds = int(os.getenv("PILOT_CAPACITY_ROUNDS", "1"))
+    attempts = int(os.getenv("PILOT_CAPACITY_REQUESTS", "500"))
+    if not 1 <= rounds <= 20 or not 100 <= attempts <= 1000 or rounds * attempts > 20000:
+        raise ValueError("Deployed capacity series exceeds its bounded budget")
+    started = time.monotonic()
+    reports = []
+    for _ in range(rounds):
+        # Stop scheduling more work after the five-minute series budget.
+        if time.monotonic() - started >= 300:
+            break
+        reports.append(capacity_probe(client, version))
+    evidence = {
+        "requested_rounds": rounds, "completed_rounds": len(reports),
+        "attempts": sum(row["attempts"] for row in reports),
+        "elapsed_seconds": time.monotonic() - started,
+        "failures": sum(row["failures"] for row in reports),
+        "degraded_responses": sum(row["degraded_responses"] for row in reports),
+        "policy_mismatches": sum(row["policy_mismatches"] for row in reports),
+        "round_processing_p95_ms": [row["processing_p95_ms"] for row in reports],
+        "series_gate_pass": len(reports) == rounds and all(row["processing_gate_pass"] for row in reports),
+        "scope": "Bounded authenticated deployed series; every round must pass independently. No aggregate percentile, HA or SLA claim.",
+    }
+    print("PILOT_CAPACITY_SERIES=" + json.dumps(evidence, sort_keys=True), flush=True)
+    return evidence
+
+
 def main():
     if os.environ.get("SL_PILOT_VERIFY") != "1":
         raise ValueError("Pilot verification must be explicitly enabled")
@@ -82,42 +109,42 @@ def main():
         credentials["mfa_code"] = pyotp.TOTP(os.environ["PILOT_ADMIN_MFA_SECRET"]).now()
         login = api("POST", "/auth/login", credentials)
         client.headers["Authorization"] = "Bearer " + login["access_token"]
-        owner = api("GET", "/auth/me")
-        assert owner["is_admin"] and owner["mfa_enabled"] and owner["tenant_id"] == "sentinel-pilot"
-        print("Owner MFA enforcement and authenticated pilot access PASS", flush=True)
-        # Read only: report registration/delivery state, never secrets or receiver URLs.
-        hooks = api("GET", "/webhooks")
-        deliveries = api("GET", "/webhooks/logs?limit=100")
-        print("PILOT_ALERT_EVIDENCE=" + json.dumps({
-            "registered_receivers": len(hooks),
-            "receivers_with_secret": sum(bool(row.get("secret_configured")) for row in hooks),
-            "recent_delivery_statuses": dict(Counter(row["status"] for row in deliveries)),
-        }, sort_keys=True), flush=True)
-        original = api("GET", f"/policies/{POLICY_ID}")
-        rules = original["rules"]
-        if isinstance(rules, str):
-            rules = json.loads(rules)
-        previous_version = original["version"]
-
-        def probe(path, expected, version):
-            response = client.get(path)
-            if response.status_code != expected:
-                return False
-            if response.headers.get("X-SL-Policy-Version") != f"{POLICY_ID}:{version}":
-                return False
-            if expected == 403 and response.json().get("reason") != "signed_policy":
-                return False
-            return True
-
-        def wait_probe(path, expected, version):
-            deadline = time.monotonic() + 35
-            while time.monotonic() < deadline:
-                if probe(path, expected, version):
-                    return
-                time.sleep(2)
-            raise RuntimeError("Signed-policy probe did not converge")
-
         try:
+            owner = api("GET", "/auth/me")
+            assert owner["is_admin"] and owner["mfa_enabled"] and owner["tenant_id"] == "sentinel-pilot"
+            print("Owner MFA enforcement and authenticated pilot access PASS", flush=True)
+            # Read only: report registration/delivery state, never secrets or receiver URLs.
+            hooks = api("GET", "/webhooks")
+            deliveries = api("GET", "/webhooks/logs?limit=100")
+            print("PILOT_ALERT_EVIDENCE=" + json.dumps({
+                "registered_receivers": len(hooks),
+                "receivers_with_secret": sum(bool(row.get("secret_configured")) for row in hooks),
+                "recent_delivery_statuses": dict(Counter(row["status"] for row in deliveries)),
+            }, sort_keys=True), flush=True)
+            original = api("GET", f"/policies/{POLICY_ID}")
+            rules = original["rules"]
+            if isinstance(rules, str):
+                rules = json.loads(rules)
+            previous_version = original["version"]
+
+            def probe(path, expected, version):
+                response = client.get(path)
+                if response.status_code != expected:
+                    return False
+                if response.headers.get("X-SL-Policy-Version") != f"{POLICY_ID}:{version}":
+                    return False
+                if expected == 403 and response.json().get("reason") != "signed_policy":
+                    return False
+                return True
+
+            def wait_probe(path, expected, version):
+                deadline = time.monotonic() + 35
+                while time.monotonic() < deadline:
+                    if probe(path, expected, version):
+                        return
+                    time.sleep(2)
+                raise RuntimeError("Signed-policy probe did not converge")
+
             wait_probe(DENY, 403, previous_version)
             wait_probe(DENY + "-boundary", 200, previous_version)
             print("Signed deny rule and path boundary PASS", flush=True)
@@ -147,7 +174,7 @@ def main():
             else:
                 raise RuntimeError("Gateway receipt did not converge")
             if os.getenv("PILOT_CAPACITY_PROBE", "0") == "1":
-                capacity_probe(client, previous_version)
+                capacity_series(client, previous_version)
             print(f"PILOT_VERIFIED_VERSION={previous_version}", flush=True)
         finally:
             api("POST", "/auth/logout", {})
