@@ -21,6 +21,7 @@ class Handler(BaseHTTPRequestHandler):
             "path": self.path,
             "decision": self.headers.get("X-SL-Decision"),
             "score": self.headers.get("X-SL-Score"),
+            "gateway_processing_ms": self.headers.get("X-SL-Latency-Ms"),
         }).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")

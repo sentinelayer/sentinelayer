@@ -102,6 +102,31 @@ def main() -> None:
         status, _, _ = request(f"http://127.0.0.1:{GATEWAY_PORT}/safe", oversized)
         assert status == 400, status
         print("gateway e2e: safe proxy, CRS body block, gzip body block, critical auth, and body limit passed")
+        if os.getenv("E2E_FAILURE_DRILL") == "1":
+            import jwt
+            from datetime import UTC, datetime, timedelta
+            token = jwt.encode({"sub": "failure-drill", "tenant_id": "failure-drill",
+                                "exp": datetime.now(UTC) + timedelta(minutes=5)}, env["JWT_SECRET"], algorithm="HS256")
+            auth = {"Authorization": f"Bearer {token}"}
+            # Terminate only engine processes created by this test. Keep the
+            # upstream alive to distinguish a protected denial from an outage.
+            for process, module in ((processes[1], "engine.risk.server"), (processes[2], "engine.behavior.server")):
+                process.terminate()
+                process.wait(timeout=5)
+                status, body, _ = request(f"http://127.0.0.1:{GATEWAY_PORT}/api/v1/admin/drill", headers=auth)
+                assert status == 403, (module, status, body)
+                assert json.loads(body)["reason"].endswith("unavailable_fail_closed"), body
+                assert request(f"http://127.0.0.1:{GATEWAY_PORT}/safe")[0] == 200
+                assert request(f"http://127.0.0.1:{GATEWAY_PORT}/safe", attack,
+                               {"Content-Type": "application/json"})[0] == 403
+                processes.append(subprocess.Popen([sys.executable, "-m", module], cwd=ROOT, env=env,
+                                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT))
+                wait_http("http://127.0.0.1:8090/health" if "risk" in module else "http://127.0.0.1:8091/health")
+                deadline = time.monotonic() + 15
+                while request(f"http://127.0.0.1:{GATEWAY_PORT}/api/v1/admin/drill", headers=auth)[0] != 200:
+                    assert time.monotonic() < deadline, module
+                    time.sleep(.5)
+            print("failure drill: risk and behavior outage deny critical traffic, preserve normal proxy/WAF, recover after restart")
         if policy_fixture:
             import jwt
             from datetime import UTC, datetime, timedelta

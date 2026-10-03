@@ -31,3 +31,7 @@ A release may be called **repository-ready** only when CI, security scans, SBOM 
 ## Explicit non-claims
 
 The system must not claim zero incidents, zero false positives, 100% uptime, certification, HA, independent verification, or enterprise readiness without the corresponding evidence. AI agent execution remains deferred until a separate design review enables it.
+
+## Latest verification
+
+See [2026-10-03 technical re-verification](verification-2026-10-03.md) for measured local latency, failure drills and remaining gates. The 32-concurrency latency profile fails; green CI alone does not approve production capacity.

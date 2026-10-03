@@ -79,8 +79,10 @@ class SharedBehaviorState:
             pipe.zremrangebyscore(key, 0, now - 300)
             pipe.zadd(key, {member: now})
             pipe.expire(key, 305)
-            pipe.zrange(key, 0, -1)
-            entries = pipe.execute()[3]
+            pipe.zcard(key)
+            pipe.zrange(key, -50, -1)
+            result = pipe.execute()
+            count, entries = int(result[3]), result[4]
         except redis.RedisError as exc:
             raise HTTPException(status_code=503, detail="shared behavior state unavailable") from exc
 
@@ -92,11 +94,11 @@ class SharedBehaviorState:
                     actions.append(value["endpoint"])
             except (TypeError, json.JSONDecodeError):
                 continue
-        frequency = {"is_anomaly": False, "reason": "normal", "confidence": 0.4, "signals": [], "count": len(entries)}
-        if len(entries) > 50:
-            frequency = {"is_anomaly": True, "reason": "excessive_requests_5m", "confidence": 0.85, "signals": ["freq_critical"], "count": len(entries)}
-        elif len(entries) > 20:
-            frequency = {"is_anomaly": True, "reason": "elevated_request_rate_5m", "confidence": 0.65, "signals": ["freq_elevated"], "count": len(entries)}
+        frequency = {"is_anomaly": False, "reason": "normal", "confidence": 0.4, "signals": [], "count": count}
+        if count > 50:
+            frequency = {"is_anomaly": True, "reason": "excessive_requests_5m", "confidence": 0.85, "signals": ["freq_critical"], "count": count}
+        elif count > 20:
+            frequency = {"is_anomaly": True, "reason": "elevated_request_rate_5m", "confidence": 0.65, "signals": ["freq_elevated"], "count": count}
         sequence = self._sequence_anomaly(actions)
         signals = list(dict.fromkeys([*(frequency["signals"]), *(sequence["signals"])]))
         return {

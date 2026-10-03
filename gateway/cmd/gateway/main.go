@@ -388,7 +388,7 @@ func main() {
 				confidence = 0.5
 				reason = "risk_engine_unavailable_fail_closed"
 			} else if v, ok := lkg.Get(reqCtx.TenantID + ":" + reqCtx.Endpoint + ":" + policyVersion); ok {
-				if prev, ok2 := v.(DecisionOutput); ok2 {
+				if prev, ok2 := v.(DecisionOutput); ok2 && (prev.Action == "ALLOW" || prev.Action == "MONITOR") {
 					action = prev.Action
 					score = prev.Score
 					confidence = prev.Confidence
@@ -437,7 +437,11 @@ func main() {
 			Signals: signals, Reason: reason, PolicyVer: policyVersion,
 			Context: reqCtx, Timestamp: time.Now().UTC(),
 		}
-		lkg.Save(reqCtx.TenantID+":"+reqCtx.Endpoint+":"+policyVersion, out)
+		// Request-specific BLOCK decisions must not poison a path-wide fallback.
+		// WAF and signed policy are still evaluated on every degraded request.
+		if action == "ALLOW" || action == "MONITOR" {
+			lkg.Save(reqCtx.TenantID+":"+reqCtx.Endpoint+":"+policyVersion, out)
+		}
 
 		if action == "BLOCK" {
 			w.Header().Set("Content-Type", "application/json")
@@ -452,7 +456,7 @@ func main() {
 		r.Header.Set("X-SL-Decision", action)
 		r.Header.Set("X-SL-Score", jsonFloat(score))
 		r.Header.Set("X-SL-Tenant", reqCtx.TenantID)
-		r.Header.Set("X-SL-Latency-Ms", jsonFloat(float64(time.Since(start).Milliseconds())))
+		r.Header.Set("X-SL-Latency-Ms", jsonFloat(float64(time.Since(start))/float64(time.Millisecond)))
 		proxy.ServeHTTP(w, r)
 		observability.IncAllowed()
 	})
