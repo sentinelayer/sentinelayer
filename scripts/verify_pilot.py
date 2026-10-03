@@ -60,7 +60,7 @@ def revoke_owner_session(client, token):
         database.dispose()
 
 
-def capacity_probe(client, version):
+def capacity_probe(client, version, processing_samples=None):
     attempts = int(os.getenv("PILOT_CAPACITY_REQUESTS", "500"))
     concurrency = int(os.getenv("PILOT_CAPACITY_CONCURRENCY", "8"))
     if not 100 <= attempts <= 1000 or not 1 <= concurrency <= 32:
@@ -80,14 +80,28 @@ def capacity_probe(client, version):
             return {"status": str(response.status_code), "processing_ms": processing,
                     "degraded": response.headers.get("X-SL-Gateway-Degraded") != "false",
                     "policy_match": response.headers.get("X-SL-Policy-Version") == f"{POLICY_ID}:{version}",
+                    "stages": {stage: response.headers.get(f"X-SL-Gateway-{stage}-Ms") for stage in ("WAF", "Rate", "Behavior", "Risk")},
                     "transport_failure": None, "wall_ms": (time.perf_counter() - started) * 1000}
         except httpx.RequestError as error:
             return {"status": type(error).__name__, "processing_ms": None, "degraded": False,
-                    "policy_match": True, "transport_failure": transport_failure_code(error), "wall_ms": (time.perf_counter() - started) * 1000}
+                    "policy_match": True, "stages": {}, "transport_failure": transport_failure_code(error), "wall_ms": (time.perf_counter() - started) * 1000}
     started = time.perf_counter()
     with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
         rows = list(executor.map(sample, range(attempts)))
     timings = sorted(row["processing_ms"] for row in rows if row["processing_ms"] is not None)
+    if processing_samples is not None:
+        processing_samples.extend(timings)
+    stage_values = {}
+    for stage in ("WAF", "Rate", "Behavior", "Risk"):
+        values = []
+        for row in rows:
+            try:
+                value = float(row["stages"].get(stage))
+                if math.isfinite(value) and value >= 0:
+                    values.append(value)
+            except (ValueError, TypeError):
+                pass
+        stage_values[stage] = sorted(values)
     p95 = timings[math.ceil(len(timings)*.95)-1] if timings else None
     report = {"attempts": attempts, "concurrency": concurrency,
               "elapsed_seconds": time.perf_counter() - started,
@@ -97,6 +111,8 @@ def capacity_probe(client, version):
               "degraded_responses": sum(row["degraded"] for row in rows),
               "policy_mismatches": sum(not row["policy_match"] for row in rows),
               "processing_samples": len(timings), "processing_p95_ms": p95,
+              "stage_samples": {stage: len(values) for stage, values in stage_values.items()},
+              "stage_p95_ms": {stage: values[math.ceil(len(values)*.95)-1] if values else None for stage, values in stage_values.items()},
               "client_wall_p95_ms": sorted(row["wall_ms"] for row in rows)[math.ceil(attempts*.95)-1],
               "scope": "Bounded deployed authenticated pilot through public HTTPS and signed tenant policy; not sustained capacity, HA or SLA certification."}
     report["processing_gate_pass"] = (len(timings) == attempts and p95 < 20 and not report["failures"]
@@ -113,14 +129,18 @@ def capacity_series(client, version):
         raise ValueError("Deployed capacity series exceeds its bounded budget")
     started = time.monotonic()
     reports = []
+    timings = []
     for _ in range(rounds):
         # Stop scheduling more work after the five-minute series budget.
         if time.monotonic() - started >= 300:
             break
-        reports.append(capacity_probe(client, version))
+        reports.append(capacity_probe(client, version, timings))
         if reports[-1]["transport_failure_codes"]:
             break  # Preserve failure evidence and avoid another round of unreachable traffic.
+    timings.sort()
     evidence = {
+        "processing_samples": len(timings),
+        "aggregate_processing_p95_ms": timings[math.ceil(len(timings)*.95)-1] if timings else None,
         "requested_rounds": rounds, "completed_rounds": len(reports),
         "attempts": sum(row["attempts"] for row in reports),
         "elapsed_seconds": time.monotonic() - started,
@@ -130,7 +150,7 @@ def capacity_series(client, version):
         "transport_failure_codes": dict(sum((Counter(row["transport_failure_codes"]) for row in reports), Counter())),
         "round_processing_p95_ms": [row["processing_p95_ms"] for row in reports],
         "series_gate_pass": len(reports) == rounds and all(row["processing_gate_pass"] for row in reports),
-        "scope": "Bounded authenticated deployed series; every round must pass independently. No aggregate percentile, HA or SLA claim.",
+        "scope": "Bounded authenticated deployed series; every round must pass independently. Aggregate percentile calculated from all received finite processing samples. No HA or SLA claim.",
     }
     print("PILOT_CAPACITY_SERIES=" + json.dumps(evidence, sort_keys=True), flush=True)
     return evidence

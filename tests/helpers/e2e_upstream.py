@@ -22,7 +22,7 @@ class Handler(BaseHTTPRequestHandler):
             "decision": self.headers.get("X-SL-Decision"),
             "score": self.headers.get("X-SL-Score"),
             "gateway_processing_ms": self.headers.get("X-SL-Latency-Ms"),
-            "gateway_stages_ms": {stage: self.headers.get(f"X-SL-{stage}-Latency-Ms") for stage in ("WAF", "Behavior", "Risk")},
+            "gateway_stages_ms": {stage: self.headers.get(f"X-SL-{stage}-Latency-Ms") for stage in ("WAF", "Rate", "Behavior", "Risk")},
             "gateway_degraded": self.headers.get("X-SL-Degraded"),
         }).encode()
         self.send_response(200)
@@ -30,6 +30,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/safe":
             self.send_header("X-SL-Gateway-Processing-Ms", "999999")
             self.send_header("X-SL-Gateway-Degraded", "true")
+            self.send_header("X-SL-Gateway-Rate-Ms", "999999")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)

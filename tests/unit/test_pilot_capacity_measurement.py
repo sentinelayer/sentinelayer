@@ -137,3 +137,23 @@ def test_previous_probe_cleanup_preserves_unrelated_owner_sessions(monkeypatch):
         return {'revoked': True}
     cleanup_previous_probe_session(api)
     assert revoked == ['/auth/sessions/failed-probe/revoke']
+
+
+def test_series_aggregate_uses_all_samples_and_keeps_window_failure(monkeypatch):
+    from scripts.verify_pilot import capacity_series
+    monkeypatch.setenv('PILOT_CAPACITY_REQUESTS', '100')
+    monkeypatch.setenv('PILOT_CAPACITY_CONCURRENCY', '1')
+    monkeypatch.setenv('PILOT_CAPACITY_ROUNDS', '2')
+    counter = iter(range(200))
+    def receive(request):
+        index = next(counter)
+        headers = {'X-SL-Gateway-Processing-Ms': '40' if 94 <= index < 100 else '1',
+                   'X-SL-Gateway-Degraded': 'false', 'X-SL-Policy-Version': f'{POLICY_ID}:3',
+                   'X-SL-Gateway-Rate-Ms': '0.5'}
+        return httpx.Response(200, headers=headers)
+    with httpx.Client(base_url='https://pilot.example.test', transport=httpx.MockTransport(receive)) as client:
+        evidence = capacity_series(client, 3)
+    assert evidence['processing_samples'] == 200
+    assert evidence['aggregate_processing_p95_ms'] == 1
+    assert evidence['round_processing_p95_ms'] == [40, 1]
+    assert not evidence['series_gate_pass']

@@ -220,6 +220,7 @@ func main() {
 			"X-SL-Gateway-WAF-Ms":        "X-SL-WAF-Latency-Ms",
 			"X-SL-Gateway-Behavior-Ms":   "X-SL-Behavior-Latency-Ms",
 			"X-SL-Gateway-Risk-Ms":       "X-SL-Risk-Latency-Ms",
+			"X-SL-Gateway-Rate-Ms":       "X-SL-Rate-Latency-Ms",
 		} {
 			response.Header.Del(responseName)
 			if response.Request != nil {
@@ -346,6 +347,7 @@ func main() {
 			signals = append(signals, "waf_block")
 		}
 
+		rateStart := time.Now()
 		if rateLimiter != nil {
 			allowed, rateErr := rateLimiter.Allow(rateLimitKey(r, reqCtx))
 			if rateErr != nil {
@@ -368,6 +370,7 @@ func main() {
 			}
 		}
 
+		rateDuration := time.Since(rateStart)
 		behaviorStart := time.Now()
 		behaviorCtx, behaviorCancel := context.WithTimeout(r.Context(), 80*time.Millisecond)
 		behaviorResp, behaviorErr := behaviorClient.Analyze(behaviorCtx, engine.BehaviorRequest{
@@ -494,6 +497,7 @@ func main() {
 		r.Header.Set("X-SL-Latency-Ms", jsonFloat(float64(time.Since(start))/float64(time.Millisecond)))
 		r.Header.Set("X-SL-WAF-Latency-Ms", jsonFloat(float64(wafDuration)/float64(time.Millisecond)))
 		r.Header.Set("X-SL-Behavior-Latency-Ms", jsonFloat(float64(behaviorDuration)/float64(time.Millisecond)))
+		r.Header.Set("X-SL-Rate-Latency-Ms", jsonFloat(float64(rateDuration)/float64(time.Millisecond)))
 		r.Header.Set("X-SL-Risk-Latency-Ms", jsonFloat(float64(riskDuration)/float64(time.Millisecond)))
 		proxy.ServeHTTP(w, r)
 		observability.IncAllowed()

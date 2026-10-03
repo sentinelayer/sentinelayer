@@ -81,13 +81,14 @@ def main() -> None:
         processes.append(subprocess.Popen([gateway_bin], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT))
         wait_http(f"http://127.0.0.1:{GATEWAY_PORT}/health")
 
-        status, body, safe_headers = request(f"http://127.0.0.1:{GATEWAY_PORT}/safe", headers={"X-SL-Latency-Ms": "999999", "X-SL-Degraded": "true"})
+        status, body, safe_headers = request(f"http://127.0.0.1:{GATEWAY_PORT}/safe", headers={"X-SL-Latency-Ms": "999999", "X-SL-Degraded": "true", "X-SL-Rate-Latency-Ms": "999999"})
         assert status == 200, (status, body)
         safe_response = json.loads(body)
         assert safe_response["upstream"] is True
         assert safe_response["gateway_degraded"] == "false"
         assert safe_headers["X-Sl-Gateway-Processing-Ms"] == safe_response["gateway_processing_ms"], (safe_headers, safe_response)
         assert float(safe_headers["X-Sl-Gateway-Processing-Ms"]) < 999999
+        assert 0 <= float(safe_headers["X-Sl-Gateway-Rate-Ms"]) < 999999
         assert safe_headers["X-Sl-Gateway-Degraded"] == "false"
         assert safe_response["decision"] in {"ALLOW", "MONITOR"}
 
