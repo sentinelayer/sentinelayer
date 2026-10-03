@@ -80,7 +80,7 @@ def capacity_probe(client, version, processing_samples=None):
             return {"status": str(response.status_code), "processing_ms": processing,
                     "degraded": response.headers.get("X-SL-Gateway-Degraded") != "false",
                     "policy_match": response.headers.get("X-SL-Policy-Version") == f"{POLICY_ID}:{version}",
-                    "stages": {stage: response.headers.get(f"X-SL-Gateway-{stage}-Ms") for stage in ("WAF", "Rate", "Behavior", "Risk")},
+                    "stages": {stage: response.headers.get(f"X-SL-Gateway-{stage}-Ms") for stage in ("WAF", "Rate", "Policy", "Behavior", "Risk")},
                     "transport_failure": None, "wall_ms": (time.perf_counter() - started) * 1000}
         except httpx.RequestError as error:
             return {"status": type(error).__name__, "processing_ms": None, "degraded": False,
@@ -92,7 +92,7 @@ def capacity_probe(client, version, processing_samples=None):
     if processing_samples is not None:
         processing_samples.extend(timings)
     stage_values = {}
-    for stage in ("WAF", "Rate", "Behavior", "Risk"):
+    for stage in ("WAF", "Rate", "Policy", "Behavior", "Risk"):
         values = []
         for row in rows:
             try:

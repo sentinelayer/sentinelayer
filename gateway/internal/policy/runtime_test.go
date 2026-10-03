@@ -5,6 +5,8 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -146,5 +148,116 @@ func TestEnvironmentRejectsUnsafeEndpointAndMissingTrust(t *testing.T) {
 	t.Setenv("POLICY_SIGNING_PUBLIC_KEYS_JSON", "{}")
 	if _, err := FromEnvironment(); err == nil {
 		t.Fatal("accepted empty trust store")
+	}
+}
+
+func TestWarmPolicyDoesNotWaitForInFlightRefresh(t *testing.T) {
+	c, key, snapshot := fixture()
+	c.current = &snapshot
+	c.checkedAt = c.Now().Add(-11 * time.Second)
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	var calls atomic.Int64
+	updated := snapshot
+	updated.Version++
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		close(entered)
+		<-release
+		_, _ = w.Write(signed(t, key, updated))
+	}))
+	defer server.Close()
+	c.URL, c.HTTP = server.URL, server.Client()
+	refreshed := make(chan error, 1)
+	go func() { _, err := c.Current(context.Background()); refreshed <- err }()
+	<-entered
+	warm := make(chan error, 1)
+	go func() {
+		got, err := c.Current(context.Background())
+		if err == nil && got.Version != snapshot.Version {
+			err = fmt.Errorf("unexpected warm version %d", got.Version)
+		}
+		warm <- err
+	}()
+	var fast bool
+	select {
+	case err := <-warm:
+		fast = true
+		if err != nil {
+			t.Error(err)
+		}
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(release)
+	if err := <-refreshed; err != nil {
+		t.Fatal(err)
+	}
+	if !fast {
+		<-warm
+		t.Fatal("verified unexpired policy waited behind control-plane network I/O")
+	}
+	got, err := c.Current(context.Background())
+	if err != nil || got.Version != updated.Version {
+		t.Fatalf("refresh not installed: got=%v err=%v", got, err)
+	}
+	if calls.Load() != 1 {
+		t.Fatalf("duplicate refreshes: %d", calls.Load())
+	}
+}
+
+func TestExpiredPolicyWaitRespectsCancellationAndNeverAllows(t *testing.T) {
+	c, _, snapshot := fixture()
+	snapshot.ExpiresAt = c.Now().Unix()
+	c.current = &snapshot
+	entered, release := make(chan struct{}), make(chan struct{})
+	var requests atomic.Int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if requests.Add(1) == 1 {
+			close(entered)
+		}
+		<-release
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+	c.URL, c.HTTP = server.URL, server.Client()
+	refreshed := make(chan error, 1)
+	go func() {
+		got, err := c.Current(context.Background())
+		if got != nil {
+			err = fmt.Errorf("expired policy returned")
+		}
+		refreshed <- err
+	}()
+	<-entered
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
+	defer cancel()
+	waiting := make(chan error, 1)
+	go func() {
+		got, err := c.Current(ctx)
+		if got != nil {
+			err = fmt.Errorf("expired policy returned to waiter")
+		}
+		waiting <- err
+	}()
+	var waitErr error
+	var bounded bool
+	select {
+	case waitErr = <-waiting:
+		bounded = true
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(release)
+	if err := <-refreshed; err == nil {
+		t.Fatal("refresh failure accepted expired policy")
+	}
+	if !bounded {
+		<-waiting
+		t.Fatal("expired policy wait ignored context deadline")
+	}
+	if !errors.Is(waitErr, context.DeadlineExceeded) {
+		t.Fatalf("wait error=%v; want deadline", waitErr)
+	}
+	if requests.Load() != 1 {
+		t.Fatalf("cold/expired wait started duplicate refreshes: %d", requests.Load())
 	}
 }

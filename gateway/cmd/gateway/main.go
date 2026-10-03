@@ -221,6 +221,7 @@ func main() {
 			"X-SL-Gateway-Behavior-Ms":   "X-SL-Behavior-Latency-Ms",
 			"X-SL-Gateway-Risk-Ms":       "X-SL-Risk-Latency-Ms",
 			"X-SL-Gateway-Rate-Ms":       "X-SL-Rate-Latency-Ms",
+			"X-SL-Gateway-Policy-Ms":     "X-SL-Policy-Latency-Ms",
 		} {
 			response.Header.Del(responseName)
 			if response.Request != nil {
@@ -288,6 +289,7 @@ func main() {
 		reqCtx := extractContext(r, claims)
 		policyVersion := "builtin-v1"
 		var snapshot *policy.Snapshot
+		policyStart := time.Now()
 		if policyRouting != nil {
 			policyClient, routeErr := policyRouting.Select(r.Host)
 			if routeErr != nil {
@@ -325,6 +327,7 @@ func main() {
 			}
 			policyVersion = fmt.Sprintf("%s:%d", snapshot.PolicyID, snapshot.Version)
 		}
+		policyDuration := time.Since(policyStart)
 		w.Header().Set("X-SL-Policy-Version", policyVersion)
 		r.Header.Set("X-SL-Policy-Version", policyVersion)
 		normalize.NormalizeRequest(r)
@@ -497,6 +500,7 @@ func main() {
 		r.Header.Set("X-SL-Latency-Ms", jsonFloat(float64(time.Since(start))/float64(time.Millisecond)))
 		r.Header.Set("X-SL-WAF-Latency-Ms", jsonFloat(float64(wafDuration)/float64(time.Millisecond)))
 		r.Header.Set("X-SL-Behavior-Latency-Ms", jsonFloat(float64(behaviorDuration)/float64(time.Millisecond)))
+		r.Header.Set("X-SL-Policy-Latency-Ms", jsonFloat(float64(policyDuration)/float64(time.Millisecond)))
 		r.Header.Set("X-SL-Rate-Latency-Ms", jsonFloat(float64(rateDuration)/float64(time.Millisecond)))
 		r.Header.Set("X-SL-Risk-Latency-Ms", jsonFloat(float64(riskDuration)/float64(time.Millisecond)))
 		proxy.ServeHTTP(w, r)

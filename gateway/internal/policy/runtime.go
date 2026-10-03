@@ -40,6 +40,11 @@ type Envelope struct {
 	Signature string `json:"signature"`
 	KeyID     string `json:"key_id"`
 }
+type policyRefresh struct {
+	done chan struct{}
+	err  error
+}
+
 type Client struct {
 	floor                           int
 	statePath                       string
@@ -52,6 +57,7 @@ type Client struct {
 	Now                             func() time.Time
 	current                         *Snapshot
 	checkedAt                       time.Time
+	inFlight                        *policyRefresh
 }
 
 func FromEnvironment() (*Client, error) {
@@ -181,49 +187,86 @@ func (c *Client) verify(raw []byte, now time.Time) (*Snapshot, error) {
 	return &snapshot, nil
 }
 
-// Current refreshes at most every ten seconds; an unexpired verified bundle is
-// the only fallback. Expiry and signature errors never substitute an ALLOW.
+// Current shares one refresh without holding the cache lock during network I/O.
+// Only unexpired verified snapshots may serve while a refresh is in flight.
 func (c *Client) Current(ctx context.Context) (*Snapshot, error) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	now := c.Now()
-	if c.current != nil && now.Sub(c.checkedAt) < 10*time.Second && c.current.ExpiresAt > now.Unix() {
+	valid := c.current != nil && c.current.ExpiresAt > now.Unix()
+	if valid && (now.Sub(c.checkedAt) < 10*time.Second || c.inFlight != nil) {
+		snapshot := clone(c.current)
+		c.mu.Unlock()
+		return snapshot, nil
+	}
+	if refresh := c.inFlight; refresh != nil {
+		c.mu.Unlock()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-refresh.done:
+			c.mu.Lock()
+			defer c.mu.Unlock()
+			if c.current != nil && c.current.ExpiresAt > c.Now().Unix() {
+				return clone(c.current), nil
+			}
+			if refresh.err != nil {
+				return nil, refresh.err
+			}
+			return nil, errors.New("verified policy expired while waiting for refresh")
+		}
+	}
+	refresh := &policyRefresh{done: make(chan struct{})}
+	c.inFlight = refresh
+	c.checkedAt = now
+	c.mu.Unlock()
+
+	raw, err := c.fetch(ctx)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err == nil {
+		var snapshot *Snapshot
+		snapshot, err = c.verify(raw, c.Now())
+		if err == nil {
+			err = c.persistFloor(snapshot.Version)
+		}
+		if err == nil {
+			c.current = snapshot
+			c.report(raw)
+		}
+	}
+	refresh.err = err
+	c.inFlight = nil
+	close(refresh.done)
+	if c.current != nil && c.current.ExpiresAt > c.Now().Unix() {
 		return clone(c.current), nil
 	}
-	c.checkedAt = now
+	if err == nil {
+		err = errors.New("verified policy expired during refresh")
+	}
+	return nil, err
+}
+
+func (c *Client) fetch(ctx context.Context) ([]byte, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, c.URL, nil)
 	if err != nil {
 		return nil, err
 	}
 	request.Header.Set("X-API-Key", c.APIKey)
 	response, err := c.HTTP.Do(request)
-	if err == nil {
-		defer response.Body.Close()
-		if response.StatusCode != http.StatusOK {
-			err = fmt.Errorf("policy service status %d", response.StatusCode)
-		} else {
-			raw, readErr := io.ReadAll(io.LimitReader(response.Body, 65537))
-			if readErr != nil || len(raw) > 65536 {
-				err = errors.New("policy response limit exceeded")
-			} else {
-				var snapshot *Snapshot
-				snapshot, err = c.verify(raw, c.Now())
-				if err == nil {
-					err = c.persistFloor(snapshot.Version)
-				}
-				if err == nil {
-					c.current = snapshot
-					c.report(raw)
-					return clone(snapshot), nil
-				}
-			}
-		}
+	if err != nil {
+		return nil, err
 	}
-	if c.current != nil && c.current.ExpiresAt > c.Now().Unix() {
-		return clone(c.current), nil
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("policy service status %d", response.StatusCode)
 	}
-	return nil, err
+	raw, err := io.ReadAll(io.LimitReader(response.Body, 65537))
+	if err != nil || len(raw) > 65536 {
+		return nil, errors.New("policy response limit exceeded")
+	}
+	return raw, nil
 }
+
 func clone(s *Snapshot) *Snapshot {
 	copy := *s
 	copy.Rules.DenyPathPrefixes = append([]string(nil), s.Rules.DenyPathPrefixes...)
