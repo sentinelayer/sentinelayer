@@ -1,0 +1,146 @@
+{
+  "provenance": "synthetic",
+  "corpus_sha256": "35eff3b9dc231182b0f174268d82769062a218826c6a81af0e13150a0ed86cea",
+  "attack_block_rate": {
+    "events": 10,
+    "total": 10,
+    "estimate": 1,
+    "wilson_95_interval": [
+      0.7224672001371107,
+      0.9999999999999999
+    ]
+  },
+  "benign_block_rate": {
+    "events": 0,
+    "total": 10,
+    "estimate": 0,
+    "wilson_95_interval": [
+      0,
+      0.2775327998628892
+    ]
+  },
+  "cases": [
+    {
+      "id": "search",
+      "label": "benign",
+      "blocked": false,
+      "rule_id": 0
+    },
+    {
+      "id": "apostrophe",
+      "label": "benign",
+      "blocked": false,
+      "rule_id": 0
+    },
+    {
+      "id": "unicode",
+      "label": "benign",
+      "blocked": false,
+      "rule_id": 0
+    },
+    {
+      "id": "email",
+      "label": "benign",
+      "blocked": false,
+      "rule_id": 0
+    },
+    {
+      "id": "math",
+      "label": "benign",
+      "blocked": false,
+      "rule_id": 0
+    },
+    {
+      "id": "url",
+      "label": "benign",
+      "blocked": false,
+      "rule_id": 0
+    },
+    {
+      "id": "json-text",
+      "label": "benign",
+      "blocked": false,
+      "rule_id": 0
+    },
+    {
+      "id": "markdown",
+      "label": "benign",
+      "blocked": false,
+      "rule_id": 0
+    },
+    {
+      "id": "comparison",
+      "label": "benign",
+      "blocked": false,
+      "rule_id": 0
+    },
+    {
+      "id": "uuid",
+      "label": "benign",
+      "blocked": false,
+      "rule_id": 0
+    },
+    {
+      "id": "sql-tautology",
+      "label": "attack",
+      "blocked": true,
+      "rule_id": 949110
+    },
+    {
+      "id": "sql-union",
+      "label": "attack",
+      "blocked": true,
+      "rule_id": 949110
+    },
+    {
+      "id": "sql-drop",
+      "label": "attack",
+      "blocked": true,
+      "rule_id": 949110
+    },
+    {
+      "id": "sql-time",
+      "label": "attack",
+      "blocked": true,
+      "rule_id": 949110
+    },
+    {
+      "id": "xss-script",
+      "label": "attack",
+      "blocked": true,
+      "rule_id": 949110
+    },
+    {
+      "id": "xss-event",
+      "label": "attack",
+      "blocked": true,
+      "rule_id": 949110
+    },
+    {
+      "id": "xss-svg",
+      "label": "attack",
+      "blocked": true,
+      "rule_id": 949110
+    },
+    {
+      "id": "xss-protocol",
+      "label": "attack",
+      "blocked": true,
+      "rule_id": 949110
+    },
+    {
+      "id": "command",
+      "label": "attack",
+      "blocked": true,
+      "rule_id": 949110
+    },
+    {
+      "id": "traversal-argument",
+      "label": "attack",
+      "blocked": true,
+      "rule_id": 1003
+    }
+  ],
+  "production_acceptance": "not_evaluated",
+  "scope": "Offline WAF only; no behavior, signed policy, customer representativeness, leakage review or production accuracy certification."
+}

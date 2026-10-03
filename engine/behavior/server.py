@@ -17,6 +17,16 @@ from engine.behavior import behavior_engine
 
 app = FastAPI(title="SentinelLayer Behavior Engine", version="1.0.0")
 
+# The newest 51 timestamps suffice to distinguish every frequency threshold;
+# only the newest 50 actions participate in sequence detection.
+_OBSERVE_ACTION = """
+redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, ARGV[2])
+redis.call('ZADD', KEYS[1], ARGV[1], ARGV[3])
+redis.call('ZREMRANGEBYRANK', KEYS[1], 0, -52)
+redis.call('EXPIRE', KEYS[1], 305)
+return {redis.call('ZCARD', KEYS[1]), redis.call('ZRANGE', KEYS[1], -50, -1)}
+"""
+
 
 class BehaviorRequest(BaseModel):
     tenant_id: str = Field(default="", max_length=128)
@@ -76,14 +86,8 @@ class SharedBehaviorState:
         key = f"sl:behavior:actions:{actor}"
         member = json.dumps({"endpoint": req.endpoint, "timestamp": now, "nonce": uuid.uuid4().hex}, sort_keys=True)
         try:
-            pipe = self.redis_client.pipeline(transaction=True)
-            pipe.zremrangebyscore(key, 0, now - 300)
-            pipe.zadd(key, {member: now})
-            pipe.expire(key, 305)
-            pipe.zcard(key)
-            pipe.zrange(key, -50, -1)
-            result = pipe.execute()
-            count, entries = int(result[3]), result[4]
+            count, entries = self.redis_client.eval(_OBSERVE_ACTION, 1, key, now, now - 300, member)
+            count = int(count)
         except redis.RedisError as exc:
             raise HTTPException(status_code=503, detail="shared behavior state unavailable") from exc
 
@@ -100,6 +104,8 @@ class SharedBehaviorState:
             frequency = {"is_anomaly": True, "reason": "excessive_requests_5m", "confidence": 0.85, "signals": ["freq_critical"], "count": count}
         elif count > 20:
             frequency = {"is_anomaly": True, "reason": "elevated_request_rate_5m", "confidence": 0.65, "signals": ["freq_elevated"], "count": count}
+        frequency["count_is_lower_bound"] = count == 51
+        frequency["retained_count_limit"] = 51
         sequence = self._sequence_anomaly(actions)
         signals = list(dict.fromkeys([*(frequency["signals"]), *(sequence["signals"])]))
         return {
