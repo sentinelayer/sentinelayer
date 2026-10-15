@@ -1,4 +1,4 @@
-from scripts.probe_hosted_gateway import verify, read
+from scripts.probe_hosted_gateway import WAF_CHECKS, verify, read
 
 import pytest
 
@@ -10,6 +10,8 @@ def test_hosted_probe_reports_only_tested_anonymous_boundaries():
         "/api/v1/admin/users": (401, {"code": "AUTH_REQUIRED"}),
         "/api/v1/keys": (401, {"code": "AUTH_REQUIRED"}),
         "/metrics": (401, {"detail": "Invalid metrics token"}),
+        **{path: (403, {"action": "BLOCK", "reason": "waf_block rule=1002"})
+           for path in WAF_CHECKS},
     }
     assert verify(lambda path: values[path])["status"] == "PASS"
     assert "not authenticated tenant tests" in verify(lambda path: values[path])["scope"]
@@ -29,6 +31,8 @@ def test_bad_hosted_responses_are_rejected(path, status, payload):
         "/api/v1/admin/users": (401, {}),
         "/api/v1/keys": (401, {}),
         "/metrics": (401, {}),
+        **{path: (403, {"action": "BLOCK", "reason": "waf_block rule=1002"})
+           for path in WAF_CHECKS},
     }
     values[path] = status, payload
     with pytest.raises(ValueError):
@@ -38,3 +42,18 @@ def test_bad_hosted_responses_are_rejected(path, status, payload):
 def test_probe_disallows_unreviewed_paths():
     with pytest.raises(ValueError, match="PATH_FORBIDDEN"):
         read("/api/v1/auth/register")
+
+
+def test_live_waf_proof_rejects_unblocked_synthetic_attacks():
+    values = {
+        "/health": (200, {"status": "healthy", "waf": "coraza"}),
+        "/ready": (200, {"status": "ready"}),
+        "/api/v1/admin/users": (401, {}),
+        "/api/v1/keys": (401, {}),
+        "/metrics": (401, {}),
+        **{path: (403, {"action": "BLOCK", "reason": "waf_block rule=1002"})
+           for path in WAF_CHECKS},
+    }
+    values[WAF_CHECKS[0]] = 200, {"status": "ok"}
+    with pytest.raises(ValueError, match="WAF_REQUEST_NOT_BLOCKED"):
+        verify(lambda path: values[path])
