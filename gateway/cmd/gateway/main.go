@@ -56,7 +56,10 @@ type DecisionOutput struct {
 
 func classifyEndpoint(r *http.Request) string {
 	path := r.URL.Path
-	if strings.HasPrefix(path, "/health") || strings.HasPrefix(path, "/ready") || path == "/" {
+	// Only documented health endpoints are public. A prefix such as
+	// /health-private must not inherit the public fail-open policy.
+	if path == "/" || path == "/health" || path == "/ready" ||
+		path == "/health/readiness" || path == "/healthz" || path == "/readyz" {
 		return "public"
 	}
 
