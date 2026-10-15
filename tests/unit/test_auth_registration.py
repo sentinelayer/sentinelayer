@@ -119,6 +119,6 @@ async def test_administrative_user_creation_hashes_supplied_password(registratio
             request=req, db=db,
         )
         created = db.query(User).filter(User.id == result["id"]).one()
-        assert bcrypt.checkpw(bsupplied_password, created.hashed_password.encode())
+        assert bcrypt.checkpw(supplied_password.encode('utf-8'), created.hashed_password.encode())
         assert result["tenant_id"] == "tenant-direct"
         assert "password" not in result
