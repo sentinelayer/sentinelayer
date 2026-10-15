@@ -79,3 +79,38 @@ def test_grant_only_restore_refuses_active_database_before_any_sql():
     import pytest
     with pytest.raises(ValueError, match="disposable"):
         configure_roles(ActiveDatabase(), {}, provision_roles=False)
+
+
+
+def test_production_rejects_sqlite_or_non_postgres_database_urls() -> None:
+    for bad in ("sqlite:///local.db", "http://db.example", "not-a-uri",
+                "postgresql://", "postgresql://db.example:invalid/app",
+                "postgresql://db.example:70000/app"):
+        for field in ("DATABASE_URL", "AUTH_DATABASE_URL", "WORKER_DATABASE_URL"):
+            errors = validate({"SL_ENV": "production", field: bad})
+            assert f"{field} must use a valid PostgreSQL URL" in errors
+            assert bad not in "\n".join(errors)
+
+
+def test_production_redis_dependency_requires_redis_scheme_and_host() -> None:
+    for bad in ("http://cache.example", "redis://", "localhost:6379",
+                "redis://cache.example:bad", "redis://cache.example:99999"):
+        errors = validate({"SL_ENV": "production", "REDIS_URL": bad})
+        assert "REDIS_URL must use a valid Redis URL" in errors
+        assert bad not in "\n".join(errors)
+
+
+def test_production_validates_postgres_driver_and_tls_redis_schemes() -> None:
+    from scripts.validate_runtime_config import valid_dependency_url, POSTGRES_SCHEMES, REDIS_SCHEMES
+    for url in ("postgresql://db.example/app", "postgresql+asyncpg://db.example/app",
+                "postgresql+psycopg2://db.example/app"):
+        assert valid_dependency_url(url, POSTGRES_SCHEMES)
+    assert valid_dependency_url("rediss://cache.example:6380/0", REDIS_SCHEMES)
+
+
+def test_provenance_hash_comparison_is_case_insensitive_for_hex_digits() -> None:
+    assert validate({
+        "SL_ENFORCE_PROVENANCE": "true",
+        "SL_APPROVED_ARTIFACT_HASH": "A" * 64,
+        "SL_RUNNING_ARTIFACT_HASH": "a" * 64,
+    }) == []
