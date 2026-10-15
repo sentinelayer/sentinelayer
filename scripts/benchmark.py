@@ -39,7 +39,7 @@ def run_benchmark(origin, iterations=200, concurrency=1, timeout=3, prefix="/ben
                 try:
                     payload = response.json() if response.status_code == 200 else {}
                     processing = response.headers.get("X-SL-Gateway-Processing-Ms", payload.get("gateway_processing_ms"))
-                    degraded = response.headers.get("X-SL-Gateway-Degraded", payload.get("gateway_degraded")) == "true"
+                    degraded = str(response.headers.get("X-SL-Gateway-Degraded", payload.get("gateway_degraded"))).strip().lower() == "true"
                 except (ValueError, AttributeError):
                     payload = {}
                     processing = None
