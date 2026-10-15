@@ -64,8 +64,8 @@ test('registration does not send a stale session or assign tenant context before
 
 test('hosted dashboard does not expose the fixture demonstration route', () => {
   const appSource = readFileSync(new URL('../src/app/App.tsx', import.meta.url), 'utf8');
-  assert.doesNotMatch(appSource, /path=["']\\/demo["']/);
-  assert.doesNotMatch(appSource, /import\\s+DemoPage/);
+  assert.equal(appSource.includes('path="/demo"'), false);
+  assert.equal(appSource.includes('import DemoPage'), false);
 });
 
 
