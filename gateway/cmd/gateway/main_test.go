@@ -72,6 +72,32 @@ func TestClassifyEndpointAuthBootstrapRoutes(t *testing.T) {
 	}
 }
 
+func TestHealthClassificationRequiresExactPublicRoutes(t *testing.T) {
+	for _, test := range []struct {
+		path string
+		want string
+	}{
+		{"/", "public"},
+		{"/health", "public"},
+		{"/ready", "public"},
+		{"/health/readiness", "public"},
+		{"/healthz", "public"},
+		{"/readyz", "public"},
+		{"/health-private", "normal"},
+		{"/health/private", "normal"},
+		{"/ready-for-payment", "normal"},
+		{"/readyness", "normal"},
+		{"/healthz/admin", "normal"},
+	} {
+		t.Run(test.path, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "http://gateway.test"+test.path, nil)
+			if got := classifyEndpoint(req); got != test.want {
+				t.Fatalf("classifyEndpoint(%q) = %q; want %q", test.path, got, test.want)
+			}
+		})
+	}
+}
+
 func TestRuntimeProvenanceRejectsMissingInvalidAndMismatchedDigests(t *testing.T) {
 	valid := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	for _, flag := range []string{"1", "true", "TRUE", " true "} {
