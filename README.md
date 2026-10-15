@@ -23,7 +23,7 @@ SentinelLayer menyatukan enforcement dan konteks risiko dalam satu jalur request
 
 ## What is inside
 
-Live pilot: [SentinelLayer on Railway](https://sentinelayer-production-b882.up.railway.app).
+Hosted gateway: [SentineLayer on Railway](https://sentinelayer-production-635f.up.railway.app). This is the domain currently attached to the Railway service; it does not certify production availability, customer acceptance, or a service-level guarantee.
 The pilot uses private PostgreSQL and Redis, restricted database roles, revocable
 sessions, and encrypted bucket backups. An isolated restore of 33 tables at schema
 0028 passed on 2026-10-03. See [deployment and recovery](docs/operations/railway-deployment.md).
