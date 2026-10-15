@@ -25,3 +25,18 @@ jobs:
           printf '\nMODULE_GEN_GO_SUM_START\n'
           cat go.sum
           printf '\nMODULE_GEN_GO_SUM_END\n'
+  regenerated-npm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Produce audited Cloudflare lockfile from exact declared overrides
+        run: |
+          npm --prefix cloudflare install --package-lock-only --ignore-scripts --no-audit
+          npm --prefix cloudflare audit --audit-level=low
+          printf '\nMODULE_GEN_NPM_LOCK_START\n'
+          cat cloudflare/package-lock.json
+          printf '\nMODULE_GEN_NPM_LOCK_END\n'
