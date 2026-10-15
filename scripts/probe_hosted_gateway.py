@@ -10,7 +10,11 @@ from urllib.error import HTTPError
 from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 
 ORIGIN = "https://sentinelayer-production-635f.up.railway.app"
-ALLOWED = {"/health", "/ready", "/api/v1/admin/users", "/api/v1/keys", "/metrics"}
+WAF_CHECKS = (
+    "/api/v1/events?q=%3Cscript%3Ealert%281%29%3C%2Fscript%3E",
+    "/api/v1/events?q=union%20select",
+)
+ALLOWED = {"/health", "/ready", "/api/v1/admin/users", "/api/v1/keys", "/metrics", *WAF_CHECKS}
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -54,10 +58,15 @@ def verify(probe=read) -> dict:
             raise ValueError("HOSTED_ANONYMOUS_PRIVILEGED_ACCESS_NOT_DENIED")
     if probe("/metrics")[0] not in {401, 403}:
         raise ValueError("HOSTED_METRICS_NOT_PROTECTED")
+    for path in WAF_CHECKS:
+        status, attack = probe(path)
+        if (status != 403 or attack.get("action") != "BLOCK"
+                or not str(attack.get("reason", "")).startswith("waf_block rule=")):
+            raise ValueError("HOSTED_WAF_REQUEST_NOT_BLOCKED")
     return {"status": "PASS", "origin": ORIGIN,
             "gateway": "HTTPS_HEALTH_AND_READY", "waf": "INITIALIZED",
             "anonymous_admin_and_keys": "DENIED",
-            "anonymous_metrics": "DENIED",
+            "anonymous_metrics": "DENIED", "waf_synthetic_xss_sqli": "BLOCKED",
             "scope": "Live HTTPS availability and anonymous security boundaries only; "
                      "not authenticated tenant tests, WAF effectiveness, high availability, "
                      "signed artifact provenance, backup restore or production acceptance"}
