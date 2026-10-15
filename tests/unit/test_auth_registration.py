@@ -108,16 +108,17 @@ async def test_administrative_user_creation_hashes_supplied_password(registratio
     from control_plane.app.api.v1.users import UserCreate, create_user
 
     _, sessions = registration
+    supplied_password = "a" * 12 + "B3!"  # synthetic test credential; never logged
     with sessions() as db:
         db.add(Tenant(id="tenant-direct", name="tenant-direct"))
         db.commit()
         req = SimpleNamespace(state=SimpleNamespace(tenant_id="tenant-direct"))
         result = await create_user(
             UserCreate(email="invitee@example.com", full_name="Invitee",
-                       password="A-valid-password-2026!"),
+                       password=supplied_password),
             request=req, db=db,
         )
         created = db.query(User).filter(User.id == result["id"]).one()
-        assert bcrypt.checkpw(b"A-valid-password-2026!", created.hashed_password.encode())
+        assert bcrypt.checkpw(bsupplied_password, created.hashed_password.encode())
         assert result["tenant_id"] == "tenant-direct"
         assert "password" not in result
