@@ -48,7 +48,7 @@ def run_benchmark(origin, iterations=200, concurrency=1, timeout=3, prefix="/ben
                     processing = response.headers.get("X-SL-Gateway-Processing-Ms")
                 degraded = degraded or response.headers.get("X-SL-Gateway-Degraded") == "true"
                 stages = payload.get("gateway_stages_ms", {}) if isinstance(payload, dict) else {}
-                stages = {stage: response.headers.get(f"X-SL-Gateway-{stage}-Ms", stages.get(stage)) for stage in ("WAF", "Behavior", "Risk")} if isinstance(stages, dict) else {}
+                stages = {stage: response.headers.get(f"X-SL-Gateway-{stage}-Ms", stages.get(stage)) for stage in ("WAF", "Rate", "Policy", "Behavior", "Risk")} if isinstance(stages, dict) else {}
                 stages = {k: value for k, raw in stages.items() if (value := _timing(raw)) is not None} if isinstance(stages, dict) else {}
                 processing = _timing(processing)
         except requests.RequestException as exc:
@@ -71,8 +71,8 @@ def run_benchmark(origin, iterations=200, concurrency=1, timeout=3, prefix="/ben
         "gateway_processing_samples": sum(value is not None for _, _, value, _, _ in results),
         "gateway_processing_p95_ms": percentile([value for _, _, value, _, _ in results if value is not None], .95), "p50_ms": percentile(timings, .5),
         "p95_ms": percentile(timings, .95), "p99_ms": percentile(timings, .99), "max_ms": max(timings),
-        "gateway_stage_samples": {stage: sum(stage in stages for _, _, _, _, stages in results) for stage in ("WAF", "Behavior", "Risk")},
-        "gateway_stage_p95_ms": {stage: percentile([stages[stage] for _, _, _, _, stages in results if stage in stages], .95) for stage in ("WAF", "Behavior", "Risk")},
+        "gateway_stage_samples": {stage: sum(stage in stages for _, _, _, _, stages in results) for stage in ("WAF", "Rate", "Policy", "Behavior", "Risk")},
+        "gateway_stage_p95_ms": {stage: percentile([stages[stage] for _, _, _, _, stages in results if stage in stages], .95) for stage in ("WAF", "Rate", "Policy", "Behavior", "Risk")},
         "connection_mode": "new connection per request",
         "rate_limit_scope": "distinct paths; not one-path capacity"}
 
