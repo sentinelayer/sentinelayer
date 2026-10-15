@@ -67,3 +67,12 @@ test('hosted dashboard does not expose the fixture demonstration route', () => {
   assert.doesNotMatch(appSource, /path=["']\\/demo["']/);
   assert.doesNotMatch(appSource, /import\\s+DemoPage/);
 });
+
+
+test('dashboard does not claim live health without a probe', () => {
+  const layout = readFileSync(new URL('../src/components/Layout.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(layout, /Runtime operational/);
+  assert.doesNotMatch(layout, /Last check just now/);
+  assert.match(layout, /Runtime status unverified/);
+  assert.match(layout, /status-dot-muted/);
+});
