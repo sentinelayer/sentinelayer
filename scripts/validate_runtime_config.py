@@ -74,7 +74,11 @@ def validate(env: dict[str, str] | None = None) -> list[str]:
             errors.append("REDIS_URL must use a valid Redis URL")
     if production and values.get("SL_AUTO_CREATE_SCHEMA", "0") != "0":
         errors.append("SL_AUTO_CREATE_SCHEMA must be 0 in production")
-    if values.get("SL_ENFORCE_PROVENANCE", "0").strip().lower() in {"1", "true"}:
+    provenance_flag = values.get("SL_ENFORCE_PROVENANCE", "0").strip().lower()
+    # Typos in production must not silently disable the runtime integrity gate.
+    if production and provenance_flag not in {"0", "false", "1", "true"}:
+        errors.append("SL_ENFORCE_PROVENANCE must be 0/false or 1/true in production")
+    if provenance_flag in {"1", "true"}:
         if not values.get("SL_APPROVED_ARTIFACT_HASH", "").strip():
             errors.append("SL_APPROVED_ARTIFACT_HASH is required when provenance enforcement is enabled")
         if not values.get("SL_RUNNING_ARTIFACT_HASH", "").strip():

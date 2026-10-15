@@ -43,3 +43,19 @@ Cloudflare workflow diubah menjadi manual-only pada commit berikutnya yang akan 
 Bukti lokal terbaru: `npm --prefix dashboard run build` lulus setelah perubahan terakhir; `git diff --check` lulus; Python compile dan shell syntax check dijalankan. Pytest integration yang membutuhkan service pada `localhost:8005` tidak dapat membuktikan runtime karena service belum berjalan di sandbox. Docker Compose validation tidak dapat dijalankan karena binary Docker tidak terpasang di sandbox. Ini dicatat sebagai keterbatasan verifikasi, bukan dianggap lulus.
 
 Railway public networking, domain single-origin, database/Redis managed services, seeder staging, backup restore drill, dan Cloudflare deployment tetap membutuhkan verifikasi eksternal melalui environment pengguna. Repository hanya menyediakan implementasi dan runbook; tidak ada evidence eksternal yang dipalsukan.
+
+
+## GitHub-only security hardening — 2026-10-15
+
+The repository's gateway dependency graph has been updated to the Coraza 3.8.1
+security-fix line and `golang.org/x/net` 0.60.0, with regenerated Go checksums and
+Go 1.26 build inputs. JavaScript lockfiles and package overrides address
+reported `source-map-js` and Cloudflare `sharp` advisories. Coraza now
+rejects excessive query/body argument sets rather than forwarding a
+truncated inspection result. Runtime validation fails closed on invalid
+PostgreSQL/Redis URI schemes and unknown production provenance flags.
+
+These are code and CI controls, not evidence of a hosted deployment, customer
+traffic protection, completed disaster recovery, or independent production
+security acceptance. GitHub Actions security and integration results must be
+reviewed at the exact commit being considered for release.

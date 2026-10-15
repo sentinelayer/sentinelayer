@@ -114,3 +114,16 @@ def test_provenance_hash_comparison_is_case_insensitive_for_hex_digits() -> None
         "SL_APPROVED_ARTIFACT_HASH": "A" * 64,
         "SL_RUNNING_ARTIFACT_HASH": "a" * 64,
     }) == []
+
+
+def test_production_rejects_unrecognized_provenance_flags() -> None:
+    for value in ("yes", "tru", "enabled", "2", "off", "unexpected"):
+        errors = validate({"SL_ENV": "production", "SL_ENFORCE_PROVENANCE": value})
+        assert "SL_ENFORCE_PROVENANCE must be 0/false or 1/true in production" in errors
+
+
+def test_known_false_provenance_flags_remain_explicitly_supported() -> None:
+    for value in ("0", "false", "FALSE", " false "):
+        errors = validate({"SL_ENV": "production", "SL_ENFORCE_PROVENANCE": value})
+        assert "SL_ENFORCE_PROVENANCE must be 0/false or 1/true in production" not in errors
+        assert "SL_APPROVED_ARTIFACT_HASH is required when provenance enforcement is enabled" not in errors
