@@ -1,6 +1,7 @@
 package waf
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -95,4 +96,42 @@ func TestProcessRequestPreservesHostForCRS(t *testing.T) {
 	if blocked {
 		t.Fatalf("safe request blocked by rule %d (%s)", ruleID, msg)
 	}
+}
+
+
+func TestProcessRequestRejectsTooManyQueryArguments(t *testing.T) {
+    engine, err := NewEngine("")
+    if err != nil { t.Fatal(err) }
+    req := httptest.NewRequest(http.MethodGet, "http://example.test/?"+strings.Repeat("x=1&", 1002), nil)
+    blocked, ruleID, _ := engine.ProcessRequest(req)
+    if !blocked || ruleID != 200004 {
+        t.Fatalf("query argument overrun must fail closed: blocked=%v rule=%d", blocked, ruleID)
+    }
+}
+
+func TestProcessRequestRejectsTooManyDistinctJSONArguments(t *testing.T) {
+    engine, err := NewEngine("")
+    if err != nil { t.Fatal(err) }
+    fields := make([]string, 1002)
+    for i := range fields {
+        fields[i] = fmt.Sprintf("%q:%d", fmt.Sprintf("field%d", i), i)
+    }
+    payload := "{" + strings.Join(fields, ",") + "}"
+    req := httptest.NewRequest(http.MethodPost, "http://example.test/data", strings.NewReader(payload))
+    req.Header.Set("Content-Type", "application/json")
+    blocked, ruleID, _ := engine.ProcessRequest(req)
+    if !blocked || ruleID != 200005 {
+        t.Fatalf("JSON argument overrun must fail closed: blocked=%v rule=%d", blocked, ruleID)
+    }
+}
+
+func TestProcessRequestAllowsBoundedJSONArguments(t *testing.T) {
+    engine, err := NewEngine("")
+    if err != nil { t.Fatal(err) }
+    req := httptest.NewRequest(http.MethodPost, "http://example.test/data", strings.NewReader(`{"one":1,"two":2}`))
+    req.Header.Set("Content-Type", "application/json")
+    blocked, ruleID, msg := engine.ProcessRequest(req)
+    if blocked {
+        t.Fatalf("bounded JSON body must not be blocked: rule=%d message=%s", ruleID, msg)
+    }
 }

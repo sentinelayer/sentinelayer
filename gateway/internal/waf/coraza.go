@@ -25,6 +25,10 @@ func NewEngine(crsRulesDir string) (*Engine, error) {
 SecRuleEngine On
 SecRequestBodyAccess On
 SecResponseBodyAccess Off
+# Reject argument truncation instead of forwarding content not inspected by WAF.
+SecArgumentsLimit 1000
+SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" "id:200004,phase:1,t:none,log,deny,status:400,msg:'Query argument limit reached'"
+SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" "id:200005,phase:2,t:none,log,deny,status:400,msg:'Body argument limit reached'"
 SecRule REQUEST_HEADERS:Content-Type "@rx (?i)^application/json" "id:1000,phase:1,pass,nolog,ctl:requestBodyProcessor=JSON"
 	`
 
