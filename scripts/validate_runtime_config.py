@@ -45,7 +45,12 @@ def validate(env: dict[str, str] | None = None) -> list[str]:
         errors.append("REDIS_URL is required in production")
     if production and values.get("SL_AUTO_CREATE_SCHEMA", "0") != "0":
         errors.append("SL_AUTO_CREATE_SCHEMA must be 0 in production")
-    if values.get("SL_ENFORCE_PROVENANCE", "0").strip().lower() in {"1", "true"}:
+    provenance_flag = values.get("SL_ENFORCE_PROVENANCE", "0").strip().lower()
+    # An accidental typo must not silently disable an explicitly configured
+    # production integrity check (for example, "tru" or "yes").
+    if production and provenance_flag not in {"0", "false", "1", "true"}:
+        errors.append("SL_ENFORCE_PROVENANCE must be 0/false or 1/true in production")
+    if provenance_flag in {"1", "true"}:
         if not values.get("SL_APPROVED_ARTIFACT_HASH", "").strip():
             errors.append("SL_APPROVED_ARTIFACT_HASH is required when provenance enforcement is enabled")
         if not values.get("SL_RUNNING_ARTIFACT_HASH", "").strip():
@@ -55,7 +60,7 @@ def validate(env: dict[str, str] | None = None) -> list[str]:
         for name, digest in (("SL_APPROVED_ARTIFACT_HASH", approved), ("SL_RUNNING_ARTIFACT_HASH", running)):
             if digest and not re.fullmatch(r"[0-9a-fA-F]{64}", digest):
                 errors.append(f"{name} must be a SHA-256 hex digest")
-        if approved and running and approved != running:
+        if approved and running and approved.lower() != running.lower():
             errors.append("Running artifact does not match the approved artifact digest")
     if production and not values.get("KMS_KEY", "").strip():
         errors.append("KMS_KEY must be provided by the platform secret manager in production")

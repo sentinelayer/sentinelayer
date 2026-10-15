@@ -79,3 +79,36 @@ def test_grant_only_restore_refuses_active_database_before_any_sql():
     import pytest
     with pytest.raises(ValueError, match="disposable"):
         configure_roles(ActiveDatabase(), {}, provision_roles=False)
+
+
+def test_production_rejects_unknown_provenance_flag():
+    for invalid in ("yes", "tru", "enabled", "2", "off"):
+        errors = validate({"SL_ENV": "production", "SL_ENFORCE_PROVENANCE": invalid})
+        assert "SL_ENFORCE_PROVENANCE must be 0/false or 1/true in production" in errors
+
+
+def test_provenance_digest_hex_case_is_semantically_equivalent():
+    errors = validate({
+        "SL_ENV": "development",
+        "SL_ENFORCE_PROVENANCE": "true",
+        "SL_APPROVED_ARTIFACT_HASH": "A" * 64,
+        "SL_RUNNING_ARTIFACT_HASH": "a" * 64,
+    })
+    assert errors == []
+
+
+def test_provenance_still_rejects_a_genuinely_different_digest():
+    errors = validate({
+        "SL_ENV": "production",
+        "SL_ENFORCE_PROVENANCE": "true",
+        "SL_APPROVED_ARTIFACT_HASH": "A" * 64,
+        "SL_RUNNING_ARTIFACT_HASH": "b" * 64,
+    })
+    assert "Running artifact does not match the approved artifact digest" in errors
+
+
+def test_provenance_rejects_missing_digests_with_case_insensitive_enable():
+    for enabled in ("TRUE", " true ", "1"):
+        errors = validate({"SL_ENV": "production", "SL_ENFORCE_PROVENANCE": enabled})
+        assert "SL_APPROVED_ARTIFACT_HASH is required when provenance enforcement is enabled" in errors
+        assert "SL_RUNNING_ARTIFACT_HASH is required when provenance enforcement is enabled" in errors

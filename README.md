@@ -109,7 +109,7 @@ Gateway production membutuhkan `JWT_SECRET` minimal 32 byte dan koneksi Redis. S
 | `JWT_SECRET` | Session/token signing; minimal 32 byte |
 | `METRICS_TOKEN` | Proteksi endpoint metrics |
 | `KMS_KEY` | Proteksi secret/material kriptografi |
-| `SL_ENFORCE_PROVENANCE` | Source-manifest dan expected/running SHA-256 checks (`1`/`true`); OCI signature verification belum dibuktikan |
+| `SL_ENFORCE_PROVENANCE` | Source-manifest dan expected/running SHA-256 checks (`1`/`true`); nilai tak dikenal ditolak di production dan digest heksadesimal dibandingkan tanpa membedakan huruf besar/kecil. OCI signature verification belum dibuktikan |
 
 ## Documentation map
 
