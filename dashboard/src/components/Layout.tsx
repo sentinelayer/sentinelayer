@@ -137,14 +137,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           )}
         </nav>
         <div className="sidebar-footer">
-          <div className="runtime-status"><span className="status-dot status-dot-good" /><span><b>Runtime operational</b><small>Last check just now</small></span></div>
+          <div className="runtime-status"><span className="status-dot status-dot-muted" /><span><b>Runtime status unverified</b><small>Check the live health endpoint</small></span></div>
           <button className="logout-button" type="button" onClick={handleLogout}>Sign out</button>
         </div>
       </aside>
       <div className="main-shell">
         <header className="topbar">
           <div className="breadcrumb"><span className="breadcrumb-muted">SentinelLayer</span><span>/</span><strong>{location.pathname === "/" ? "Overview" : location.pathname.split("/").filter(Boolean).pop()?.replace(/-/g, " ")}</strong></div>
-          <div className="topbar-actions"><span className="environment-badge"><span className="status-dot status-dot-good" />Production</span><span className="user-pill"><span className="user-avatar">{(user?.full_name || user?.email || "S").slice(0, 1).toUpperCase()}</span><span><b>{user?.full_name || user?.email || "Session user"}</b><small>{user?.is_admin || isAdmin ? "Administrator" : "Viewer"}</small></span></span><button className="topbar-button" type="button" aria-label="Open notifications">Notifications <span className="notification-count">0</span></button></div>
+          <div className="topbar-actions"><span className="environment-badge"><span className="status-dot status-dot-muted" />Production environment</span><span className="user-pill"><span className="user-avatar">{(user?.full_name || user?.email || "S").slice(0, 1).toUpperCase()}</span><span><b>{user?.full_name || user?.email || "Session user"}</b><small>{user?.is_admin || isAdmin ? "Administrator" : "Viewer"}</small></span></span><button className="topbar-button" type="button" aria-label="Open notifications">Notifications <span className="notification-count">0</span></button></div>
         </header>
         <main className="content-area">{children}</main>
       </div>
