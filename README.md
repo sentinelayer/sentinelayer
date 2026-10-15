@@ -72,7 +72,7 @@ Repository dan CI evidence menunjukkan code path yang diuji; keduanya tidak otom
 
 ### Requirements
 
-Development membutuhkan **Python 3.11+**, **Node.js 22+**, **Go 1.25+**, PostgreSQL, Redis, dan Docker bila memilih Compose.
+Development membutuhkan **Python 3.11+**, **Node.js 22+**, **Go 1.26+**, PostgreSQL, Redis, dan Docker bila memilih Compose.
 
 ### Docker Compose
 
