@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { build } from 'esbuild';
+import { readFileSync } from 'node:fs';
 
 const bundle = await build({ entryPoints: ['src/api/client.ts'], bundle: true,
   write: false, format: 'esm', platform: 'node', define: { 'import.meta.env': '{}' } });
@@ -58,4 +59,11 @@ test('registration does not send a stale session or assign tenant context before
   };
   await client.register('owner@example.com', 'test-password', 'Owner', 'new-workspace');
   assert.equal(values.get('sl_tenant_id'), undefined);
+});
+
+
+test('hosted dashboard does not expose the fixture demonstration route', () => {
+  const appSource = readFileSync(new URL('../src/app/App.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(appSource, /path=["']\\/demo["']/);
+  assert.doesNotMatch(appSource, /import\\s+DemoPage/);
 });
