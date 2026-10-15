@@ -96,3 +96,33 @@ func TestProcessRequestPreservesHostForCRS(t *testing.T) {
 		t.Fatalf("safe request blocked by rule %d (%s)", ruleID, msg)
 	}
 }
+
+
+// Coraza 3.8.1 signals argument truncation instead of silently inspecting a
+// subset. Both query-string and JSON body limits must fail closed.
+func TestProcessRequestRejectsExcessiveQueryArguments(t *testing.T) {
+    engine, err := NewEngine("")
+    if err != nil {
+        t.Fatalf("create WAF: %v", err)
+    }
+    req := httptest.NewRequest(http.MethodGet,
+        "http://example.test/?"+strings.Repeat("item=1&", 1001), nil)
+    blocked, ruleID, _ := engine.ProcessRequest(req)
+    if !blocked || ruleID != 200004 {
+        t.Fatalf("expected argument-limit query block (200004); blocked=%v rule=%d", blocked, ruleID)
+    }
+}
+
+func TestProcessRequestRejectsExcessiveJSONArguments(t *testing.T) {
+    engine, err := NewEngine("")
+    if err != nil {
+        t.Fatalf("create WAF: %v", err)
+    }
+    req := httptest.NewRequest(http.MethodPost, "http://example.test/data",
+        strings.NewReader(`{"entries":[`+strings.TrimSuffix(strings.Repeat("1,", 1001), ",")+`]}`))
+    req.Header.Set("Content-Type", "application/json")
+    blocked, ruleID, _ := engine.ProcessRequest(req)
+    if !blocked || ruleID != 200005 {
+        t.Fatalf("expected argument-limit JSON block (200005); blocked=%v rule=%d", blocked, ruleID)
+    }
+}

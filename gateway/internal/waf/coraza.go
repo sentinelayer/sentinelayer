@@ -25,6 +25,11 @@ func NewEngine(crsRulesDir string) (*Engine, error) {
 SecRuleEngine On
 SecRequestBodyAccess On
 SecResponseBodyAccess Off
+# Enforce Coraza v3.8.1's argument budget: silently discarded arguments
+# must never bypass SQLi/XSS and other ARGS-based inspection rules.
+SecArgumentsLimit 1000
+SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" "id:200004,phase:1,t:none,log,deny,status:400,msg:'Request argument limit reached (query/path)'"
+SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" "id:200005,phase:2,t:none,log,deny,status:400,msg:'Request argument limit reached (body)'"
 SecRule REQUEST_HEADERS:Content-Type "@rx (?i)^application/json" "id:1000,phase:1,pass,nolog,ctl:requestBodyProcessor=JSON"
 	`
 
