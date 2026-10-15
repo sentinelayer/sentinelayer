@@ -5,7 +5,7 @@ RUN npm ci --ignore-scripts
 COPY dashboard/ ./
 RUN npm run build
 
-FROM golang:1.25-alpine AS gateway-builder
+FROM golang:1.26-alpine AS gateway-builder
 WORKDIR /gateway
 COPY gateway/go.mod gateway/go.sum ./
 RUN go mod download
