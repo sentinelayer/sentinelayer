@@ -1,6 +1,5 @@
 import hashlib
 import json
-import secrets
 import uuid
 from datetime import UTC, datetime
 
@@ -28,11 +27,14 @@ class UserRoleUpdate(BaseModel):
 
 @router.post("/")
 async def create_user(data: UserCreate, request: Request, db: Session = Depends(db_with_tenant)):
-    if data.password is not None:
-        if len(data.password) < 12:
-            raise HTTPException(status_code=400, detail="Password must be at least 12 characters")
-        if len(data.password.encode("utf-8")) > 72:
-            raise HTTPException(status_code=400, detail="Password must not exceed 72 UTF-8 bytes")
+    # Do not create accounts with an undisclosed random password: until an
+    # invitation / password-setup flow exists, there is no way to log in.
+    if data.password is None:
+        raise HTTPException(status_code=400, detail="Password required for direct user creation")
+    if len(data.password) < 12:
+        raise HTTPException(status_code=400, detail="Password must be at least 12 characters")
+    if len(data.password.encode("utf-8")) > 72:
+        raise HTTPException(status_code=400, detail="Password must not exceed 72 UTF-8 bytes")
     caller_tenant = tenant_id(request)
     if data.tenant_id and data.tenant_id != caller_tenant:
         raise HTTPException(status_code=403, detail="Cannot create a user for another tenant")
@@ -43,7 +45,7 @@ async def create_user(data: UserCreate, request: Request, db: Session = Depends(
         email=data.email,
         full_name=data.full_name,
         tenant_id=caller_tenant,
-        hashed_password=bcrypt.hashpw((data.password or secrets.token_urlsafe(24)).encode(), bcrypt.gensalt()).decode(),
+        hashed_password=bcrypt.hashpw(data.password.encode("utf-8"), bcrypt.gensalt()).decode(),
     )
     db.add(user)
     db.commit()
