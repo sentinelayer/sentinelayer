@@ -1,0 +1,12 @@
+# One-shot database bootstrap only. Do not use this image for the public gateway.
+FROM python:3.11-slim
+ENV PYTHONPATH=/app PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY control_plane ./control_plane
+COPY scripts ./scripts
+COPY alembic.ini ./
+RUN useradd --uid 10001 --create-home migrator && chown -R migrator:migrator /app
+USER migrator
+CMD ["/bin/sh", "/app/scripts/migrate_database.sh"]
