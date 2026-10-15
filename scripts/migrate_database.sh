@@ -5,5 +5,6 @@ set -eu
 : "${AUTHENTICATION_DATABASE_PASSWORD:?AUTHENTICATION_DATABASE_PASSWORD is required}"
 : "${WORKER_DATABASE_PASSWORD:?WORKER_DATABASE_PASSWORD is required}"
 cd /app
+python /app/scripts/verify_migration_target.py
 python -m alembic -c alembic.ini upgrade head
 python scripts/configure_database_roles.py
