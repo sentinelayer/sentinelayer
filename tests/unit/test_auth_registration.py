@@ -85,3 +85,39 @@ def test_login_rejects_password_suffix_beyond_bcrypt_boundary(registration):
         "email": "owner@example.com", "password": value + "suffix",
     })
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("password", [None, "", "short", "é" * 37])
+async def test_administrative_user_creation_rejects_missing_password(password):
+    """Invalid credentials fail before any database mutation."""
+    from fastapi import HTTPException
+    from control_plane.app.api.v1.users import UserCreate, create_user
+
+    data = UserCreate(email="invitee@example.com", full_name="Invitee", password=password)
+    with pytest.raises(HTTPException) as failure:
+        await create_user(data, request=None, db=None)
+    assert failure.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_administrative_user_creation_hashes_supplied_password(registration):
+    """A successful direct creation must result in a usable login credential."""
+    import bcrypt
+    from types import SimpleNamespace
+    from control_plane.app.api.v1.users import UserCreate, create_user
+
+    _, sessions = registration
+    with sessions() as db:
+        db.add(Tenant(id="tenant-direct", name="tenant-direct"))
+        db.commit()
+        req = SimpleNamespace(state=SimpleNamespace(tenant_id="tenant-direct"))
+        result = await create_user(
+            UserCreate(email="invitee@example.com", full_name="Invitee",
+                       password="A-valid-password-2026!"),
+            request=req, db=db,
+        )
+        created = db.query(User).filter(User.id == result["id"]).one()
+        assert bcrypt.checkpw(b"A-valid-password-2026!", created.hashed_password.encode())
+        assert result["tenant_id"] == "tenant-direct"
+        assert "password" not in result
