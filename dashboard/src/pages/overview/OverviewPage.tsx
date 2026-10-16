@@ -68,7 +68,7 @@ export default function OverviewPage() {
       <section className="hero-row">
         <div>
           <p className="eyebrow">SECURITY OPERATIONS</p>
-          <h1 className="page-title">Good evening. Here is your protection posture.</h1>
+          <h1 className="page-title">Your workspace security posture</h1>
           <p className="page-lede">A tenant-scoped view of the traffic, decisions, and actions recorded by SentinelLayer.</p>
         </div>
         <Link className="primary-button compact-button" to={hasWorkspace ? "/live-protection" : "/applications"}>{hasWorkspace ? "Open live protection" : "Connect an application"}</Link>
@@ -102,9 +102,9 @@ export default function OverviewPage() {
       </section>
 
       <section className="dashboard-grid dashboard-grid-three">
-        <article className="panel"><div className="panel-heading"><div><p className="eyebrow">PROTECTION SURFACE</p><h2>Applications</h2></div><Link className="inline-link" to="/applications">Manage</Link></div>{applications.length ? applications.slice(0, 4).map((application) => <div className="compact-row" key={application.id}><span className="status-dot status-dot-good" /><span><b>{application.name || application.domain || "Unnamed application"}</b><small>{application.domain || application.upstream_url || "Configuration details unavailable"}</small></span><span className="status-label">{application.status || "Connected"}</span></div>) : <div className="empty-state"><span>No applications connected.</span></div>}</article>
+        <article className="panel"><div className="panel-heading"><div><p className="eyebrow">PROTECTION SURFACE</p><h2>Applications</h2></div><Link className="inline-link" to="/applications">Manage</Link></div>{applications.length ? applications.slice(0, 4).map((application) => <div className="compact-row" key={application.id}><span className="status-dot status-dot-muted" /><span><b>{application.name || application.domain || "Unnamed application"}</b><small>{application.domain || application.upstream_url || "Configuration details unavailable"}</small></span><span className="status-label">{application.status || "Configured"}</span></div>) : <div className="empty-state"><span>No applications connected.</span></div>}</article>
         <article className="panel"><div className="panel-heading"><div><p className="eyebrow">GOVERNANCE</p><h2>Policy posture</h2></div><Link className="inline-link" to="/policies">Review</Link></div><div className="posture-score"><strong>{policies.length ? policies.length : "—"}</strong><span>{policies.length ? "policy records available" : "No policy records yet"}</span></div><p className="panel-note">Policy changes should move through draft, validation, review, publish, and rollback workflows.</p></article>
-        <article className="panel"><div className="panel-heading"><div><p className="eyebrow">RUNTIME</p><h2>Service health</h2></div><Link className="inline-link" to="/configuration">Details</Link></div><div className="health-row"><span className="status-dot status-dot-good" /><div><b>Control plane reachable</b><small>Health endpoint responded for this session</small></div></div><div className="health-row"><span className="status-dot status-dot-muted" /><div><b>Traffic baseline</b><small>{events.length ? "Activity detected in current window" : "Waiting for an application to send traffic"}</small></div></div></article>
+        <article className="panel"><div className="panel-heading"><div><p className="eyebrow">RUNTIME</p><h2>Service health</h2></div><Link className="inline-link" to="/configuration">Details</Link></div><div className="health-row"><span className="status-dot status-dot-muted" /><div><b>Workspace API responding</b><small>Workspace records loaded; health endpoint not probed</small></div></div><div className="health-row"><span className="status-dot status-dot-muted" /><div><b>Traffic baseline</b><small>{events.length ? "Activity detected in current window" : "Waiting for an application to send traffic"}</small></div></div></article>
       </section>
     </div>
   );
