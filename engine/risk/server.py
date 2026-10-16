@@ -70,7 +70,10 @@ class RiskRequest(BaseModel):
         for key in ("suspicious_ip", "unusual_time", "multiple_tenants"):
             if key in context and type(context[key]) is not bool:
                 raise ValueError("INVALID_CONTEXT_FLAG")
-        if "criticality" in context and context["criticality"] not in {"critical", "normal", "low", "high"}:
+        if "criticality" in context and (
+            type(context["criticality"]) is not str
+            or context["criticality"] not in {"critical", "normal", "low", "high"}
+        ):
             raise ValueError("INVALID_CONTEXT_CRITICALITY")
         return context
 
