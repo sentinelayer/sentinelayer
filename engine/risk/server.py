@@ -36,12 +36,9 @@ catalog = SignalCatalog()
 calibration = Calibration()
 safety = SafetyLayer(mode=os.getenv("RISK_SAFETY_MODE", "production"))
 
-try:
-    configured_factor = float(os.getenv("RISK_CALIBRATION_FACTOR", "1.0"))
-except ValueError:
-    configured_factor = 1.0
-if configured_factor > 0:
-    calibration.set_factor(configured_factor)
+# Invalid calibration is a deployment configuration error, not a reason to
+# silently run a different policy than the operator approved.
+calibration.set_factor(float(os.getenv("RISK_CALIBRATION_FACTOR", "1.0")))
 
 
 class RiskRequest(BaseModel):
@@ -135,8 +132,9 @@ def _decision(req: RiskRequest, correlation_data: dict[str, Any]):
         raw_score = min(100.0, raw_score + signal_weights[signal])
 
     confidence = float(base["confidence"])
-    if req.signals:
-        confidence = min(1.0, confidence + min(0.2, 0.03 * len(signal_weights)))
+    known_signal_count = sum(1 for signal in signal_weights if signal in catalog.signals)
+    if known_signal_count:
+        confidence = min(1.0, confidence + min(0.2, 0.03 * known_signal_count))
     if unknown_signals:
         confidence = max(0.0, confidence - 0.1)
 
