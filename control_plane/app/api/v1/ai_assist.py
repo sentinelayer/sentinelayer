@@ -2,16 +2,17 @@
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Header, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
 class ExplainRequest(BaseModel):
-    decision: str
-    score: float
-    signals: list[str] = []
-    context: dict = {}
+    # This is a bounded formatter of caller-supplied risk data, not an LLM verdict.
+    decision: str = Field(min_length=1, max_length=40)
+    score: float = Field(ge=0, le=100, allow_inf_nan=False)
+    signals: list[str] = Field(default_factory=list, max_length=32)
+    context: dict = Field(default_factory=dict)
 
 
 @router.post("/explain")
@@ -36,5 +37,7 @@ async def explain_decision(
         "decision": req.decision,
         "score": req.score,
         "mode": "off-path-local",
+        "advisory_only": True,
+        "input_origin": "caller-supplied",
         "generated_at": datetime.now(UTC).isoformat(),
     }
