@@ -34,9 +34,14 @@ def wait_http(url: str, timeout: float = 20.0) -> None:
 
 
 def request(url: str, data: bytes | None = None, headers: dict[str, str] | None = None) -> tuple[int, bytes, dict[str, str]]:
-    request_headers = {"Accept": "application/json", "User-Agent": "SentinelLayer-E2E/1.0"}
-    if os.getenv("E2E_HOST_POLICY") == "1":
-        request_headers["Host"] = "a.example"
+    # Connect over loopback but exercise the gateway as if an external
+    # application was addressed. The production SSRF guard must not be
+    # weakened merely to satisfy a local test harness.
+    request_headers = {
+        "Accept": "application/json",
+        "User-Agent": "SentinelLayer-E2E/1.0",
+        "Host": "a.example" if os.getenv("E2E_HOST_POLICY") == "1" else "gateway.example",
+    }
     request_headers.update(headers or {})
     req = urllib.request.Request(url, data=data, headers=request_headers, method="POST" if data is not None else "GET")
     try:
