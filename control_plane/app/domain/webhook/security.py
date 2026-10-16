@@ -1,12 +1,22 @@
 import hashlib
 import hmac
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 class WebhookSecurity:
-    def __init__(self):
-        self.secret = os.getenv("WEBHOOK_SECRET", "change-me")
+    """Local signature/replay helper, not a distributed replay store.
+
+    The webhook worker uses per-registration KMS-protected secrets and durable
+    payment/event tables instead. In-memory replay state must not be relied on
+    across application replicas.
+    """
+
+    def __init__(self, secret: str | None = None):
+        configured = secret if secret is not None else os.getenv("WEBHOOK_SECRET")
+        if not configured or len(configured.encode("utf-8")) < 32:
+            raise ValueError("WEBHOOK_SECRET_REQUIRED")
+        self.secret = configured
         self.nonce_cache = {}
         self.replay_cache = {}
 
@@ -48,8 +58,13 @@ class WebhookSecurity:
                 del self.replay_cache[req_id]
 
     def is_expired(self, timestamp: str, ttl_seconds: int = 300) -> bool:
+        if ttl_seconds <= 0:
+            return True
         try:
             ts = datetime.fromisoformat(timestamp)
-            return datetime.utcnow() - ts > timedelta(seconds=ttl_seconds)
-        except:
+            if ts.tzinfo is None:
+                return True
+            age = datetime.now(timezone.utc) - ts
+            return age < timedelta(0) or age > timedelta(seconds=ttl_seconds)
+        except (TypeError, ValueError, OverflowError):
             return True
