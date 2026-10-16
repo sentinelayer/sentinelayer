@@ -55,3 +55,10 @@ def test_worker_revalidates_existing_registration_before_network(monkeypatch, ur
 def test_local_development_http_webhook_transport_not_prohibited(monkeypatch):
     monkeypatch.setenv("SL_ENV", "test")
     assert _validate_url("http://hooks.example.test/events") == "http://hooks.example.test/events"
+
+
+@pytest.mark.parametrize("host", ["100.64.0.1", "192.0.2.1", "198.51.100.5", "203.0.113.2", "169.254.169.254"])
+def test_registration_refuses_non_global_network_addresses(monkeypatch, host):
+    monkeypatch.setenv("SL_ENV", "test")
+    with pytest.raises(HTTPException, match="Private webhook targets"):
+        _validate_url(f"https://{host}/events")
