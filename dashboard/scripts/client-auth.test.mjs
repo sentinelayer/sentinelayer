@@ -76,3 +76,19 @@ test('dashboard does not claim live health without a probe', () => {
   assert.match(layout, /Runtime status unverified/);
   assert.match(layout, /status-dot-muted/);
 });
+
+
+test('admin navigation uses authenticated profile data only', () => {
+  const source = readFileSync(new URL('../src/components/Layout.tsx', import.meta.url), 'utf8');
+  assert.ok(source.includes('user?.is_admin === true'));
+  assert.ok(source.includes('apiGet<CurrentUser>("/auth/me")'));
+  assert.equal(source.includes('readAdminClaim'), false);
+  assert.equal(source.includes('notification-count'), false);
+});
+
+test('overview distinguishes configured records from verified runtime health', () => {
+  const source = readFileSync(new URL('../src/pages/overview/OverviewPage.tsx', import.meta.url), 'utf8');
+  assert.ok(source.includes('health endpoint not probed'));
+  assert.ok(source.includes('application.status || "Configured"'));
+  assert.equal(source.includes('Health endpoint responded for this session'), false);
+});
