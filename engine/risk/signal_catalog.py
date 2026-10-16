@@ -14,7 +14,7 @@ class SignalCatalog:
         }
 
     def get_weight(self, signal_type: str) -> int:
-        return self.signals.get(signal_type, {}).get("weight", 10)
+        # Unknown signals have no measured weight and must not fabricate risk.\n        return self.signals.get(signal_type, {}).get("weight", 0)
 
     def get_description(self, signal_type: str) -> str:
         return self.signals.get(signal_type, {}).get("description", "Unknown signal")
