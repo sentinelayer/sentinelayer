@@ -7,7 +7,7 @@ from control_plane.app.runtime import is_production
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from engine.decision.safety_layer import SafetyLayer
 from engine.risk.calibration import Calibration
@@ -45,16 +45,34 @@ if configured_factor > 0:
 
 
 class RiskRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     tenant_id: str = ""
     application_id: str = ""
     endpoint: str = ""
     user_id: str = ""
-    signals: list[str] = Field(default_factory=list)
+    signals: list[str] = Field(default_factory=list, max_length=128)
     context: dict[str, Any] = Field(default_factory=dict)
-    failed_attempts: int = 0
-    suspicious_ip: bool = False
-    unusual_time: bool = False
-    multiple_tenants: bool = False
+    failed_attempts: int = Field(default=0, ge=0, le=10_000, strict=True)
+    suspicious_ip: bool = Field(default=False, strict=True)
+    unusual_time: bool = Field(default=False, strict=True)
+    multiple_tenants: bool = Field(default=False, strict=True)
+
+    @field_validator("context")
+    @classmethod
+    def validate_security_context(cls, context: dict[str, Any]) -> dict[str, Any]:
+        # Python's bool("false") is True and int(untrusted_string) can
+        # throw or allocate unbounded integers. Reject malformed security
+        # signals as 422 instead of fabricating a risk decision or a 500.
+        attempts = context.get("failed_attempts", 0)
+        if type(attempts) is not int or not 0 <= attempts <= 10_000:
+            raise ValueError("INVALID_FAILED_ATTEMPTS")
+        for key in ("suspicious_ip", "unusual_time", "multiple_tenants"):
+            if key in context and type(context[key]) is not bool:
+                raise ValueError("INVALID_CONTEXT_FLAG")
+        if "criticality" in context and context["criticality"] not in {"critical", "normal", "low", "high"}:
+            raise ValueError("INVALID_CONTEXT_CRITICALITY")
+        return context
 
 
 class RiskResponse(BaseModel):
