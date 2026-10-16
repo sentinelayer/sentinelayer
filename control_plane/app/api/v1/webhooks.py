@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from control_plane.app.api.deps import db_with_tenant, tenant_id
 from control_plane.app.infrastructure.db.models import WebhookDelivery, WebhookRegistration
 from control_plane.app.infrastructure.kms.client import KMSClient
+from control_plane.app.runtime import is_production
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 _kms = KMSClient()
@@ -31,6 +32,10 @@ def _validate_url(url: str) -> str:
     host = (parsed.hostname or "").lower()
     if parsed.scheme not in {"http", "https"} or not host:
         raise HTTPException(status_code=400, detail="Webhook URL must use HTTP(S)")
+    if parsed.username is not None or parsed.password is not None:
+        raise HTTPException(status_code=400, detail="Webhook URLs cannot include user credentials")
+    if is_production() and parsed.scheme != "https":
+        raise HTTPException(status_code=400, detail="Production webhook URLs require HTTPS")
     if host in {"localhost", "localhost.localdomain"} or host.endswith(".local"):
         raise HTTPException(status_code=400, detail="Private/local webhook targets are not allowed")
     try:
