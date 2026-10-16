@@ -42,7 +42,7 @@ def _validate_url(url: str) -> str:
         address = ip_address(host)
     except ValueError:
         address = None
-    if address and (address.is_private or address.is_loopback or address.is_link_local or address.is_reserved):
+    if address is not None and not address.is_global:
         raise HTTPException(status_code=400, detail="Private webhook targets are not allowed")
     return url
 
