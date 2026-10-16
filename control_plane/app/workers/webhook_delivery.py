@@ -17,6 +17,7 @@ from sqlalchemy import and_, or_
 from control_plane.app.infrastructure.db.models import WebhookDelivery, WebhookRegistration
 from control_plane.app.infrastructure.db.session import WorkerSessionLocal as SessionLocal
 from control_plane.app.infrastructure.kms.client import KMSClient
+from control_plane.app.runtime import is_production
 
 MAX_ATTEMPTS = max(1, int(os.getenv("WEBHOOK_DELIVERY_MAX_ATTEMPTS", "5")))
 TIMEOUT_SECONDS = max(1, int(os.getenv("WEBHOOK_DELIVERY_TIMEOUT_SECONDS", "5")))
@@ -99,6 +100,12 @@ class _PinnedHTTPSHandler(HTTPSHandler):
 
 def _deliver(delivery: WebhookDelivery, webhook: WebhookRegistration) -> dict[str, object]:
     parsed = urlparse(webhook.url)
+    # Revalidate at dispatch: existing registrations and database imports must
+    # not bypass current production egress policy.
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("webhook URL credentials are not permitted")
+    if is_production() and parsed.scheme != "https":
+        raise ValueError("production webhook delivery requires HTTPS")
     host = (parsed.hostname or "").lower()
     addresses = _resolve_public_addresses(host) if host and parsed.scheme in {"http", "https"} else ()
     if not addresses:
