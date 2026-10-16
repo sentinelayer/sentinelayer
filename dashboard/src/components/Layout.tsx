@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { apiGet, logout } from "../api/client";
 
@@ -56,23 +56,13 @@ const ADMIN_ITEMS: NavItem[] = [
   { to: "/admin/high-risk-actions", label: "High-risk actions", code: "HR" },
 ];
 
-function readAdminClaim(): boolean {
-  try {
-    const token = localStorage.getItem("sl_access_token");
-    if (!token) return false;
-    const payload = JSON.parse(atob(token.split(".")[1])) as { is_admin?: boolean };
-    return payload.is_admin === true;
-  } catch {
-    return false;
-  }
-}
-
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<CurrentUser | null>(null);
-  const isAdmin = useMemo(readAdminClaim, []);
+  // Only a server-verified /auth/me profile may reveal privileged navigation.
+  const isAdmin = user?.is_admin === true;
 
   React.useEffect(() => {
     let cancelled = false;
@@ -144,7 +134,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="main-shell">
         <header className="topbar">
           <div className="breadcrumb"><span className="breadcrumb-muted">SentinelLayer</span><span>/</span><strong>{location.pathname === "/" ? "Overview" : location.pathname.split("/").filter(Boolean).pop()?.replace(/-/g, " ")}</strong></div>
-          <div className="topbar-actions"><span className="environment-badge"><span className="status-dot status-dot-muted" />Production environment</span><span className="user-pill"><span className="user-avatar">{(user?.full_name || user?.email || "S").slice(0, 1).toUpperCase()}</span><span><b>{user?.full_name || user?.email || "Session user"}</b><small>{user?.is_admin || isAdmin ? "Administrator" : "Viewer"}</small></span></span><button className="topbar-button" type="button" aria-label="Open notifications">Notifications <span className="notification-count">0</span></button></div>
+          <div className="topbar-actions"><span className="environment-badge"><span className="status-dot status-dot-muted" />Production environment</span><span className="user-pill"><span className="user-avatar">{(user?.full_name || user?.email || "S").slice(0, 1).toUpperCase()}</span><span><b>{user?.full_name || user?.email || "Session user"}</b><small>{isAdmin ? "Administrator" : "Workspace user"}</small></span></span></div>
         </header>
         <main className="content-area">{children}</main>
       </div>
