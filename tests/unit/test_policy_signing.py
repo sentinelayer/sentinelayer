@@ -60,3 +60,17 @@ def test_policy_rotation_rejects_archived_key_id_shadowing_active_key(monkeypatc
     )
     with pytest.raises(RuntimeError, match="must not replace the active key ID"):
         PolicySigning()
+
+
+def test_policy_signing_rejects_nonfinite_numbers_instead_of_signing_invalid_json(monkeypatch):
+    import pytest
+    monkeypatch.setenv("SL_ENV", "test")
+    monkeypatch.setenv("KMS_KEY", "test-policy-nonfinite-key")
+    monkeypatch.delenv("POLICY_SIGNING_PRIVATE_KEY", raising=False)
+    monkeypatch.delenv("POLICY_SIGNING_PUBLIC_KEYS_JSON", raising=False)
+    signer = PolicySigning()
+    for value in (float("nan"), float("inf"), -float("inf")):
+        policy = {"policy_id": "test", "rules": {"threshold": value}}
+        with pytest.raises(ValueError):
+            signer.sign(policy)
+        assert signer.verify(policy, "not-a-valid-signature") is False
