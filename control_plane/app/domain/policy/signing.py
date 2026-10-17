@@ -53,6 +53,10 @@ class PolicySigning:
                 raise RuntimeError("POLICY_SIGNING_PUBLIC_KEYS_JSON must be valid JSON") from exc
             if not isinstance(previous_keys, dict):
                 raise RuntimeError("POLICY_SIGNING_PUBLIC_KEYS_JSON must be an object")
+            # Archived keys cannot shadow the private key used for new signatures.
+            # Otherwise sign() succeeds while verify() rejects its own result.
+            if self.key_id in previous_keys:
+                raise RuntimeError("Archived policy keys must not replace the active key ID")
             for key_id, encoded in previous_keys.items():
                 if not isinstance(key_id, str) or not isinstance(encoded, str):
                     raise RuntimeError("policy public key entries must be string-to-string")
