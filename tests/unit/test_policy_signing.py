@@ -43,3 +43,20 @@ def test_policy_key_rotation_keeps_previous_signatures_verifiable(monkeypatch):
     assert rotated.verify(policy, signature, "old-key") is True
     assert rotated.verify(policy, signature, "new-key") is False
     assert rotated.verify(policy, signature, "unknown-key") is False
+
+
+def test_policy_rotation_rejects_archived_key_id_shadowing_active_key(monkeypatch):
+    import base64
+    import pytest
+
+    monkeypatch.setenv("SL_ENV", "test")
+    monkeypatch.setenv("POLICY_SIGNING_PRIVATE_KEY", base64.b64encode(b"1" * 32).decode("ascii"))
+    monkeypatch.setenv("POLICY_SIGNING_KEY_ID", "active-key")
+    monkeypatch.delenv("POLICY_SIGNING_PUBLIC_KEYS_JSON", raising=False)
+    current = PolicySigning()
+    monkeypatch.setenv(
+        "POLICY_SIGNING_PUBLIC_KEYS_JSON",
+        '{"active-key": "' + current.get_public_key() + '"}',
+    )
+    with pytest.raises(RuntimeError, match="must not replace the active key ID"):
+        PolicySigning()
