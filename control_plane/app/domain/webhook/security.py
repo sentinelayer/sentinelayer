@@ -29,21 +29,29 @@ class WebhookSecurity:
 
     def verify_signature(self, payload: str, signature: str) -> bool:
         expected = self.generate_signature(payload)
+        if not isinstance(signature, str) or len(signature) != 64:
+            return False
         return hmac.compare_digest(expected, signature)
 
-    def verify_nonce(self, nonce: str) -> bool:
-        if nonce in self.nonce_cache:
+    MAX_RECENT_IDENTIFIERS = 10_000
+
+    def _remember(self, cache: dict, identifier: str, *, cleanup) -> bool:
+        # This is a bounded process-local helper, NOT a distributed replay
+        # protection mechanism. Never evict a fresh key to make capacity.
+        if (not isinstance(identifier, str) or not 1 <= len(identifier) <= 256
+                or any(ord(char) < 33 or ord(char) > 126 for char in identifier)):
             return False
-        self.nonce_cache[nonce] = datetime.utcnow().isoformat()
-        self._cleanup_nonce_cache()
+        cleanup()
+        if identifier in cache or len(cache) >= self.MAX_RECENT_IDENTIFIERS:
+            return False
+        cache[identifier] = datetime.utcnow().isoformat()
         return True
 
+    def verify_nonce(self, nonce: str) -> bool:
+        return self._remember(self.nonce_cache, nonce, cleanup=self._cleanup_nonce_cache)
+
     def verify_replay(self, request_id: str) -> bool:
-        if request_id in self.replay_cache:
-            return False
-        self.replay_cache[request_id] = datetime.utcnow().isoformat()
-        self._cleanup_replay_cache()
-        return True
+        return self._remember(self.replay_cache, request_id, cleanup=self._cleanup_replay_cache)
 
     def _cleanup_nonce_cache(self):
         cutoff = datetime.utcnow() - timedelta(minutes=5)
