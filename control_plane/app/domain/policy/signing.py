@@ -68,7 +68,11 @@ class PolicySigning:
 
     @staticmethod
     def canonical(policy: dict) -> bytes:
-        return json.dumps(policy, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+        # Signed policies must be standards-compliant JSON. Python otherwise
+        # serializes NaN/Infinity into invalid JSON that downstream policy
+        # engines may interpret inconsistently.
+        return json.dumps(policy, sort_keys=True, separators=(",", ":"),
+                          ensure_ascii=True, allow_nan=False).encode("utf-8")
 
     def sign(self, policy: dict) -> str:
         signature = self.private_key.sign(self.canonical(policy))
